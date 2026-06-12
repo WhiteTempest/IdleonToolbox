@@ -1705,12 +1705,12 @@
       "description": "You_can_now_speak_to_the_knife_found_in_the_map_past_Glimbo_to_play_the_Sushi_Station_game!_@_Also,_}x_more_Bucks_gained_from_your_Sushi!"
     },
     {
-      "name": "Name",
-      "maxLv": 1,
-      "baseBonus": 1,
+      "name": "Masterius_Cookerius",
+      "maxLv": 4,
+      "baseBonus": 75,
       "x4": 0,
       "x5": 0,
-      "description": "desc"
+      "description": "Multiplies_your_EXP_gain_for_Cooking_Mastery,_a_feature_unlocked_at_Rift_61,_by_a_massive_}x_@_Also_gives_+|_Yellow_PTS_to_spend_on_Meals!"
     },
     {
       "name": "Name",
@@ -2409,7 +2409,7 @@
     {
       "name": "Big_Ol_Reef",
       "researchLvReq": 72,
-      "mapId": 307,
+      "mapId": 309,
       "x": 320,
       "y": 892,
       "index": 5,
@@ -19316,6 +19316,614 @@
       "description": "desc"
     }
   ],
+  "holeFountUpg": [
+    [
+      {
+        "name": "Yellow_Water",
+        "prereqIndex": 6,
+        "position": "85,169",
+        "currencyType": 2,
+        "baseCost": 100000,
+        "costMulti": 1.1,
+        "bonusPerLevel": 1,
+        "description": "Unlock_Yellow_Water._Tap_the_Change_Water_button_to_toggle_which_water_the_Fountain_is_using._Also,_}x_Currency_Value"
+      },
+      {
+        "name": "Currency_Booster_I",
+        "prereqIndex": 4,
+        "position": "171,145",
+        "currencyType": 2,
+        "baseCost": 1500,
+        "costMulti": 1.2,
+        "bonusPerLevel": 10,
+        "description": "All_currencies_are_worth_+{%_more._@_Currencies_are_ALL_money_types_here_at_the_Fountain,_from_coins_to_dollars_and_more!"
+      },
+      {
+        "name": "Penny_Lane",
+        "prereqIndex": 9,
+        "position": "390,86",
+        "currencyType": 0,
+        "baseCost": 1,
+        "costMulti": 1.06,
+        "bonusPerLevel": 1,
+        "description": "Increases_the_value_of_Bronze_Coins._@_All_bronze_coins_you_find_have_a_base_value_of_$_@___@_Your_total_Currency_multi:_@_^_@_(Affects_value_of_all_Fountain_money)"
+      },
+      {
+        "name": "Nickel_and_Diming",
+        "prereqIndex": 12,
+        "position": "301,161",
+        "currencyType": 1,
+        "baseCost": 1,
+        "costMulti": 1.12,
+        "bonusPerLevel": 1,
+        "description": "You_can_now_find_Silver_Coins._@_All_silver_coins_you_find_have_a_base_value_of_$"
+      },
+      {
+        "name": "Dubloon_Desires",
+        "prereqIndex": 8,
+        "position": "229,171",
+        "currencyType": 2,
+        "baseCost": 1,
+        "costMulti": 1.13,
+        "bonusPerLevel": 1,
+        "description": "You_can_now_find_Golden_Coins._@_All_golden_coins_you_find_have_a_base_value_of_$"
+      },
+      {
+        "name": "Stackin'_Silver",
+        "prereqIndex": 3,
+        "position": "326,223",
+        "currencyType": 0,
+        "baseCost": 10,
+        "costMulti": 1.1,
+        "bonusPerLevel": 5,
+        "description": "Silver_coins_are_worth_}x_more."
+      },
+      {
+        "name": "Stackin'_Gold",
+        "prereqIndex": 19,
+        "position": "101,232",
+        "currencyType": 1,
+        "baseCost": 15,
+        "costMulti": 1.1,
+        "bonusPerLevel": 5,
+        "description": "Golden_coins_are_worth_}x_more."
+      },
+      {
+        "name": "Stackin'_Dollars",
+        "prereqIndex": 6,
+        "position": "24,183",
+        "currencyType": 2,
+        "baseCost": 25,
+        "costMulti": 1.1,
+        "bonusPerLevel": 5,
+        "description": "Dollar_Bills_are_worth_}x_more."
+      },
+      {
+        "name": "Money_Back_Guarantee",
+        "prereqIndex": 5,
+        "position": "260,228",
+        "currencyType": 1,
+        "baseCost": 25,
+        "costMulti": 1.15,
+        "bonusPerLevel": 1,
+        "description": "Currency_generated_while_at_maximum_capacity_aren't_wasted,_and_instead_auto_collected_at_$%_of_their_value."
+      },
+      {
+        "name": "Fountain_Filling",
+        "prereqIndex": -1,
+        "position": "457,110",
+        "currencyType": 0,
+        "baseCost": 1,
+        "costMulti": 1.1,
+        "bonusPerLevel": 2,
+        "description": "Every_time_the_fountain_fills_up,_it_creates_a_new_coin._@_This_will_happen_in_$_@___@_From_empty,_it_takes:_@_#_to_fill"
+      },
+      {
+        "name": "Extra_Space",
+        "prereqIndex": 2,
+        "position": "328,63",
+        "currencyType": 0,
+        "baseCost": 5,
+        "costMulti": 20,
+        "bonusPerLevel": 1,
+        "description": "Coins_can_appear_in_$_different_areas_on_the_ground._@_This_means_your_current_max_coin_capacity_is_#_coins"
+      },
+      {
+        "name": "Taller_Stacks",
+        "prereqIndex": 3,
+        "position": "267,104",
+        "currencyType": 1,
+        "baseCost": 25,
+        "costMulti": 4,
+        "bonusPerLevel": 1,
+        "description": "Each_area_can_stack_up_to_$_coins,_this_upgrade_increases_it_by_+{._@_This_means_your_current_max_coin_capacity_is_#_coins"
+      },
+      {
+        "name": "Water_Bender",
+        "prereqIndex": 2,
+        "position": "364,147",
+        "currencyType": 0,
+        "baseCost": 10,
+        "costMulti": 1.3,
+        "bonusPerLevel": 10,
+        "description": "The_fountain_fills_up_$x_faster_while_you_are_actively_standing_in_this_cavern_specifically._@_"
+      },
+      {
+        "name": "Monumental_Boost",
+        "prereqIndex": 18,
+        "position": "698,225",
+        "currencyType": 2,
+        "baseCost": 250,
+        "costMulti": 2.5,
+        "bonusPerLevel": 1,
+        "description": "All_Bravery_Monument_bonuses_are_}x_larger."
+      },
+      {
+        "name": "Cosmological_Boost",
+        "prereqIndex": 9,
+        "position": "520,83",
+        "currencyType": 0,
+        "baseCost": 5,
+        "costMulti": 1.15,
+        "bonusPerLevel": 1,
+        "description": "Cosmo_the_Villager_gains_}x_more_EXP_than_normal."
+      },
+      {
+        "name": "Golden_Bucket_Boost",
+        "prereqIndex": 16,
+        "position": "644,78",
+        "currencyType": 1,
+        "baseCost": 25,
+        "costMulti": 1.1,
+        "bonusPerLevel": 5,
+        "description": "Your_1st_bucket_at_The_Well_cavern_is_golden._Golden_buckets_have_}x_fill_rate."
+      },
+      {
+        "name": "Class_EXP_Boost",
+        "prereqIndex": 14,
+        "position": "581,64",
+        "currencyType": 0,
+        "baseCost": 50,
+        "costMulti": 1.12,
+        "bonusPerLevel": 1,
+        "description": "Boosts_Class_EXP_gain_by_}x"
+      },
+      {
+        "name": "Treasure_Boost",
+        "prereqIndex": 15,
+        "position": "709,112",
+        "currencyType": 1,
+        "baseCost": 100,
+        "costMulti": 1.2,
+        "bonusPerLevel": 3,
+        "description": "All_Sailing_Chests_you_open_contain_}x_more_Treasure_to_upgrade_your_Boats_with!"
+      },
+      {
+        "name": "Orion_Boost",
+        "prereqIndex": 17,
+        "position": "670,167",
+        "currencyType": 2,
+        "baseCost": 150,
+        "costMulti": 1.12,
+        "bonusPerLevel": 5,
+        "description": "Permanently_boost_Feather_Generation_rate_at_Orion_the_Horned_Owl_by_}x"
+      },
+      {
+        "name": "Mythril_Transience",
+        "prereqIndex": 4,
+        "position": "159,205",
+        "currencyType": 2,
+        "baseCost": 800,
+        "costMulti": 1.2,
+        "bonusPerLevel": 1,
+        "description": "Bronze,_silver,_and_gold_coins_are_worth_+{%_more_per_POW_10_Mythril_you_have,_over_at_The_Well_cavern._@_Total_Bonus:$x"
+      }
+    ],
+    [
+      {
+        "name": "Green_Water",
+        "prereqIndex": 1,
+        "position": "104,239",
+        "currencyType": 5,
+        "baseCost": 1000000,
+        "costMulti": 1.1,
+        "bonusPerLevel": 2,
+        "description": "Unlock_Green_Water..._well,_it_will_in_the_Future._Also,_}x_Currency_Value,_at_least_THAT'S_true_for_right_now!"
+      },
+      {
+        "name": "Currency_Booster_II",
+        "prereqIndex": 4,
+        "position": "166,218",
+        "currencyType": 5,
+        "baseCost": 10000,
+        "costMulti": 1.2,
+        "bonusPerLevel": 20,
+        "description": "All_currencies_are_worth_+{%_more."
+      },
+      {
+        "name": "Dolla_Dolla_Bills",
+        "prereqIndex": 10,
+        "position": "404,145",
+        "currencyType": 3,
+        "baseCost": 1,
+        "costMulti": 1.13,
+        "bonusPerLevel": 1,
+        "description": "You_can_now_find_Dollar_Bills._@_All_dollar_bills_you_find_have_a_base_value_of_$"
+      },
+      {
+        "name": "Credit_Swisse",
+        "prereqIndex": 12,
+        "position": "328,140",
+        "currencyType": 4,
+        "baseCost": 1,
+        "costMulti": 1.14,
+        "bonusPerLevel": 1,
+        "description": "You_can_now_find_Credit_Bills._@_All_credit_bills_you_find_have_a_base_value_of_$"
+      },
+      {
+        "name": "In_Gov_We_Trust",
+        "prereqIndex": 9,
+        "position": "190,160",
+        "currencyType": 5,
+        "baseCost": 1,
+        "costMulti": 1.15,
+        "bonusPerLevel": 1,
+        "description": "You_can_now_find_Treasury_Bills._@_All_treasury_bills_you_find_have_a_base_value_of_$"
+      },
+      {
+        "name": "Stackin'_Creds",
+        "prereqIndex": 3,
+        "position": "300,80",
+        "currencyType": 3,
+        "baseCost": 50,
+        "costMulti": 1.1,
+        "bonusPerLevel": 5,
+        "description": "Credit_bills_are_worth_}x_more."
+      },
+      {
+        "name": "Stackin'_T-Bills",
+        "prereqIndex": 4,
+        "position": "134,146",
+        "currencyType": 4,
+        "baseCost": 100,
+        "costMulti": 1.1,
+        "bonusPerLevel": 5,
+        "description": "Treasury_bills_are_worth_}x_more."
+      },
+      {
+        "name": "Stackin'_Monayy",
+        "prereqIndex": 0,
+        "position": "41,227",
+        "currencyType": 5,
+        "baseCost": 250,
+        "costMulti": 1.1,
+        "bonusPerLevel": 5,
+        "description": "Moolah_Stacks_are_worth_}x_more."
+      },
+      {
+        "name": "Royal_Stacks",
+        "prereqIndex": 5,
+        "position": "238,97",
+        "currencyType": 3,
+        "baseCost": 100,
+        "costMulti": 1.15,
+        "bonusPerLevel": 1,
+        "description": "There's_a_1_in_$_chance_for_a_currency_stack_to_become_'royal'_when_the_fountain_fills._@_All_coins_in_a_royal_stack_are_worth_more."
+      },
+      {
+        "name": "Regal_Riches",
+        "prereqIndex": 8,
+        "position": "249,153",
+        "currencyType": 4,
+        "baseCost": 250,
+        "costMulti": 1.25,
+        "bonusPerLevel": 10,
+        "description": "Royal_stacks_are_worth_$x_more,_to_be_specific."
+      },
+      {
+        "name": "Marble_Filling",
+        "prereqIndex": -1,
+        "position": "463,113",
+        "currencyType": 2,
+        "baseCost": 50000,
+        "costMulti": 1.1,
+        "bonusPerLevel": 5,
+        "description": "Adds_a_new_fountain_bar,_which_when_filled_creates_$_marble._@_Spend_these_on_upgrades_to_multiply_their_bonuses_via_Marbleization."
+      },
+      {
+        "name": "Greatest_Desire",
+        "prereqIndex": 9,
+        "position": "274,210",
+        "currencyType": 4,
+        "baseCost": 500,
+        "costMulti": 1.15,
+        "bonusPerLevel": 5,
+        "description": "You_can_now_click_and_HOLD_on_a_currency_at_the_top_of_the_screen_to_DESIRE_it,_making_them_worth_}x_more_when_collected."
+      },
+      {
+        "name": "Turn_and_Push",
+        "prereqIndex": 2,
+        "position": "374,85",
+        "currencyType": 3,
+        "baseCost": 250,
+        "costMulti": 1.15,
+        "bonusPerLevel": 10,
+        "description": "You_can_now_click_a_currency_at_the_top_to_IGNORE_it,_so_it's_never_created._Click_again_to_undo_this_at_any_time._@_Also,_+{%_all_currency"
+      },
+      {
+        "name": "Judicial_Boost",
+        "prereqIndex": 18,
+        "position": "653,64",
+        "currencyType": 5,
+        "baseCost": 5000,
+        "costMulti": 2.5,
+        "bonusPerLevel": 1,
+        "description": "All_Justice_Monument_bonuses_are_}x_larger."
+      },
+      {
+        "name": "Skim_Reading",
+        "prereqIndex": 10,
+        "position": "524,98",
+        "currencyType": 3,
+        "baseCost": 25,
+        "costMulti": 1.2,
+        "bonusPerLevel": 3,
+        "description": "Boost_the_Study_Rate_for_Bolaia_the_Villager_by_}x"
+      },
+      {
+        "name": "Fine_Tuning",
+        "prereqIndex": 16,
+        "position": "642,139",
+        "currencyType": 4,
+        "baseCost": 250,
+        "costMulti": 1.15,
+        "bonusPerLevel": 2,
+        "description": "All_your_Harp_Strings_gain_}x_more_exp_than_normal"
+      },
+      {
+        "name": "Swingy_O'_Sword",
+        "prereqIndex": 14,
+        "position": "582,117",
+        "currencyType": 3,
+        "baseCost": 100,
+        "costMulti": 1.13,
+        "bonusPerLevel": 1,
+        "description": "Boosts_Damage_for_all_characters_by_}x"
+      },
+      {
+        "name": "Summoneer",
+        "prereqIndex": 15,
+        "position": "702,149",
+        "currencyType": 4,
+        "baseCost": 500,
+        "costMulti": 1.15,
+        "bonusPerLevel": 3,
+        "description": "All_Summoning_Essence_generation_is_}x_greater_than_before"
+      },
+      {
+        "name": "Better_Poppy",
+        "prereqIndex": 17,
+        "position": "711,92",
+        "currencyType": 5,
+        "baseCost": 1500,
+        "costMulti": 1.1,
+        "bonusPerLevel": 5,
+        "description": "Permanently_boost_Fish_Generation_rate_at_Poppy_the_Kangaroo_Mouse_by_}x"
+      },
+      {
+        "name": "Sharp_Surrogate",
+        "prereqIndex": 6,
+        "position": "79,157",
+        "currencyType": 5,
+        "baseCost": 10000,
+        "costMulti": 1.2,
+        "bonusPerLevel": 1,
+        "description": "Dollar,_Credit,_and_Treasury_bills_are_worth_+{%_more_per_POW_10_Sharp_Notes_you_have,_over_at_The_Harp_cavern._@_Total_Bonus:$x"
+      }
+    ],
+    [
+      {
+        "name": "Name",
+        "prereqIndex": null,
+        "position": "X",
+        "currencyType": 8,
+        "baseCost": 1,
+        "costMulti": 1.1,
+        "bonusPerLevel": 3,
+        "description": "Unlock_Black_Water..._well,_it_will_in_the_future._Also,_}x_Currency_Value,_at_least_THAT'S_here_in_the_present!"
+      },
+      {
+        "name": "Currency_Booster_III",
+        "prereqIndex": null,
+        "position": "X",
+        "currencyType": 6,
+        "baseCost": 1,
+        "costMulti": 1.1,
+        "bonusPerLevel": 30,
+        "description": "All_currencies_are_worth_+{%_more."
+      },
+      {
+        "name": "Name",
+        "prereqIndex": null,
+        "position": "X",
+        "currencyType": 6,
+        "baseCost": 1,
+        "costMulti": 1.1,
+        "bonusPerLevel": 0,
+        "description": "You_can_now_find_Moolah_Stacks._@_All_moolah_stacks_you_find_have_a_base_value_of_$"
+      },
+      {
+        "name": "Name",
+        "prereqIndex": null,
+        "position": "X",
+        "currencyType": 7,
+        "baseCost": 1,
+        "costMulti": 1.1,
+        "bonusPerLevel": 0,
+        "description": "You_can_now_find_Shilling_Stacks._@_All_shilling_stacks_you_find_have_a_base_value_of_$"
+      },
+      {
+        "name": "Name",
+        "prereqIndex": null,
+        "position": "X",
+        "currencyType": 8,
+        "baseCost": 1,
+        "costMulti": 1.1,
+        "bonusPerLevel": 0,
+        "description": "You_can_now_find_Greane_Stacks._@_All_greane_stacks_you_find_have_a_base_value_of_$"
+      },
+      {
+        "name": "Name",
+        "prereqIndex": null,
+        "position": "X",
+        "currencyType": 6,
+        "baseCost": 1,
+        "costMulti": 1.1,
+        "bonusPerLevel": 0,
+        "description": "Shilling_Stacks_are_worth_}x_more."
+      },
+      {
+        "name": "Name",
+        "prereqIndex": null,
+        "position": "X",
+        "currencyType": 7,
+        "baseCost": 1,
+        "costMulti": 1.1,
+        "bonusPerLevel": 0,
+        "description": "Greane_Stacks_are_worth_}x_more."
+      },
+      {
+        "name": "Name",
+        "prereqIndex": null,
+        "position": "X",
+        "currencyType": 8,
+        "baseCost": 1,
+        "costMulti": 1.1,
+        "bonusPerLevel": 0,
+        "description": "Oldmoney_Stacks_are_worth_}x_more."
+      },
+      {
+        "name": "Name",
+        "prereqIndex": null,
+        "position": "X",
+        "currencyType": 7,
+        "baseCost": 1,
+        "costMulti": 1.1,
+        "bonusPerLevel": 0,
+        "description": "All_currencies_collected_have_a_1_in_$_of_being_LUCKY,_multiplying_the_value_of_that_specific_type_by_#x_forever!_@_Each_additional_one_is_4x_rarer"
+      },
+      {
+        "name": "Name",
+        "prereqIndex": null,
+        "position": "X",
+        "currencyType": 8,
+        "baseCost": 1,
+        "costMulti": 1.1,
+        "bonusPerLevel": 0,
+        "description": "Boosts_the_LUCKY_multi_by_+{%._@_Also,_you_can_see_how_many_LUCKY_coins_of_each_type_you_have_from_the_number_of_dots_above_them."
+      },
+      {
+        "name": "Name",
+        "prereqIndex": null,
+        "position": "X",
+        "currencyType": 9,
+        "baseCost": 1,
+        "costMulti": 1.1,
+        "bonusPerLevel": 0,
+        "description": "Every_Royal_stack_out_you_currently_have_boosts_Rubber_Ducky_chance_and_LUCKY_coin_chance_by_+{%_@_Total_Current_bonus:_$x_odds"
+      },
+      {
+        "name": "Name",
+        "prereqIndex": null,
+        "position": "X",
+        "currencyType": 7,
+        "baseCost": 1,
+        "costMulti": 1.1,
+        "bonusPerLevel": 0,
+        "description": "Your_Rubber_Duckies_each_MULTIPLY_the_value_of_all_coins_by_$x._@_Total_Ducky_Bonus:_#x"
+      },
+      {
+        "name": "Name",
+        "prereqIndex": null,
+        "position": "X",
+        "currencyType": 6,
+        "baseCost": 1,
+        "costMulti": 1.1,
+        "bonusPerLevel": 0,
+        "description": "Adds_a_new_fountain_bar,_which_when_filled_has_a_1_in_$_chance_of_adding_a_Rubber_Ducky_to_the_fountain."
+      },
+      {
+        "name": "Name",
+        "prereqIndex": null,
+        "position": "X",
+        "currencyType": 7,
+        "baseCost": 1,
+        "costMulti": 1.1,
+        "bonusPerLevel": 0,
+        "description": "All_Wisdom_Monument_bonuses_are_}x_larger."
+      },
+      {
+        "name": "Name",
+        "prereqIndex": null,
+        "position": "X",
+        "currencyType": 6,
+        "baseCost": 1,
+        "costMulti": 1.1,
+        "bonusPerLevel": 0,
+        "description": "Minau_the_Villager's_upgrades_all_are_}x_cheaper_than_ever_before"
+      },
+      {
+        "name": "Name",
+        "prereqIndex": null,
+        "position": "X",
+        "currencyType": 7,
+        "baseCost": 1,
+        "costMulti": 1.1,
+        "bonusPerLevel": 0,
+        "description": "Your_Enchant_chance_over_at_The_Jar_cavern_is_}x_larger_than_before"
+      },
+      {
+        "name": "Name",
+        "prereqIndex": null,
+        "position": "X",
+        "currencyType": 6,
+        "baseCost": 1,
+        "costMulti": 1.1,
+        "bonusPerLevel": 0,
+        "description": "Boosts_Research_EXP_gain_by_}x"
+      },
+      {
+        "name": "Name",
+        "prereqIndex": null,
+        "position": "X",
+        "currencyType": 8,
+        "baseCost": 1,
+        "costMulti": 1.1,
+        "bonusPerLevel": 0,
+        "description": "All_Masterclass_Drops,_specifically_Bones_Dust_and_Tachyons,_are_}x_larger"
+      },
+      {
+        "name": "Name",
+        "prereqIndex": null,
+        "position": "X",
+        "currencyType": 7,
+        "baseCost": 1,
+        "costMulti": 1.1,
+        "bonusPerLevel": 0,
+        "description": "Permanently_boost_Meat_Slice_Production_rate_at_Bubba_the_Seal_by_}x"
+      },
+      {
+        "name": "Name",
+        "prereqIndex": null,
+        "position": "X",
+        "currencyType": 7,
+        "baseCost": 1,
+        "costMulti": 1.1,
+        "bonusPerLevel": 0,
+        "description": "Moolah,_Shilling,_and_Greane_stacks_are_worth_+{%_more_per_POW_10_basic_Red_Rupie_you_have,_over_at_The_Jar_cavern."
+      }
+    ]
+  ],
   "killRoySkullShop": [
     {
       "description": "Get_a_random_time_candy!_Pick_it_up_off_the_floor.",
@@ -26062,7 +26670,7 @@
       "x3": 0,
       "x5": 0,
       "name": "Nothing",
-      "description": "When_equipped,_you_search_for_Jade_and_Items_faster."
+      "description": "0"
     },
     "NjWep0": {
       "rawName": "NjWep0",
@@ -26179,7 +26787,7 @@
       "x3": 8,
       "x5": 13,
       "name": "Ninja_Log",
-      "description": "When_equipped,_you_search_for_Jade_and_Items_faster."
+      "description": "If_detected,_+{%_chance_to_not_be_knocked_out"
     },
     "NjTr1": {
       "rawName": "NjTr1",
@@ -26188,7 +26796,7 @@
       "x3": 10,
       "x5": 40,
       "name": "Taunting_Mark",
-      "description": "When_equipped,_deal_damage_to_the_door_to_unlock_the_next_floor."
+      "description": "If_another_ninja_on_this_floor_is_detected,_you_are_instead_(if_youre_not_already_KO'd)_Also,_-{%_KO_time"
     },
     "NjTr2": {
       "rawName": "NjTr2",
@@ -26197,7 +26805,7 @@
       "x3": 5,
       "x5": 30,
       "name": "Yellow_Belt",
-      "description": "When_equipped,_untie_any_trapped_ninja_on_the_same_floor."
+      "description": "Performs_actions_+{%_faster._If_there_are_no_other_ninjas_on_floor,_this_bonus_is_doubled"
     },
     "NjTr3": {
       "rawName": "NjTr3",
@@ -26431,7 +27039,7 @@
       "x3": 5,
       "x5": 200,
       "name": "Starite",
-      "description": "When_equipped,_you_search_for_Jade_and_Items_faster."
+      "description": "Hold_down_to_add_this_Gemstone_to_your_collection._View_collection_and_bonuses_in_Ninja_Knowledge."
     },
     "NjGem4": {
       "rawName": "NjGem4",
@@ -31393,13 +32001,13 @@
     {
       "name": "Rift_Spooker",
       "rawName": "rift1",
-      "effect": "Not_officially_in_the_game_and_may_never_be",
+      "effect": "3x_Cooking_Mastery_EXP_gain_and_{5_PTS_for_Cooking_Mastery",
       "bonus": 1,
-      "x": "0",
+      "x": "-26",
       "y": "0",
-      "z": "0",
+      "z": "-15",
       "filler": "1",
-      "tourPower": 100
+      "tourPower": 160
     },
     {
       "name": "Rift_Hivemind",
@@ -32265,6 +32873,17 @@
       "z": "-5",
       "filler": "1",
       "tourPower": 10
+    },
+    {
+      "name": "Abacus_Frog",
+      "rawName": "fm_frog",
+      "effect": "Thank_you_for_rescuing_me_from_the_Fortune_Mill!",
+      "bonus": 1,
+      "x": "-18",
+      "y": "0",
+      "z": "-34",
+      "filler": "1",
+      "tourPower": 177
     }
   ],
   "companionGroups": [
@@ -32341,10 +32960,8 @@
         53,
         54,
         55,
-        88,
         128,
         132,
-        153,
         143,
         154,
         155,
@@ -32357,8 +32974,12 @@
         159,
         147,
         162,
+        87,
+        88,
+        153,
         163,
-        135
+        135,
+        167
       ]
     },
     {
@@ -32854,11 +33475,11 @@
       "name": "Small_Gratuity"
     },
     {
-      "description": "You_can't_buy_this_today,_or_tomorrow,_or_the_next_day.",
+      "description": "Boosts_your_Cooking_Mastery_EXP_gain_rate_by_1.40x",
       "index": 68,
-      "x1": 2,
-      "x2": 150,
-      "name": "Not_Today"
+      "x1": 4,
+      "x2": 100,
+      "name": "Cooking_Master"
     },
     {
       "description": "You?_Buying_THIS??_YOU'RE_BROOOOKE!!!",
@@ -37802,7 +38423,7 @@
         0
       ],
       [
-        43,
+        37,
         300,
         600
       ],
@@ -39538,60 +40159,60 @@
     },
     {
       "monsterName": "Rift_Spooker",
-      "task": "YOU_CANNOT_PROGRESS_FURTHER._BUT_THERE_WILL_BE_MORE...",
+      "task": "DEFEAT_ANY_MONSTER_HERE_ON_11_CHARS._YOU'VE_DONE_{_SO_FAR...",
       "icon": "Mface75"
     },
     {
       "monsterName": "River_Spirit",
       "task": "DEFEAT_500_MONSTERS_WITHIN_5_MIN._@_YOU'VE_DEFEATED_{_SO_FAR...",
       "icon": "Mface78",
-      "riftBonus": "Rift_Guy",
+      "riftBonus": "Cooking_Mastery",
       "riftBonusIcon": "Rift_11",
       "riftDescription": ""
     },
     {
       "monsterName": "Purgatory_Stalker",
-      "task": "DEFEAT_500_MONSTERS_WITHIN_5_MIN._@_YOU'VE_DEFEATED_{_SO_FAR...",
+      "task": "GET_5000_SKULL_POINTS._BETTER_SKULLS_ARE_WORTH_MORE._YOU_HAVE_{_SO_FAR...",
       "icon": "Mface68"
     },
     {
-      "monsterName": "Purgatory_Stalker",
-      "task": "DEFEAT_500_MONSTERS_WITHIN_5_MIN._@_YOU'VE_DEFEATED_{_SO_FAR...",
-      "icon": "Mface68"
+      "monsterName": "Lantern_Spirit",
+      "task": "DEFEAT_THE_MEGA_MONSTER,_WHO_CAN_SELF_HEAL,_ON_4_CHARS._YOU'VE_DONE_{_SO_FAR...",
+      "icon": "Mface82"
     },
     {
       "monsterName": "Mama_Troll",
-      "task": "DEFEAT_500_MONSTERS_WITHIN_5_MIN._@_YOU'VE_DEFEATED_{_SO_FAR...",
+      "task": "DEFEAT_ANY_MONSTER_HERE_ON_11_CHARS._YOU'VE_DONE_{_SO_FAR...",
       "icon": "Mface83"
     },
     {
       "monsterName": "Rift_Jocund",
-      "task": "DEFEAT_500_MONSTERS_WITHIN_5_MIN._@_YOU'VE_DEFEATED_{_SO_FAR...",
+      "task": "GET_A_PIRATE_FLAG_SCORE_OF_75_ON_YOUR_SIEGE_BREAKER._YOUR_BEST_IS_{_SO_FAR...",
       "icon": "Mface75"
     },
     {
-      "monsterName": "Citringe",
-      "task": "DEFEAT_500_MONSTERS_WITHIN_5_MIN._@_YOU'VE_DEFEATED_{_SO_FAR...",
-      "icon": "Mface69"
+      "monsterName": "Leek_Spirit",
+      "task": "YOU_CANNOT_PROGRESS_FURTHER._BUT_THERE_WILL_BE_MORE...",
+      "icon": "Mface84"
     },
     {
       "monsterName": "Ceramic_Spirit",
-      "task": "DEFEAT_500_MONSTERS_WITHIN_5_MIN._@_YOU'VE_DEFEATED_{_SO_FAR...",
+      "task": "YOU_CANNOT_PROGRESS_FURTHER._BUT_THERE_WILL_BE_MORE...",
       "icon": "Mface85"
     },
     {
       "monsterName": "Skydoggie_Spirit",
-      "task": "DEFEAT_500_MONSTERS_WITHIN_5_MIN._@_YOU'VE_DEFEATED_{_SO_FAR...",
+      "task": "YOU_CANNOT_PROGRESS_FURTHER._BUT_THERE_WILL_BE_MORE...",
       "icon": "Mface86"
     },
     {
       "monsterName": "Samurai_Guardian",
-      "task": "DEFEAT_500_MONSTERS_WITHIN_5_MIN._@_YOU'VE_DEFEATED_{_SO_FAR...",
+      "task": "YOU_CANNOT_PROGRESS_FURTHER._BUT_THERE_WILL_BE_MORE...",
       "icon": "Mface89"
     },
     {
       "monsterName": "Rift_Stalker",
-      "task": "DEFEAT_500_MONSTERS_WITHIN_5_MIN._@_YOU'VE_DEFEATED_{_SO_FAR...",
+      "task": "YOU_CANNOT_PROGRESS_FURTHER._BUT_THERE_WILL_BE_MORE...",
       "icon": "Mface75"
     }
   ],
@@ -39960,6 +40581,7 @@
     "w7B11",
     "w7B11b",
     "w7B12",
+    "w7B12b",
     "BabaYagaETC",
     "Hgg",
     "Quest17",
@@ -41857,6 +42479,7 @@
       "numberOfArtifacts": 4
     },
     {
+      "name": "The_Maw",
       "distance": 200000000000,
       "unlockReq": 2000000000,
       "cloudsUnlocked": 1,
@@ -123010,7 +123633,7 @@
         "monsterDisplayName": "Dreadnaught_Captain",
         "monsterRawName": "w7b12",
         "rawName": "COIN",
-        "quantity": 1100000,
+        "quantity": 2000000000,
         "chance": 0.5,
         "questLink": "N/A"
       },
@@ -123021,7 +123644,7 @@
         "ID": 0,
         "Type": "MONSTER_DROP",
         "lvReqToCraft": 15,
-        "desc_line1": "The_penultimate_emblem_given_to_legendary_pirates,_signifying_their_leadership_of_the_pirate_crew.",
+        "desc_line1": "The_ultimate_emblem_given_to_legendary_pirates,_signifying_their_leadership_of_the_pirate_crew.",
         "desc_line2": "Filler",
         "desc_line3": "Filler",
         "desc_line4": "Filler",
@@ -123034,7 +123657,30 @@
         "monsterDisplayName": "Dreadnaught_Captain",
         "monsterRawName": "w7b12",
         "quantity": 1,
-        "chance": 0.001,
+        "chance": 0.0001,
+        "questLink": "N/A"
+      },
+      {
+        "displayName": "Pirate_Ship_Figurine",
+        "sellPrice": 150000,
+        "typeGen": "bCraft",
+        "ID": 0,
+        "Type": "MONSTER_DROP",
+        "lvReqToCraft": 15,
+        "desc_line1": "Wait,_are_these_guys_captains_of_the_sunken_ship_or_THIS_ship??",
+        "desc_line2": "Filler",
+        "desc_line3": "Filler",
+        "desc_line4": "Filler",
+        "desc_line5": "Filler",
+        "desc_line6": "Filler",
+        "desc_line7": "Filler",
+        "desc_line8": "Filler",
+        "itemType": "Quest",
+        "rawName": "w7B12b",
+        "monsterDisplayName": "Dreadnaught_Captain",
+        "monsterRawName": "w7b12",
+        "quantity": 1,
+        "chance": 1e-9,
         "questLink": "N/A"
       },
       {
@@ -157859,7 +158505,7 @@
         },
         {
           "rawName": "CookingM0",
-          "name": "Turkey_a_la_Thank",
+          "name": "Turkey_of_Thank",
           "amount": 100
         },
         {
@@ -159015,7 +159661,7 @@
         },
         {
           "rawName": "CookingM62",
-          "name": "Bill_Jack_Pepper",
+          "name": "Bill_Jack_Pep",
           "amount": 100000000
         },
         {
@@ -188646,7 +189292,7 @@
   },
   "cookingMenu": [
     {
-      "name": "Turkey_a_la_Thank",
+      "name": "Turkey_of_Thank",
       "cookReq": 10,
       "rawName": "CookingMB0",
       "baseStat": 2,
@@ -188677,7 +189323,7 @@
       "cookReq": 40,
       "rawName": "CookingMB3",
       "baseStat": 5,
-      "effect": "+{%_New_Recipe_Cooking_Speed",
+      "effect": "+{%_Recipe_Cooking_Spd",
       "description": "Cartoon_characters_with_a_fear_of_levitation_HATE_the_smell_of_this!",
       "stat": "Rcook"
     },
@@ -188686,7 +189332,7 @@
       "cookReq": 60,
       "rawName": "CookingMB4",
       "baseStat": 5,
-      "effect": "+{%_New_Mob_Breeding_Odds",
+      "effect": "+{%_New_Mob_Breed_Odds",
       "description": "You're_breeding_Mobs_in_outer_space,_don't_be_shocked_that_there's_no_France!",
       "stat": "Npet"
     },
@@ -188713,12 +189359,12 @@
       "cookReq": 175,
       "rawName": "CookingMB7",
       "baseStat": 4,
-      "effect": "+{%_VIP_Library_Membership",
+      "effect": "+{%_VIP_Library_PTS",
       "description": "The_letter_H_ain't_lookin'_so_good_after_eating_a_few_of_these...",
       "stat": "VIP"
     },
     {
-      "name": "Garlicless_Bread",
+      "name": "Garlicles_Bread",
       "cookReq": 250,
       "rawName": "CookingMB8",
       "baseStat": 2,
@@ -188731,7 +189377,7 @@
       "cookReq": 350,
       "rawName": "CookingMB9",
       "baseStat": 9,
-      "effect": "+{%_New_Mob_Breeding_Odds",
+      "effect": "+{%_New_Mob_Breed_Odds",
       "description": "Mama_mia_mahhh_piiiiiiiizzza!!!_Wait_I_already_did_that_joke,_replace_this_one",
       "stat": "Npet"
     },
@@ -188749,7 +189395,7 @@
       "cookReq": 700,
       "rawName": "CookingMB11",
       "baseStat": 2,
-      "effect": "+{Px_Line_Width_in_Lab_Mainframe",
+      "effect": "+{Px_Line_Width_in_Lab",
       "description": "Ohhh,_they're_called_'pan'cakes_because_they're_like_cakes_made_in_a_pan_haha",
       "stat": "PxLine"
     },
@@ -188767,16 +189413,16 @@
       "cookReq": 1400,
       "rawName": "CookingMB13",
       "baseStat": 5,
-      "effect": "+{%_Cooking_Spd_per_10_Kitchen_LVs",
-      "description": "More_speed_every_10_total_kitchen_upgrade_LVs!_That's_one_IMPORTANT_vegetable!",
+      "effect": "+{%_Cooking_Spd_per_Ten",
+      "description": "Ten_means_every_10_total_kitchen_upgrade_LVs!_That's_one_IMPORTANT_vegetable!",
       "stat": "KitchenEff"
     },
     {
-      "name": "Potato_Pea_Pastry",
+      "name": "Potato_P_Pastry",
       "cookReq": 2000,
       "rawName": "CookingMB14",
       "baseStat": 1,
-      "effect": "+{%_Lower_Egg_Incubator_Time",
+      "effect": "+{%_Lower_Egg_Creation_Time",
       "description": "Yuhhhh_it's_that_Triple_P_threat!_Look_out_for_them_P's_bro!",
       "stat": "TimeEgg"
     },
@@ -188785,7 +189431,7 @@
       "cookReq": 3000,
       "rawName": "CookingMB15",
       "baseStat": 2,
-      "effect": "+{%_Lower_Kitchen_Upgrade_Costs",
+      "effect": "+{%_Lower_Kitchen_Costs",
       "description": "Look,_I'm_not_sure_what_these_are_either,_just_go_with_it.",
       "stat": "KitchC"
     },
@@ -188794,7 +189440,7 @@
       "cookReq": 4000,
       "rawName": "CookingMB16",
       "baseStat": 4,
-      "effect": "+{%_VIP_Library_Membership",
+      "effect": "+{%_VIP_Library_PTS",
       "description": "Shhh_stop_saying_they're_sweet,_you're_gonna_get_me_in_trouble!",
       "stat": "VIP"
     },
@@ -188821,7 +189467,7 @@
       "cookReq": 12500,
       "rawName": "CookingMB19",
       "baseStat": 10,
-      "effect": "+{%_New_Recipe_Cooking_Speed",
+      "effect": "+{%_Recipe_Cooking_Spd",
       "description": "...oh,_you_said_'Can_of_Pea's._You_know,_that_does_make_a_lot_more_sense.",
       "stat": "Rcook"
     },
@@ -188830,7 +189476,7 @@
       "cookReq": 20000,
       "rawName": "CookingMB20",
       "baseStat": 1,
-      "effect": "+{%_Points_earned_in_Tower_Defence",
+      "effect": "+{%_PTS_in_Tower_Defence",
       "description": "Ain't_got_no_joke_for_this_one,_it's_existence_is_enough_of_a_joke.",
       "stat": "TDpts"
     },
@@ -188857,7 +189503,7 @@
       "cookReq": 75000,
       "rawName": "CookingMB23",
       "baseStat": 5,
-      "effect": "+{%_Mob_Breedability_Speed",
+      "effect": "+{%_Mob_Breedability_Rate",
       "description": "Idk_what_you_Zoomers_are_up_to_with_those_eggplant_emojis,_but_I_don't_like_it...",
       "stat": "Breed"
     },
@@ -188875,7 +189521,7 @@
       "cookReq": 200000,
       "rawName": "CookingMB25",
       "baseStat": 2,
-      "effect": "+{Px_Line_Width_in_Lab_Mainframe",
+      "effect": "+{Px_Line_Width_in_Lab",
       "description": "It's_not_really_wild_anymore_is_it,_it_looks_kinda_dead_and_roasted.",
       "stat": "PxLine"
     },
@@ -188884,7 +189530,7 @@
       "cookReq": 300000,
       "rawName": "CookingMB26",
       "baseStat": 15,
-      "effect": "+{%_New_Mob_Breeding_Odds",
+      "effect": "+{%_New_Mob_Breed_Odds",
       "description": "Mmmmm..._doooooooonut...",
       "stat": "Npet"
     },
@@ -188911,7 +189557,7 @@
       "cookReq": 1000000,
       "rawName": "CookingMB29",
       "baseStat": 6,
-      "effect": "+{%_Lower_Kitchen_Upgrade_costs",
+      "effect": "+{%_Lower_Kitchen_costs",
       "description": "This_must_have_been_in_the_room_when_Kurt_said_it_smelled_like_'teen_spirit'...",
       "stat": "KitchC"
     },
@@ -188920,7 +189566,7 @@
       "cookReq": 1500000,
       "rawName": "CookingMB30",
       "baseStat": 3,
-      "effect": "+{%_VIP_Library_Membership",
+      "effect": "+{%_VIP_Library_PTS",
       "description": "The_true_arch-nemesis_of_rappers_and_poets_alike.",
       "stat": "VIP"
     },
@@ -188934,11 +189580,11 @@
       "stat": "Cash"
     },
     {
-      "name": "Chocolate_Truffle",
+      "name": "Chocala_Truffle",
       "cookReq": 5000000,
       "rawName": "CookingMB32",
       "baseStat": 25,
-      "effect": "+{%_New_Mob_Breeding_Odds",
+      "effect": "+{%_New_Mob_Breed_Odds",
       "description": "I_mean_it's_got_a_bite_taken_out_of_it,_pretty_gross.",
       "stat": "Npet"
     },
@@ -188956,7 +189602,7 @@
       "cookReq": 12000000,
       "rawName": "CookingMB34",
       "baseStat": 4,
-      "effect": "+{%_Faster_Library_checkout_Speed",
+      "effect": "+{%_Library_Checkout_Spd",
       "description": "It_reads:_'Salvation_lies_not_within_enjoying_video_games,_but_from_gitting_gud_at_them'",
       "stat": "Lib"
     },
@@ -189010,7 +189656,7 @@
       "cookReq": 200000000,
       "rawName": "CookingMB40",
       "baseStat": 1,
-      "effect": "+{%_Line_Width_in_Lab_Mainframe",
+      "effect": "+{%_Line_Width_in_Lab",
       "description": "The_younger_sibling_of_the_Loch_Ness_Monster._He's_real,_but_no_one_really_cares.",
       "stat": "LinePct"
     },
@@ -189046,7 +189692,7 @@
       "cookReq": 900000000,
       "rawName": "CookingMB44",
       "baseStat": 7,
-      "effect": "+{%_VIP_Library_Membership",
+      "effect": "+{%_VIP_Library_PTS",
       "description": "For_something_called_a_'sushi_roll',_it_isn't_moving_around_very_much.",
       "stat": "VIP"
     },
@@ -189055,8 +189701,8 @@
       "cookReq": 1250000000,
       "rawName": "CookingMB45",
       "baseStat": 4,
-      "effect": "+{_Max_LVs_for_TP_Pete_Star_Talent",
-      "description": "Straight_from_the_island_of_Karjama!_Or_something_like_that,_starts_with_a_K_at_least.",
+      "effect": "+{_Max_LVs_for_TPPST",
+      "description": "TPPST_stands_for_TP_Pete_Star_Talent,_the_one_that_boosts_stamps!",
       "stat": "TPpete"
     },
     {
@@ -189064,8 +189710,8 @@
       "cookReq": 1700000000,
       "rawName": "CookingMB46",
       "baseStat": 2,
-      "effect": "+{%_Liquid_Cap_for_liquids_1_and_2",
-      "description": "According_to_the_author_of_the_Iliad,_its_value_should_peak_right_around_January...",
+      "effect": "+{%_Liquid_Cap",
+      "description": "Specifically_for_Liquid_Types_1_and_2_in_the_Alchemy_skill!",
       "stat": "Liquid12"
     },
     {
@@ -189087,11 +189733,11 @@
       "stat": "TotDmg"
     },
     {
-      "name": "Head_Chef_Geustloaf",
+      "name": "Chef_Geustloaf",
       "cookReq": 10000000000,
       "rawName": "CookingMB49",
       "baseStat": 4,
-      "effect": "+{%_Bits_Gained_in_Gaming",
+      "effect": "+{%_Bits_Gain_in_Gaming",
       "description": "How_DARE_you_question_the_honorable_Chef_Geustloaf's_cooking_abilities!",
       "stat": "GamingBits"
     },
@@ -189100,8 +189746,8 @@
       "cookReq": 14000000000,
       "rawName": "CookingMB50",
       "baseStat": 2,
-      "effect": "+{%_Liquid_Cap_for_liquids_3_and_4",
-      "description": "Is_there_a_reason_these_are_so_hard_to_cook?_Aren't_you_just_like..._cutting_it_in_half?",
+      "effect": "+{%_Liquid_Cap",
+      "description": "Specifically_for_Liquid_Types_3_and_4_in_the_Alchemy_skill!",
       "stat": "Liquid34"
     },
     {
@@ -189118,7 +189764,7 @@
       "cookReq": 32000000000,
       "rawName": "CookingMB52",
       "baseStat": 30,
-      "effect": "+{%_Meal_Cooking_Speed",
+      "effect": "+{%_Meal_Cooking_Spd",
       "description": "So_like..._why_did_the_yellow_circle_want_these_again?_This_bonus_is_pretty_bad.",
       "stat": "Mcook"
     },
@@ -189127,7 +189773,7 @@
       "cookReq": 52000000000,
       "rawName": "CookingMB53",
       "baseStat": 8,
-      "effect": "+{%_Lower_Kitchen_Upgrade_costs",
+      "effect": "+{%_Lower_Kitchen_costs",
       "description": "Hey_cmon_man_how_should_I_know_how_to_spell_Ratatouille,_there's_no_France_remember?",
       "stat": "KitchC"
     },
@@ -189154,7 +189800,7 @@
       "cookReq": 225000000000,
       "rawName": "CookingMB56",
       "baseStat": 6,
-      "effect": "+{%_Bits_Gained_in_Gaming",
+      "effect": "+{%_Bits_Gain_in_Gaming",
       "description": "Plump_innit!_Would_go_great_with_some_momey_milk!",
       "stat": "GamingBits"
     },
@@ -189172,8 +189818,8 @@
       "cookReq": 700000000000,
       "rawName": "CookingMB58",
       "baseStat": 5,
-      "effect": "+{%_All_Summoning_Essence_Gain",
-      "description": "This_frosting_better_be_made_of_superglue_or_I'm_suing_for_false_advertising.",
+      "effect": "+{%_Essence_Gain",
+      "description": "You_know,_Summoning_Essence,_the_currency_for_the_Summoning_Skill_in_World_6_bro!",
       "stat": "zSumEss"
     },
     {
@@ -189186,12 +189832,12 @@
       "stat": "zSneakExp"
     },
     {
-      "name": "Misterloin_Steak",
+      "name": "MrLoin_Steak",
       "cookReq": 1700000000000,
       "rawName": "CookingMB60",
       "baseStat": 6,
-      "effect": "+{%_Jade_gain_from_Sneaking",
-      "description": "Make_sure_to_paint_on_the_grill_marks_to_really_give_it_that_extra_taste!",
+      "effect": "+{%_Jade_Gain",
+      "description": "Jade_is_the_currency_for_the_Sneaking_Skill_in_World_6_my_man!",
       "stat": "zJade"
     },
     {
@@ -189204,20 +189850,20 @@
       "stat": "zSummonExp"
     },
     {
-      "name": "Bill_Jack_Pepper",
+      "name": "Bill_Jack_Pep",
       "cookReq": 35000000000000,
       "rawName": "CookingMB62",
       "baseStat": 5,
-      "effect": "+{%_Crop_Evolution_Chance",
-      "description": "It's_Him.",
+      "effect": "+{%_Crop_Evo_Chance",
+      "description": "For_farming!_Crop_Evo_chance_is_for_the_Farming_skill_in_World_6,_not_gaming!",
       "stat": "zCropEvo"
     },
     {
-      "name": "Burned_Marshmallow",
+      "name": "Burned_Mello",
       "cookReq": 90000000000000,
       "rawName": "CookingMB63",
       "baseStat": 40,
-      "effect": "+{%_Meal_Cooking_Speed",
+      "effect": "+{%_Meal_Cooking_Spd",
       "description": "IMPORTANT,_this_bonus_DOUBLES_at_Farming_Lv_50._Triples_at_Farming_Lv_100,_and_so_on!",
       "stat": "zMealFarm"
     },
@@ -189226,8 +189872,8 @@
       "cookReq": 800000000000000,
       "rawName": "CookingMB64",
       "baseStat": 2,
-      "effect": "+{%_All_Golden_Food_bonus",
-      "description": "Don't_disrespect_the_ring._All_hail_the_ring.",
+      "effect": "+{%_Gold_Food_bonus",
+      "description": "This_boosts_ALL_Golden_food,_insane!",
       "stat": "zGoldFood"
     },
     {
@@ -189244,7 +189890,7 @@
       "cookReq": 50000000000000000,
       "rawName": "CookingMB66",
       "baseStat": 9,
-      "effect": "+{%_Crop_Evolution_Chance",
+      "effect": "+{%_Crop_Evo_Chance",
       "description": "It's_the_greatest_meal_ever!_Bonus_DOUBLES_at_Summoning_Lv_50,_Triples_at_100,_etc",
       "stat": "zCropEvoSumm"
     },
@@ -189262,7 +189908,7 @@
       "cookReq": 5e+48,
       "rawName": "CookingMB68",
       "baseStat": 0.03,
-      "effect": "+{%_cheaper_Spelunking_Upgrades",
+      "effect": "+{%_lower_Spelunk_costs",
       "description": "IMPORTANT,_this_bonus_DOUBLES_once_your_first_character_reaches_Lv_50_Spelunking!",
       "stat": "SplkUpg"
     },
@@ -189271,7 +189917,7 @@
       "cookReq": 8.8888e+53,
       "rawName": "CookingMB69",
       "baseStat": 0.3,
-      "effect": "+{%_Total_Spelunking_POW",
+      "effect": "+{%_Spelunking_POW",
       "description": "They're_pipin'_hot,_fresh_outta_the_oven..._wait,_what_oven?",
       "stat": "SplkPOW"
     },
@@ -189280,7 +189926,7 @@
       "cookReq": 1e+59,
       "rawName": "CookingMB70",
       "baseStat": 0.2,
-      "effect": "+{%_Amber_gain_from_Spelunking",
+      "effect": "+{%_Amber_from_Spelunking",
       "description": "You're_asking_me_will_my_love_grow?_Pistachioooooh_ohhh,_Pishaaaaaaachio!!!",
       "stat": "SplkAmb"
     },
@@ -189289,7 +189935,7 @@
       "cookReq": 1e+61,
       "rawName": "CookingMB71",
       "baseStat": 0.01,
-      "effect": "+{%_Polymer_Refinery_Speed",
+      "effect": "+{%_Polymer_Refinery_Spd",
       "description": "Hey_look!_It's..._wait,_where's_this_from?_I_know_I_recognize_it_from_somewhere...",
       "stat": "PolyRefSpd"
     },
@@ -189298,17 +189944,17 @@
       "cookReq": 1e+64,
       "rawName": "CookingMB72",
       "baseStat": 0.01,
-      "effect": "+{%_Research_EXP_gains",
+      "effect": "+{%_Research_EXP",
       "description": "People_always_say_'That's_Not_Yo_chip'_for_some_reason..._This_is_YES_yo_chip!",
       "stat": "ResearchXP"
     },
     {
-      "name": "2nd_Wedding_Cake",
+      "name": "Divorce_Cake",
       "cookReq": 1e+66,
       "rawName": "CookingMB73",
       "baseStat": 0.02,
-      "effect": "+{%_Minehead_Mine_Currency_gain",
-      "description": "Congrats_on_getting_married_again!_I_hope_it_lasts_this_time..._I_don't_have_a_3rd_cake!",
+      "effect": "+{%_Mine_Currency_gain",
+      "description": "Mine_Currency_is_used_in_Mr._Minehead's_Depth_Charge_shop_in_World_7!",
       "stat": "MineCurr"
     }
   ],
@@ -211336,7 +211982,7 @@
       "ID": 0,
       "Type": "MONSTER_DROP",
       "lvReqToCraft": 15,
-      "desc_line1": "The_penultimate_emblem_given_to_legendary_pirates,_signifying_their_leadership_of_the_pirate_crew.",
+      "desc_line1": "The_ultimate_emblem_given_to_legendary_pirates,_signifying_their_leadership_of_the_pirate_crew.",
       "desc_line2": "Filler",
       "desc_line3": "Filler",
       "desc_line4": "Filler",
@@ -211345,6 +211991,24 @@
       "desc_line7": "Filler",
       "desc_line8": "Filler",
       "rawName": "w7B12",
+      "itemType": "Quest"
+    },
+    {
+      "displayName": "Pirate_Ship_Figurine",
+      "sellPrice": 150000,
+      "typeGen": "bCraft",
+      "ID": 0,
+      "Type": "MONSTER_DROP",
+      "lvReqToCraft": 15,
+      "desc_line1": "Wait,_are_these_guys_captains_of_the_sunken_ship_or_THIS_ship??",
+      "desc_line2": "Filler",
+      "desc_line3": "Filler",
+      "desc_line4": "Filler",
+      "desc_line5": "Filler",
+      "desc_line6": "Filler",
+      "desc_line7": "Filler",
+      "desc_line8": "Filler",
+      "rawName": "w7B12b",
       "itemType": "Quest"
     },
     {
@@ -234705,6 +235369,81 @@
       "itemType": "Equip"
     },
     {
+      "displayName": "Bronze_Tournament_Border_Nametag",
+      "sellPrice": 1,
+      "typeGen": "aNametag",
+      "ID": 38,
+      "Type": "REPLICA_NAMETAG",
+      "lvReqToCraft": 55,
+      "lvReqToEquip": 1,
+      "Class": "ALL",
+      "Speed": 0,
+      "Reach": 0,
+      "Weapon_Power": 0,
+      "STR": 0,
+      "AGI": 0,
+      "WIS": 0,
+      "LUK": 0,
+      "Defence": 0,
+      "UQ1txt": 0,
+      "UQ1val": 0,
+      "UQ2txt": 0,
+      "UQ2val": 0,
+      "Upgrade_Slots_Left": 0,
+      "rawName": "EquipmentNametagReplica38",
+      "itemType": "Equip"
+    },
+    {
+      "displayName": "Silver_Tournament_Border_Nametag",
+      "sellPrice": 1,
+      "typeGen": "aNametag",
+      "ID": 39,
+      "Type": "REPLICA_NAMETAG",
+      "lvReqToCraft": 55,
+      "lvReqToEquip": 1,
+      "Class": "ALL",
+      "Speed": 0,
+      "Reach": 0,
+      "Weapon_Power": 0,
+      "STR": 0,
+      "AGI": 0,
+      "WIS": 0,
+      "LUK": 0,
+      "Defence": 0,
+      "UQ1txt": 0,
+      "UQ1val": 0,
+      "UQ2txt": 0,
+      "UQ2val": 0,
+      "Upgrade_Slots_Left": 0,
+      "rawName": "EquipmentNametagReplica39",
+      "itemType": "Equip"
+    },
+    {
+      "displayName": "Gold_Tournament_Border_Nametag",
+      "sellPrice": 1,
+      "typeGen": "aNametag",
+      "ID": 40,
+      "Type": "REPLICA_NAMETAG",
+      "lvReqToCraft": 55,
+      "lvReqToEquip": 1,
+      "Class": "ALL",
+      "Speed": 0,
+      "Reach": 0,
+      "Weapon_Power": 0,
+      "STR": 0,
+      "AGI": 0,
+      "WIS": 0,
+      "LUK": 0,
+      "Defence": 0,
+      "UQ1txt": 0,
+      "UQ1val": 0,
+      "UQ2txt": 0,
+      "UQ2val": 0,
+      "Upgrade_Slots_Left": 0,
+      "rawName": "EquipmentNametagReplica40",
+      "itemType": "Equip"
+    },
+    {
       "displayName": "Smitty's_Bubble_Blowing_Hat",
       "sellPrice": 1,
       "typeGen": "aHelmetMTX",
@@ -243395,9 +244134,9 @@
       "displayName": "Dreadnaught_Captain",
       "cardIndex": "J24",
       "visualIndex": 23,
-      "effect": "+{%_Drop_Rate_Multi",
-      "bonus": 1,
-      "perTier": 100000000,
+      "effect": "+{%_Spelunk_Amber_(Passive)",
+      "bonus": 10,
+      "perTier": 40000000,
       "category": "Shimmerfin_Deep"
     },
     "Crystal6": {
@@ -251481,15 +252220,15 @@
       "MovingFrame": 10,
       "DeathFrame": 21,
       "RespawnTime": 45,
-      "MonsterHPTotal": 1e+37,
+      "MonsterHPTotal": 7.5e+32,
       "Type": "Monster",
       "SpecialType": "_",
-      "ExpGiven": 300000000000,
+      "ExpGiven": 15000000000000,
       "ExpType": 0,
-      "Defence": 2500000,
+      "Defence": 1000000000,
       "MoveSPEED": 4,
       "Damages": [
-        600000,
+        600000000,
         1
       ],
       "mapIndex": 326,
@@ -253699,6 +254438,33 @@
       "spriteAcross": 7,
       "spriteDown": 7,
       "spriteNumFrames": 43
+    },
+    "fm_frog": {
+      "Name": "Abacus_Frog",
+      "AFKtype": "FIGHTING",
+      "MonsterFace": 23,
+      "MonsterOffsetX": 38,
+      "MonsterOffsetY": 47,
+      "HeightOfMonster": 60,
+      "MonsterMoving": 1,
+      "MovingFrame": 9,
+      "DeathFrame": 18,
+      "RespawnTime": 40,
+      "MonsterHPTotal": 14000,
+      "Type": "Monster",
+      "SpecialType": "_",
+      "ExpGiven": 420,
+      "ExpType": 0,
+      "Defence": 1,
+      "MoveSPEED": 4,
+      "Damages": [
+        2,
+        1
+      ],
+      "sprite": "sprite-2-241",
+      "spriteAcross": 6,
+      "spriteDown": 5,
+      "spriteNumFrames": 27
     },
     "T1a": {
       "Name": "Bronze_Champion_Ram",
@@ -279340,7 +280106,7 @@
       "ID": 0,
       "Type": "MONSTER_DROP",
       "lvReqToCraft": 15,
-      "desc_line1": "The_penultimate_emblem_given_to_legendary_pirates,_signifying_their_leadership_of_the_pirate_crew.",
+      "desc_line1": "The_ultimate_emblem_given_to_legendary_pirates,_signifying_their_leadership_of_the_pirate_crew.",
       "desc_line2": "Filler",
       "desc_line3": "Filler",
       "desc_line4": "Filler",
@@ -279350,6 +280116,24 @@
       "desc_line8": "Filler",
       "itemType": "Quest",
       "rawName": "w7B12"
+    },
+    "w7B12b": {
+      "displayName": "Pirate_Ship_Figurine",
+      "sellPrice": 150000,
+      "typeGen": "bCraft",
+      "ID": 0,
+      "Type": "MONSTER_DROP",
+      "lvReqToCraft": 15,
+      "desc_line1": "Wait,_are_these_guys_captains_of_the_sunken_ship_or_THIS_ship??",
+      "desc_line2": "Filler",
+      "desc_line3": "Filler",
+      "desc_line4": "Filler",
+      "desc_line5": "Filler",
+      "desc_line6": "Filler",
+      "desc_line7": "Filler",
+      "desc_line8": "Filler",
+      "itemType": "Quest",
+      "rawName": "w7B12b"
     },
     "GemP35": {
       "displayName": "Hyper_Obol_Stack_Square_Edition",
@@ -302708,6 +303492,81 @@
       "itemType": "Equip",
       "rawName": "EquipmentNametagReplica37"
     },
+    "EquipmentNametagReplica38": {
+      "displayName": "Bronze_Tournament_Border_Nametag",
+      "sellPrice": 1,
+      "typeGen": "aNametag",
+      "ID": 38,
+      "Type": "REPLICA_NAMETAG",
+      "lvReqToCraft": 55,
+      "lvReqToEquip": 1,
+      "Class": "ALL",
+      "Speed": 0,
+      "Reach": 0,
+      "Weapon_Power": 0,
+      "STR": 0,
+      "AGI": 0,
+      "WIS": 0,
+      "LUK": 0,
+      "Defence": 0,
+      "UQ1txt": 0,
+      "UQ1val": 0,
+      "UQ2txt": 0,
+      "UQ2val": 0,
+      "Upgrade_Slots_Left": 0,
+      "itemType": "Equip",
+      "rawName": "EquipmentNametagReplica38"
+    },
+    "EquipmentNametagReplica39": {
+      "displayName": "Silver_Tournament_Border_Nametag",
+      "sellPrice": 1,
+      "typeGen": "aNametag",
+      "ID": 39,
+      "Type": "REPLICA_NAMETAG",
+      "lvReqToCraft": 55,
+      "lvReqToEquip": 1,
+      "Class": "ALL",
+      "Speed": 0,
+      "Reach": 0,
+      "Weapon_Power": 0,
+      "STR": 0,
+      "AGI": 0,
+      "WIS": 0,
+      "LUK": 0,
+      "Defence": 0,
+      "UQ1txt": 0,
+      "UQ1val": 0,
+      "UQ2txt": 0,
+      "UQ2val": 0,
+      "Upgrade_Slots_Left": 0,
+      "itemType": "Equip",
+      "rawName": "EquipmentNametagReplica39"
+    },
+    "EquipmentNametagReplica40": {
+      "displayName": "Gold_Tournament_Border_Nametag",
+      "sellPrice": 1,
+      "typeGen": "aNametag",
+      "ID": 40,
+      "Type": "REPLICA_NAMETAG",
+      "lvReqToCraft": 55,
+      "lvReqToEquip": 1,
+      "Class": "ALL",
+      "Speed": 0,
+      "Reach": 0,
+      "Weapon_Power": 0,
+      "STR": 0,
+      "AGI": 0,
+      "WIS": 0,
+      "LUK": 0,
+      "Defence": 0,
+      "UQ1txt": 0,
+      "UQ1val": 0,
+      "UQ2txt": 0,
+      "UQ2val": 0,
+      "Upgrade_Slots_Left": 0,
+      "itemType": "Equip",
+      "rawName": "EquipmentNametagReplica40"
+    },
     "EquipmentHats31": {
       "displayName": "Smitty's_Bubble_Blowing_Hat",
       "sellPrice": 1,
@@ -318424,10 +319283,13 @@
       "message": "Happy_birthday!_5,555_gems_for_a_special_5th_anniversary_offer,_not_to_mention_that_sweet_Wicker_Spirit_pet!_Tap_to_take_a_look!"
     },
     "ban_b": {
-      "message": "Happy_birthday!_5,555_gems_for_a_special_5th_anniversary_offer,_not_to_mention_that_sweet_Wicker_Spirit_pet!_Tap_to_take_a_look!"
+      "message": "Smokey_Boi"
     },
     "ban_c": {
-      "message": "Happy_birthday!_5,555_gems_for_a_special_5th_anniversary_offer,_not_to_mention_that_sweet_Wicker_Spirit_pet!_Tap_to_take_a_look!"
+      "message": "Beeg_egggg_buy_buy_buy_yees"
+    },
+    "ban_d": {
+      "message": "BOO!_Spooked_ya!_This_pack_marks_the_first_time_you_could_collect_all_5_unique_Rift_Monsters_as_pets..._Slug,_Jocund,_Hivemind,_Stalker,_and_now_SPOOKER!_Tap_to_take_a_look!"
     }
   },
   "shops": {
@@ -320094,11 +320956,11 @@
       "maxLevel": 20
     },
     {
-      "name": "Froge",
-      "rawName": "Critter1",
+      "name": "Redox_Salts",
+      "rawName": "Refinery1",
       "desc": "+4_Obol_storage_slots_per_upgrade!_Circle,_Square,_Hexagon,_then_Sparkle,_in_that_order.",
-      "baseCost": 100,
-      "increment": 1.92,
+      "baseCost": 10,
+      "increment": 2.3,
       "baseBonus": 1,
       "maxLevel": 8
     },
@@ -320112,11 +320974,11 @@
       "maxLevel": 100
     },
     {
-      "name": "Dune_Soul",
-      "rawName": "Soul2",
+      "name": "Explosive_Salts",
+      "rawName": "Refinery2",
       "desc": "+{%_Class_EXP_and_Skill_EXP._Not_really_sure_what_those_blobulytes_do_with_these_souls...",
-      "baseCost": 250,
-      "increment": 1.079,
+      "baseCost": 10,
+      "increment": 1.2,
       "baseBonus": 0.2,
       "maxLevel": 100
     },
@@ -320130,10 +320992,10 @@
       "maxLevel": 10
     },
     {
-      "name": "Mousey",
-      "rawName": "Critter4",
+      "name": "Spontaneity_Salts",
+      "rawName": "Refinery3",
       "desc": "+{%_Liquid_rate_and_Capacity_for_all_liquids_in_Alchemy.",
-      "baseCost": 100,
+      "baseCost": 10,
       "increment": 1.122,
       "baseBonus": 1,
       "maxLevel": 100
@@ -320143,16 +321005,16 @@
       "rawName": "Refinery4",
       "desc": "+{%_Points_Earned_during_Worship_Tower_Defense_from_killing_monsters.",
       "baseCost": 5,
-      "increment": 2,
+      "increment": 2.1,
       "baseBonus": 5,
       "maxLevel": 10
     },
     {
-      "name": "Frigid_Soul",
-      "rawName": "Soul4",
+      "name": "Dioxide_Synthesis",
+      "rawName": "Refinery4",
       "desc": "+{%_Movement_Speed._Doesn't_work_if_you're_above_170%_move_speed_already.",
-      "baseCost": 100,
-      "increment": 1.15,
+      "baseCost": 10,
+      "increment": 1.4,
       "baseBonus": 0.4,
       "maxLevel": 25
     },
@@ -320166,13 +321028,22 @@
       "maxLevel": 10
     },
     {
-      "name": "Pingy",
-      "rawName": "Critter6",
+      "name": "Purple_Salt",
+      "rawName": "Refinery5",
       "desc": "+{%_Total_Damage_dealt.",
-      "baseCost": 250,
+      "baseCost": 10,
       "increment": 1.04,
       "baseBonus": 0.1,
       "maxLevel": 250
+    },
+    {
+      "name": "Nullo_Salt",
+      "rawName": "Refinery6",
+      "desc": "+{%_Cooking_Mastery_EXP_gain,_a_feature_unlocked_via_Rift_61_deep_in_World_4.",
+      "baseCost": 100,
+      "increment": 1.22,
+      "baseBonus": 1,
+      "maxLevel": 100
     }
   ],
   "vials": {
@@ -322263,6 +323134,56 @@
         {
           "rawName": "w7A12",
           "name": "Guardian_Mace"
+        },
+        {
+          "rawName": "Liquid4",
+          "name": "Liquid4"
+        },
+        {
+          "rawName": "Blank"
+        },
+        {
+          "rawName": "Blank"
+        }
+      ]
+    },
+    "84": {
+      "name": "SHIPINABOTTLE",
+      "mainItem": "w7B12b",
+      "desc": "+{%_Drop_Rate_MULTIPLIER!_It's_golden_and_pirate_themed,_of_course_it_gives_DR!",
+      "func": "add",
+      "stat": "7drMulto",
+      "x1": 0.1,
+      "x2": 0,
+      "itemReq": [
+        {
+          "rawName": "w7B12b",
+          "name": "Pirate_Ship_Figurine"
+        },
+        {
+          "rawName": "Liquid4",
+          "name": "Liquid4"
+        },
+        {
+          "rawName": "Blank"
+        },
+        {
+          "rawName": "Blank"
+        }
+      ]
+    },
+    "85": {
+      "name": "CANTEEN_READ",
+      "mainItem": "Spelunking5",
+      "desc": "+{%_extra_Cooking_Mastery_EXP_gain!",
+      "func": "add",
+      "stat": "7cookmastery",
+      "x1": 0.2,
+      "x2": 0,
+      "itemReq": [
+        {
+          "rawName": "Spelunking5",
+          "name": "Chapter_Six_'Kelp_Primeval'"
         },
         {
           "rawName": "Liquid4",
@@ -344761,7 +345682,7 @@
     "323": "fillername",
     "324": "fillername",
     "325": "Pirate_Mess_Hall",
-    "326": "fillername"
+    "326": "Dreadnaught_Chamber"
   },
   "mapPortals": {
     "0": [
@@ -345902,7 +346823,7 @@
           "amount": 3
         }
       ],
-      "maxLevel": 10,
+      "maxLevel": 11,
       "bonusInc": 1,
       "costInc": [
         1,
@@ -345953,7 +346874,7 @@
           "amount": 20
         }
       ],
-      "maxLevel": 10,
+      "maxLevel": 11,
       "bonusInc": 2,
       "costInc": [
         1,
@@ -355956,6 +356877,13 @@
       "x2": 100,
       "func": "decay",
       "bonusName": "+{%_Fill_Spd"
+    },
+    {
+      "effect": "+{%_Cook_Mastery_EXP",
+      "x1": 100,
+      "x2": 100,
+      "func": "decay",
+      "bonusName": "+{%_EXP"
     }
   ],
   "prayers": [
@@ -358102,8 +359030,8 @@
       "186"
     ],
     [
-      "NEW_CAVERNS_v1.14",
-      "NEW_UPDATE_PATCH_NOTES_@_*The_Hole_in_World_5_just_got_bigger,_with_TWO_new_caverns!_@_*Remember,_your_EXPLORER_villager_unlocks_new_caverns_by_leveling_up!_@_*The_1st_new_Cavern,_THE_FOUNTAIN,_will_generate_coins_every_time_it_fills,_it's_your_job_to_spend_them!_Click_on_the_fountain_to_see_all_the_upgrades_you_can_buy!_@_*There's_a_TON_of_new_bonuses_to_help_with_the_Fountain!_New_bonuses_for_the_Conjuro_Villager,_new_Schematics_for_the_Builder_Villager,_new_Studies_for_the_Lore_Villager,_and_even_a_new_upgrade_for_the_Measurement_villager!_@_*New_bonus_reward_type_for_The_Bell!_Consider_cleaning_yours_to_start_from_scratch_so_you_can_ring_for_it!_@_*Fixed_the_Bravery_Monument_issue_that_affected_certain_players._@_*No_new_Pack_or_Pet_to_buy_this_week._Instead,_I_give_you_this_number:_8_@_*BIG_reveal_at_10,_I've_been_working_on_this_since_August_2025._This_is_separate_from_new_IdleOn_content,_and_something_you'll_want_MORE_of_once_you_see_it!_I_can_feel_it,_this_one's_gonna_be_a_swish!",
+      "Cooking_MASTERY_v1.17",
+      "*Unlocked_at_Rift_61,_Cooking_Mastery_(CM)_lets_you_RANK_UP_to_boost_your_meals!_@_*You_gain_CM_EXP_over_time,_and_when_you_earn_enough,_you'll_get_+1_Rank._@_*Each_Rank_gives_you_1_Purple_AND_Yellow_CM_points._Spend_purple_to_boost_CM_EXP_gain,_and_spend_yellow_points_to_boost_specific_Meal_bonuses!_@_*New_Ribbon_Max_Rank._Friendship_ended_with_Rank_20,_now_Rank_25_is_the_best_ribbon!_@_*New_Research_Grid_-_K3_@_*New_Vial_-_Spelunking_Chapter_6_pages._@_*New_Arcade_Bonus_type,_but_only_if_the_Twitch_Viewers_vote_for_it..._@_*New_Salt_Lick_upgrade._I'm_moving_DIFFERENT,_making_moves_here_guys!_@_*New_Zuperbit_upgrade_in_Gaming._@___@___@_*Shoutout_to_my_Mill_Escapers,_yall_know_who_you_are!!_Good_luck_in_the_new_NG+_mode!",
       "*Le Monde 6 est arrivé, avec tout ce que vous pourriez souhaiter ! De nouveaux monstres, de nouvelles compétences, de nouvelles cartes, de nouveaux tampons, de nouvelles bulles, de nouvelles fioles, de nouvelles statues, de nouveaux équipements, tellement de nouveautés ! @ *Vous pouvez découvrir le Monde 6 vous-même, à la place, ces notes de mise à jour concernent tous les changements de cette mise à jour non liés au Monde 6. @ *Nouvel affichage des pièces ajouté ! Collectez 100 pièces Godshard pour voir ce que je veux dire ! @ *Le succès Trial by Time peut désormais être complété à n'importe quelle vitesse de déplacement. @ *Mise à l'échelle du bonus ajustée sur la 6ème bulle de chaque couleur. C'est un buff pour toute personne en dessous du niveau de bulle 300, sinon c'est un nerf. @ * Correction du problème où les archers glissaient lorsqu'ils essayaient de combattre des foules protégées. @ *Les attaques au canon de Siege Breaker apparaissent désormais derrière lui.",
       "*Welt 6 ist da, mit allem, was Sie sich nur wünschen können! Neue Monster, neue Fähigkeiten, neue Karten, neue Stempel, neue Blasen, neue Fläschchen, neue Statuen, neue Ausrüstung, so viel neues Zeug! @ *Sie können Welt 6 selbst entdecken. Stattdessen gelten diese Patchnotizen für alle Änderungen in diesem Update, die nicht mit Welt 6 zusammenhängen. @ *Neue Münzanzeige hinzugefügt! Sammle 100 Godshard-Münzen, um zu sehen, was ich meine! @ *Die Errungenschaft „Prüfung durch Zeit“ kann jetzt bei jeder Bewegungsgeschwindigkeit abgeschlossen werden. @ *Bonusskalierung für die 6. Blase jeder Farbe angepasst. Es ist ein Buff für alle unter Bubble Lv 300, andernfalls ist es ein Nerf. @ *Das Problem wurde behoben, bei dem Bogenschützen herumrutschten, wenn sie versuchten, gegen abgeschirmte Mobs zu kämpfen. @ *Die Kanonenangriffe von Belagerungsbrecher erscheinen jetzt hinter ihm.",
       "*원하는 모든 것을 갖춘 월드 6이 도착했습니다! 새로운 몬스터, 새로운 기술, 새로운 지도, 새로운 우표, 새로운 거품, 새로운 약병, 새로운 조각상, 새로운 장비, 너무나 많은 새로운 것들! @ *월드 6를 직접 발견하실 수 있습니다. 대신 이 패치 노트는 월드 6과 관련되지 않은 이번 업데이트의 모든 변경 사항에 대한 것입니다. @ *새로운 코인 표시가 추가되었습니다! 100개의 갓샤드 동전을 모아 무슨 뜻인지 알아보세요! @ *이제 모든 이동 속도에서 시간별 시험 업적을 완료할 수 있습니다. @ *각 색상의 6번째 버블에 대한 보너스 스케일링을 조정했습니다. 버블 Lv 300 미만인 사람에게는 버프이고, 그렇지 않으면 너프입니다. @ *방어막이 있는 몹과 싸울 때 궁수가 미끄러지는 문제를 수정했습니다. @ *Siege Breaker의 대포 공격이 이제 그의 뒤에서 생성됩니다.",
@@ -359558,614 +360486,22 @@
       "120",
       "120",
       "120"
-    ]
-  ],
-  "holeFountUpg": [
-    [
-      {
-        "name": "Yellow_Water",
-        "prereqIndex": 6,
-        "position": "85,169",
-        "currencyType": 2,
-        "baseCost": 100000,
-        "costMulti": 1.1,
-        "bonusPerLevel": 1,
-        "description": "Unlock_Yellow_Water._Tap_the_Change_Water_button_to_toggle_which_water_the_Fountain_is_using._Also,_}x_Currency_Value"
-      },
-      {
-        "name": "Currency_Booster_I",
-        "prereqIndex": 4,
-        "position": "171,145",
-        "currencyType": 2,
-        "baseCost": 1500,
-        "costMulti": 1.2,
-        "bonusPerLevel": 10,
-        "description": "All_currencies_are_worth_+{%_more._@_Currencies_are_ALL_money_types_here_at_the_Fountain,_from_coins_to_dollars_and_more!"
-      },
-      {
-        "name": "Penny_Lane",
-        "prereqIndex": 9,
-        "position": "390,86",
-        "currencyType": 0,
-        "baseCost": 1,
-        "costMulti": 1.06,
-        "bonusPerLevel": 1,
-        "description": "Increases_the_value_of_Bronze_Coins._@_All_bronze_coins_you_find_have_a_base_value_of_$_@___@_Your_total_Currency_multi:_@_^_@_(Affects_value_of_all_Fountain_money)"
-      },
-      {
-        "name": "Nickel_and_Diming",
-        "prereqIndex": 12,
-        "position": "301,161",
-        "currencyType": 1,
-        "baseCost": 1,
-        "costMulti": 1.12,
-        "bonusPerLevel": 1,
-        "description": "You_can_now_find_Silver_Coins._@_All_silver_coins_you_find_have_a_base_value_of_$"
-      },
-      {
-        "name": "Dubloon_Desires",
-        "prereqIndex": 8,
-        "position": "229,171",
-        "currencyType": 2,
-        "baseCost": 1,
-        "costMulti": 1.13,
-        "bonusPerLevel": 1,
-        "description": "You_can_now_find_Golden_Coins._@_All_golden_coins_you_find_have_a_base_value_of_$"
-      },
-      {
-        "name": "Stackin'_Silver",
-        "prereqIndex": 3,
-        "position": "326,223",
-        "currencyType": 0,
-        "baseCost": 10,
-        "costMulti": 1.1,
-        "bonusPerLevel": 5,
-        "description": "Silver_coins_are_worth_}x_more."
-      },
-      {
-        "name": "Stackin'_Gold",
-        "prereqIndex": 19,
-        "position": "101,232",
-        "currencyType": 1,
-        "baseCost": 15,
-        "costMulti": 1.1,
-        "bonusPerLevel": 5,
-        "description": "Golden_coins_are_worth_}x_more."
-      },
-      {
-        "name": "Stackin'_Dollars",
-        "prereqIndex": 6,
-        "position": "24,183",
-        "currencyType": 2,
-        "baseCost": 25,
-        "costMulti": 1.1,
-        "bonusPerLevel": 5,
-        "description": "Dollar_Bills_are_worth_}x_more."
-      },
-      {
-        "name": "Money_Back_Guarantee",
-        "prereqIndex": 5,
-        "position": "260,228",
-        "currencyType": 1,
-        "baseCost": 25,
-        "costMulti": 1.15,
-        "bonusPerLevel": 1,
-        "description": "Currency_generated_while_at_maximum_capacity_aren't_wasted,_and_instead_auto_collected_at_$%_of_their_value."
-      },
-      {
-        "name": "Fountain_Filling",
-        "prereqIndex": -1,
-        "position": "457,110",
-        "currencyType": 0,
-        "baseCost": 1,
-        "costMulti": 1.1,
-        "bonusPerLevel": 2,
-        "description": "Every_time_the_fountain_fills_up,_it_creates_a_new_coin._@_This_will_happen_in_$_@___@_From_empty,_it_takes:_@_#_to_fill"
-      },
-      {
-        "name": "Extra_Space",
-        "prereqIndex": 2,
-        "position": "328,63",
-        "currencyType": 0,
-        "baseCost": 5,
-        "costMulti": 20,
-        "bonusPerLevel": 1,
-        "description": "Coins_can_appear_in_$_different_areas_on_the_ground._@_This_means_your_current_max_coin_capacity_is_#_coins"
-      },
-      {
-        "name": "Taller_Stacks",
-        "prereqIndex": 3,
-        "position": "267,104",
-        "currencyType": 1,
-        "baseCost": 25,
-        "costMulti": 4,
-        "bonusPerLevel": 1,
-        "description": "Each_area_can_stack_up_to_$_coins,_this_upgrade_increases_it_by_+{._@_This_means_your_current_max_coin_capacity_is_#_coins"
-      },
-      {
-        "name": "Water_Bender",
-        "prereqIndex": 2,
-        "position": "364,147",
-        "currencyType": 0,
-        "baseCost": 10,
-        "costMulti": 1.3,
-        "bonusPerLevel": 10,
-        "description": "The_fountain_fills_up_$x_faster_while_you_are_actively_standing_in_this_cavern_specifically._@_"
-      },
-      {
-        "name": "Monumental_Boost",
-        "prereqIndex": 18,
-        "position": "698,225",
-        "currencyType": 2,
-        "baseCost": 250,
-        "costMulti": 2.5,
-        "bonusPerLevel": 1,
-        "description": "All_Bravery_Monument_bonuses_are_}x_larger."
-      },
-      {
-        "name": "Cosmological_Boost",
-        "prereqIndex": 9,
-        "position": "520,83",
-        "currencyType": 0,
-        "baseCost": 5,
-        "costMulti": 1.15,
-        "bonusPerLevel": 1,
-        "description": "Cosmo_the_Villager_gains_}x_more_EXP_than_normal."
-      },
-      {
-        "name": "Golden_Bucket_Boost",
-        "prereqIndex": 16,
-        "position": "644,78",
-        "currencyType": 1,
-        "baseCost": 25,
-        "costMulti": 1.1,
-        "bonusPerLevel": 5,
-        "description": "Your_1st_bucket_at_The_Well_cavern_is_golden._Golden_buckets_have_}x_fill_rate."
-      },
-      {
-        "name": "Class_EXP_Boost",
-        "prereqIndex": 14,
-        "position": "581,64",
-        "currencyType": 0,
-        "baseCost": 50,
-        "costMulti": 1.12,
-        "bonusPerLevel": 1,
-        "description": "Boosts_Class_EXP_gain_by_}x"
-      },
-      {
-        "name": "Treasure_Boost",
-        "prereqIndex": 15,
-        "position": "709,112",
-        "currencyType": 1,
-        "baseCost": 100,
-        "costMulti": 1.2,
-        "bonusPerLevel": 3,
-        "description": "All_Sailing_Chests_you_open_contain_}x_more_Treasure_to_upgrade_your_Boats_with!"
-      },
-      {
-        "name": "Orion_Boost",
-        "prereqIndex": 17,
-        "position": "670,167",
-        "currencyType": 2,
-        "baseCost": 150,
-        "costMulti": 1.12,
-        "bonusPerLevel": 5,
-        "description": "Permanently_boost_Feather_Generation_rate_at_Orion_the_Horned_Owl_by_}x"
-      },
-      {
-        "name": "Mythril_Transience",
-        "prereqIndex": 4,
-        "position": "159,205",
-        "currencyType": 2,
-        "baseCost": 800,
-        "costMulti": 1.2,
-        "bonusPerLevel": 1,
-        "description": "Bronze,_silver,_and_gold_coins_are_worth_+{%_more_per_POW_10_Mythril_you_have,_over_at_The_Well_cavern._@_Total_Bonus:$x"
-      }
     ],
     [
-      {
-        "name": "Green_Water",
-        "prereqIndex": 1,
-        "position": "104,239",
-        "currencyType": 5,
-        "baseCost": 1000000,
-        "costMulti": 1.1,
-        "bonusPerLevel": 2,
-        "description": "Unlock_Green_Water..._well,_it_will_in_the_Future._Also,_}x_Currency_Value,_at_least_THAT'S_true_for_right_now!"
-      },
-      {
-        "name": "Currency_Booster_II",
-        "prereqIndex": 4,
-        "position": "166,218",
-        "currencyType": 5,
-        "baseCost": 10000,
-        "costMulti": 1.2,
-        "bonusPerLevel": 20,
-        "description": "All_currencies_are_worth_+{%_more."
-      },
-      {
-        "name": "Dolla_Dolla_Bills",
-        "prereqIndex": 10,
-        "position": "404,145",
-        "currencyType": 3,
-        "baseCost": 1,
-        "costMulti": 1.13,
-        "bonusPerLevel": 1,
-        "description": "You_can_now_find_Dollar_Bills._@_All_dollar_bills_you_find_have_a_base_value_of_$"
-      },
-      {
-        "name": "Credit_Swisse",
-        "prereqIndex": 12,
-        "position": "328,140",
-        "currencyType": 4,
-        "baseCost": 1,
-        "costMulti": 1.14,
-        "bonusPerLevel": 1,
-        "description": "You_can_now_find_Credit_Bills._@_All_credit_bills_you_find_have_a_base_value_of_$"
-      },
-      {
-        "name": "In_Gov_We_Trust",
-        "prereqIndex": 9,
-        "position": "190,160",
-        "currencyType": 5,
-        "baseCost": 1,
-        "costMulti": 1.15,
-        "bonusPerLevel": 1,
-        "description": "You_can_now_find_Treasury_Bills._@_All_treasury_bills_you_find_have_a_base_value_of_$"
-      },
-      {
-        "name": "Stackin'_Creds",
-        "prereqIndex": 3,
-        "position": "300,80",
-        "currencyType": 3,
-        "baseCost": 50,
-        "costMulti": 1.1,
-        "bonusPerLevel": 5,
-        "description": "Credit_bills_are_worth_}x_more."
-      },
-      {
-        "name": "Stackin'_T-Bills",
-        "prereqIndex": 4,
-        "position": "134,146",
-        "currencyType": 4,
-        "baseCost": 100,
-        "costMulti": 1.1,
-        "bonusPerLevel": 5,
-        "description": "Treasury_bills_are_worth_}x_more."
-      },
-      {
-        "name": "Stackin'_Monayy",
-        "prereqIndex": 0,
-        "position": "41,227",
-        "currencyType": 5,
-        "baseCost": 250,
-        "costMulti": 1.1,
-        "bonusPerLevel": 5,
-        "description": "Moolah_Stacks_are_worth_}x_more."
-      },
-      {
-        "name": "Royal_Stacks",
-        "prereqIndex": 5,
-        "position": "238,97",
-        "currencyType": 3,
-        "baseCost": 100,
-        "costMulti": 1.15,
-        "bonusPerLevel": 1,
-        "description": "There's_a_1_in_$_chance_for_a_currency_stack_to_become_'royal'_when_the_fountain_fills._@_All_coins_in_a_royal_stack_are_worth_more."
-      },
-      {
-        "name": "Regal_Riches",
-        "prereqIndex": 8,
-        "position": "249,153",
-        "currencyType": 4,
-        "baseCost": 250,
-        "costMulti": 1.25,
-        "bonusPerLevel": 10,
-        "description": "Royal_stacks_are_worth_$x_more,_to_be_specific."
-      },
-      {
-        "name": "Marble_Filling",
-        "prereqIndex": -1,
-        "position": "463,113",
-        "currencyType": 2,
-        "baseCost": 50000,
-        "costMulti": 1.1,
-        "bonusPerLevel": 5,
-        "description": "Adds_a_new_fountain_bar,_which_when_filled_creates_$_marble._@_Spend_these_on_upgrades_to_multiply_their_bonuses_via_Marbleization."
-      },
-      {
-        "name": "Greatest_Desire",
-        "prereqIndex": 9,
-        "position": "274,210",
-        "currencyType": 4,
-        "baseCost": 500,
-        "costMulti": 1.15,
-        "bonusPerLevel": 5,
-        "description": "You_can_now_click_and_HOLD_on_a_currency_at_the_top_of_the_screen_to_DESIRE_it,_making_them_worth_}x_more_when_collected."
-      },
-      {
-        "name": "Turn_and_Push",
-        "prereqIndex": 2,
-        "position": "374,85",
-        "currencyType": 3,
-        "baseCost": 250,
-        "costMulti": 1.15,
-        "bonusPerLevel": 10,
-        "description": "You_can_now_click_a_currency_at_the_top_to_IGNORE_it,_so_it's_never_created._Click_again_to_undo_this_at_any_time._@_Also,_+{%_all_currency"
-      },
-      {
-        "name": "Judicial_Boost",
-        "prereqIndex": 18,
-        "position": "653,64",
-        "currencyType": 5,
-        "baseCost": 5000,
-        "costMulti": 2.5,
-        "bonusPerLevel": 1,
-        "description": "All_Justice_Monument_bonuses_are_}x_larger."
-      },
-      {
-        "name": "Skim_Reading",
-        "prereqIndex": 10,
-        "position": "524,98",
-        "currencyType": 3,
-        "baseCost": 25,
-        "costMulti": 1.2,
-        "bonusPerLevel": 3,
-        "description": "Boost_the_Study_Rate_for_Bolaia_the_Villager_by_}x"
-      },
-      {
-        "name": "Fine_Tuning",
-        "prereqIndex": 16,
-        "position": "642,139",
-        "currencyType": 4,
-        "baseCost": 250,
-        "costMulti": 1.15,
-        "bonusPerLevel": 2,
-        "description": "All_your_Harp_Strings_gain_}x_more_exp_than_normal"
-      },
-      {
-        "name": "Swingy_O'_Sword",
-        "prereqIndex": 14,
-        "position": "582,117",
-        "currencyType": 3,
-        "baseCost": 100,
-        "costMulti": 1.13,
-        "bonusPerLevel": 1,
-        "description": "Boosts_Damage_for_all_characters_by_}x"
-      },
-      {
-        "name": "Summoneer",
-        "prereqIndex": 15,
-        "position": "702,149",
-        "currencyType": 4,
-        "baseCost": 500,
-        "costMulti": 1.15,
-        "bonusPerLevel": 3,
-        "description": "All_Summoning_Essence_generation_is_}x_greater_than_before"
-      },
-      {
-        "name": "Better_Poppy",
-        "prereqIndex": 17,
-        "position": "711,92",
-        "currencyType": 5,
-        "baseCost": 1500,
-        "costMulti": 1.1,
-        "bonusPerLevel": 5,
-        "description": "Permanently_boost_Fish_Generation_rate_at_Poppy_the_Kangaroo_Mouse_by_}x"
-      },
-      {
-        "name": "Sharp_Surrogate",
-        "prereqIndex": 6,
-        "position": "79,157",
-        "currencyType": 5,
-        "baseCost": 10000,
-        "costMulti": 1.2,
-        "bonusPerLevel": 1,
-        "description": "Dollar,_Credit,_and_Treasury_bills_are_worth_+{%_more_per_POW_10_Sharp_Notes_you_have,_over_at_The_Harp_cavern._@_Total_Bonus:$x"
-      }
+      "200",
+      "1",
+      "30",
+      "10",
+      "2",
+      "20"
     ],
     [
-      {
-        "name": "Name",
-        "prereqIndex": null,
-        "position": "X",
-        "currencyType": 8,
-        "baseCost": 1,
-        "costMulti": 1.1,
-        "bonusPerLevel": 3,
-        "description": "Unlock_Black_Water..._well,_it_will_in_the_future._Also,_}x_Currency_Value,_at_least_THAT'S_here_in_the_present!"
-      },
-      {
-        "name": "Currency_Booster_III",
-        "prereqIndex": null,
-        "position": "X",
-        "currencyType": 6,
-        "baseCost": 1,
-        "costMulti": 1.1,
-        "bonusPerLevel": 30,
-        "description": "All_currencies_are_worth_+{%_more."
-      },
-      {
-        "name": "Name",
-        "prereqIndex": null,
-        "position": "X",
-        "currencyType": 6,
-        "baseCost": 1,
-        "costMulti": 1.1,
-        "bonusPerLevel": 0,
-        "description": "You_can_now_find_Moolah_Stacks._@_All_moolah_stacks_you_find_have_a_base_value_of_$"
-      },
-      {
-        "name": "Name",
-        "prereqIndex": null,
-        "position": "X",
-        "currencyType": 7,
-        "baseCost": 1,
-        "costMulti": 1.1,
-        "bonusPerLevel": 0,
-        "description": "You_can_now_find_Shilling_Stacks._@_All_shilling_stacks_you_find_have_a_base_value_of_$"
-      },
-      {
-        "name": "Name",
-        "prereqIndex": null,
-        "position": "X",
-        "currencyType": 8,
-        "baseCost": 1,
-        "costMulti": 1.1,
-        "bonusPerLevel": 0,
-        "description": "You_can_now_find_Greane_Stacks._@_All_greane_stacks_you_find_have_a_base_value_of_$"
-      },
-      {
-        "name": "Name",
-        "prereqIndex": null,
-        "position": "X",
-        "currencyType": 6,
-        "baseCost": 1,
-        "costMulti": 1.1,
-        "bonusPerLevel": 0,
-        "description": "Shilling_Stacks_are_worth_}x_more."
-      },
-      {
-        "name": "Name",
-        "prereqIndex": null,
-        "position": "X",
-        "currencyType": 7,
-        "baseCost": 1,
-        "costMulti": 1.1,
-        "bonusPerLevel": 0,
-        "description": "Greane_Stacks_are_worth_}x_more."
-      },
-      {
-        "name": "Name",
-        "prereqIndex": null,
-        "position": "X",
-        "currencyType": 8,
-        "baseCost": 1,
-        "costMulti": 1.1,
-        "bonusPerLevel": 0,
-        "description": "Oldmoney_Stacks_are_worth_}x_more."
-      },
-      {
-        "name": "Name",
-        "prereqIndex": null,
-        "position": "X",
-        "currencyType": 7,
-        "baseCost": 1,
-        "costMulti": 1.1,
-        "bonusPerLevel": 0,
-        "description": "All_currencies_collected_have_a_1_in_$_of_being_LUCKY,_multiplying_the_value_of_that_specific_type_by_#x_forever!_@_Each_additional_one_is_4x_rarer"
-      },
-      {
-        "name": "Name",
-        "prereqIndex": null,
-        "position": "X",
-        "currencyType": 8,
-        "baseCost": 1,
-        "costMulti": 1.1,
-        "bonusPerLevel": 0,
-        "description": "Boosts_the_LUCKY_multi_by_+{%._@_Also,_you_can_see_how_many_LUCKY_coins_of_each_type_you_have_from_the_number_of_dots_above_them."
-      },
-      {
-        "name": "Name",
-        "prereqIndex": null,
-        "position": "X",
-        "currencyType": 9,
-        "baseCost": 1,
-        "costMulti": 1.1,
-        "bonusPerLevel": 0,
-        "description": "Every_Royal_stack_out_you_currently_have_boosts_Rubber_Ducky_chance_and_LUCKY_coin_chance_by_+{%_@_Total_Current_bonus:_$x_odds"
-      },
-      {
-        "name": "Name",
-        "prereqIndex": null,
-        "position": "X",
-        "currencyType": 7,
-        "baseCost": 1,
-        "costMulti": 1.1,
-        "bonusPerLevel": 0,
-        "description": "Your_Rubber_Duckies_each_MULTIPLY_the_value_of_all_coins_by_$x._@_Total_Ducky_Bonus:_#x"
-      },
-      {
-        "name": "Name",
-        "prereqIndex": null,
-        "position": "X",
-        "currencyType": 6,
-        "baseCost": 1,
-        "costMulti": 1.1,
-        "bonusPerLevel": 0,
-        "description": "Adds_a_new_fountain_bar,_which_when_filled_has_a_1_in_$_chance_of_adding_a_Rubber_Ducky_to_the_fountain."
-      },
-      {
-        "name": "Name",
-        "prereqIndex": null,
-        "position": "X",
-        "currencyType": 7,
-        "baseCost": 1,
-        "costMulti": 1.1,
-        "bonusPerLevel": 0,
-        "description": "All_Wisdom_Monument_bonuses_are_}x_larger."
-      },
-      {
-        "name": "Name",
-        "prereqIndex": null,
-        "position": "X",
-        "currencyType": 6,
-        "baseCost": 1,
-        "costMulti": 1.1,
-        "bonusPerLevel": 0,
-        "description": "Minau_the_Villager's_upgrades_all_are_}x_cheaper_than_ever_before"
-      },
-      {
-        "name": "Name",
-        "prereqIndex": null,
-        "position": "X",
-        "currencyType": 7,
-        "baseCost": 1,
-        "costMulti": 1.1,
-        "bonusPerLevel": 0,
-        "description": "Your_Enchant_chance_over_at_The_Jar_cavern_is_}x_larger_than_before"
-      },
-      {
-        "name": "Name",
-        "prereqIndex": null,
-        "position": "X",
-        "currencyType": 6,
-        "baseCost": 1,
-        "costMulti": 1.1,
-        "bonusPerLevel": 0,
-        "description": "Boosts_Research_EXP_gain_by_}x"
-      },
-      {
-        "name": "Name",
-        "prereqIndex": null,
-        "position": "X",
-        "currencyType": 8,
-        "baseCost": 1,
-        "costMulti": 1.1,
-        "bonusPerLevel": 0,
-        "description": "All_Masterclass_Drops,_specifically_Bones_Dust_and_Tachyons,_are_}x_larger"
-      },
-      {
-        "name": "Name",
-        "prereqIndex": null,
-        "position": "X",
-        "currencyType": 7,
-        "baseCost": 1,
-        "costMulti": 1.1,
-        "bonusPerLevel": 0,
-        "description": "Permanently_boost_Meat_Slice_Production_rate_at_Bubba_the_Seal_by_}x"
-      },
-      {
-        "name": "Name",
-        "prereqIndex": null,
-        "position": "X",
-        "currencyType": 7,
-        "baseCost": 1,
-        "costMulti": 1.1,
-        "bonusPerLevel": 0,
-        "description": "Moolah,_Shilling,_and_Greane_stacks_are_worth_+{%_more_per_POW_10_basic_Red_Rupie_you_have,_over_at_The_Jar_cavern."
-      }
+      "SALTY",
+      "SPICY",
+      "SWEET",
+      "SMOKY",
+      "SOUR",
+      "SAVORY"
     ]
   ]
 }

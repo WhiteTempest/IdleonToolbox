@@ -56,10 +56,15 @@ const parseSneaking = (rawSneaking: any, rawSpelunking: any, serverVars: any, ch
       description = description.replace('$', notatedBonus);
     }
 
+    // The bonus formula is x3 + x5 * (baseValue / (1000 + baseValue)).
+    // The saturating term is how close this gemstone is to its max possible bonus (x5 is the asymptotic cap).
+    const saturationPct = data.baseValue / (1e3 + data.baseValue) * 100;
+
     return {
       ...data,
       bonus,
       notatedBonus,
+      saturationPct,
       description: description.replace('{', '+').replace(/@/g, '')
     };
   });
@@ -132,8 +137,8 @@ const parseSneaking = (rawSneaking: any, rawSpelunking: any, serverVars: any, ch
   })
 
   const order = ninjaExtraInfo[24];
-  const inventory = parseNinjaItems(rawSneaking?.slice(60, 99), false, gemStones, account);
-  const characterEquipments = parseNinjaItems(rawSneaking?.slice(12, 12 + (charactersData?.length * 4)), true, gemStones?.[3]?.bonus, account);
+  const inventory = parseNinjaItems(rawSneaking?.slice(60, 99), false, gemStones, account, 60);
+  const characterEquipments = parseNinjaItems(rawSneaking?.slice(12, 12 + (charactersData?.length * 4)), true, gemStones?.[3]?.bonus, account, 12);
 
   const players = charactersData.map((_: any, index: any) => ({
     equipment: characterEquipments?.[index]?.map((equip: any) => ({
@@ -192,7 +197,7 @@ const parseSneaking = (rawSneaking: any, rawSpelunking: any, serverVars: any, ch
     return { index, description, bonus };
   });
 
-  const itemsMaxLevel = getItemsMaxLevel(selectedNinjaMastery, ninjaMastery, upgrades, gemStones, inventory);
+  const itemsMaxLevel = getItemsMaxLevel(upgrades, gemStones, inventory, account);
 
   const charmRollCounter = account?.accountOptions?.[402] || 0;
   const remainingPristineRolls = Math.max(0, 120 - charmRollCounter);
@@ -228,35 +233,36 @@ const parseSneaking = (rawSneaking: any, rawSpelunking: any, serverVars: any, ch
 };
 
 export const getLocalNinjaUpgradeBonus = (upgrades: any, index: any, gemstones: any, inventory: any, account: any) => {
-  const { level, modifier } = upgrades?.[index];
-  const goldEye = getInventoryNinjaItem({ sneaking: { inventory } }, 'Gold_Eye');
-  const fireFrostBonus = gemstones?.[7]?.bonus;
+  const { level, modifier } = upgrades?.[index] ?? {};
+  const masteryLootLevel = upgrades?.[3]?.level || 0;
+  const selectedMasteryLevel = account?.accountOptions?.[231] || 0;
 
-  const paletteBonus30 = getPaletteBonus(account, 30);
-  const vaultBonus88 = getUpgradeVaultBonus(account?.upgradeVault?.upgrades, 88);
-
-  return index === 11
-    ? level * modifier + (upgrades?.[3]?.level * account?.accountOptions?.[231] + (goldEye + (Math.ceil(fireFrostBonus) + Math.floor(paletteBonus30 + vaultBonus88))))
-    : index === 6 || index === 7 || index === 10 || index === 12
-      ? level * modifier + upgrades?.[3]?.level * account?.accountOptions?.[231]
-      : level * modifier;
+  if (index === 11) {
+    const goldStar = getInventoryNinjaItem({ sneaking: { inventory } }, 'Gold_Star') || 0;
+    const fireFrostBonus = gemstones?.[7]?.bonus || 0;
+    const paletteBonus30 = getPaletteBonus(account, 30) || 0;
+    const vaultBonus88 = getUpgradeVaultBonus(account?.upgradeVault?.upgrades, 88) || 0;
+    return Math.round(
+      level * modifier
+      + masteryLootLevel * selectedMasteryLevel
+      + goldStar
+      + Math.ceil(fireFrostBonus)
+      + Math.floor(paletteBonus30 + vaultBonus88)
+    );
+  }
+  if (index === 6 || index === 7 || index === 10 || index === 12) {
+    return level * modifier + masteryLootLevel * selectedMasteryLevel;
+  }
+  return level * modifier;
 };
 
-const getItemsMaxLevel = (selectedMasteryLevel: any, masteryLevel: any, upgrades: any, gemstones: any, inventory: any) => {
-  const goldStarBonus = getInventoryNinjaItem({ sneaking: { inventory } }, 'Gold_Star') || 0;
-
-  const masteryBonus = (upgrades?.[2]?.value || 0) * selectedMasteryLevel;
-  const baseLevel = masteryBonus;
-  const fireFrostBonus = gemstones?.[7]?.bonus;
-
-  const getUpgradeValue = (index: any) => upgrades?.[index]?.value || 0;
-
+const getItemsMaxLevel = (upgrades: any, gemstones: any, inventory: any, account: any) => {
   return [
-    { name: 'Gemstone', value: Math.floor(baseLevel + getUpgradeValue(5)) },
-    { name: 'Kunai', value: Math.floor(baseLevel + getUpgradeValue(6)) },
-    { name: 'Gloves', value: Math.floor(baseLevel + getUpgradeValue(9)) },
-    { name: 'Charm', value: Math.floor(baseLevel + getUpgradeValue(10) + goldStarBonus + fireFrostBonus) },
-    { name: 'Nunchaku', value: Math.floor(baseLevel + getUpgradeValue(11)) }
+    { name: 'Gemstone', value: Math.floor(getLocalNinjaUpgradeBonus(upgrades, 6, gemstones, inventory, account)) },
+    { name: 'Kunai', value: Math.floor(getLocalNinjaUpgradeBonus(upgrades, 7, gemstones, inventory, account)) },
+    { name: 'Gloves', value: Math.floor(getLocalNinjaUpgradeBonus(upgrades, 10, gemstones, inventory, account)) },
+    { name: 'Charm', value: Math.floor(getLocalNinjaUpgradeBonus(upgrades, 11, gemstones, inventory, account)) },
+    { name: 'Nunchaku', value: Math.floor(getLocalNinjaUpgradeBonus(upgrades, 12, gemstones, inventory, account)) }
   ];
 };
 
@@ -270,15 +276,24 @@ const getGemstoneBonus = (gemstone: any, index: any, fifthGemstoneBonus: any, ch
     * Math.max(1, talentBonus);
 };
 
-const parseNinjaItems = (array: any, doChunks: any, gemstones: any, account: any) => {
+const parseNinjaItems = (array: any, doChunks: any, gemstones: any, account: any, baseItemId: number) => {
   const gemstoneBonus = gemstones?.[3]?.bonus || 0;
 
-  let result = array?.map(([itemName, level]: any, index: any) => ({
-    ...ninjaEquipment[itemName],
-    level,
-    symbolBonus: getSymbolBonus(account, itemIdToSymbolLevelId(60 + index)),
-    symbolLevel: account?.spelunking?.sneakingSlots?.[24 + index]
-  }));
+  let result = array?.map(([itemName, level]: any, index: any) => {
+    const itemId = baseItemId + index;
+    // Symbol upgrades apply to inventory items (raw 60+) and to character equipment item slots
+    // (raw 14+4t and 15+4t — i.e. the last two of each 4-slot character chunk; hat and weapon don't have symbols).
+    const isInventoryItem = itemId >= 60;
+    const isCharSymbolSlot = !isInventoryItem && itemId >= 14 && (itemId - 14) % 4 < 2;
+    const hasSymbol = isInventoryItem || isCharSymbolSlot;
+    const symbolLVID = hasSymbol ? itemIdToSymbolLevelId(itemId) : -1;
+    return {
+      ...ninjaEquipment[itemName],
+      level,
+      symbolBonus: hasSymbol ? getSymbolBonus(account, symbolLVID) : 0,
+      symbolLevel: hasSymbol ? (account?.spelunking?.sneakingSlots?.[symbolLVID] ?? 0) : 0
+    };
+  });
 
   if (doChunks) {
     return result?.toChunks(4)?.map((array: any) => array.map((item: any) => ({ ...item, value: getItemValue(item) })));

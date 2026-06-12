@@ -1174,6 +1174,80 @@ const migration49 = (dashboardConfig) => {
   return dashboardConfig;
 };
 
+const migration50 = (dashboardConfig) => {
+  const etcOptions = dashboardConfig?.account?.General?.etc?.options;
+  if (etcOptions && !etcOptions.some((opt) => opt.name === 'dailyCrystals')) {
+    etcOptions.push({
+      name: 'dailyCrystals',
+      checked: true,
+      helperText: 'Alert when daily guaranteed crystal kills remain'
+    });
+  }
+  dashboardConfig.version = 50;
+  return dashboardConfig;
+};
+
+const migration51 = (dashboardConfig) => {
+  if (!dashboardConfig.timers) dashboardConfig.timers = {};
+  if (!dashboardConfig.timers['World 5']) dashboardConfig.timers['World 5'] = {};
+  if (!dashboardConfig.timers['World 5'].coinFill) {
+    dashboardConfig.timers['World 5'].coinFill = { checked: true, options: [] };
+  }
+  if (!dashboardConfig.timers['World 5'].marbleFill) {
+    dashboardConfig.timers['World 5'].marbleFill = { checked: true, options: [] };
+  }
+  dashboardConfig.version = 51;
+  return dashboardConfig;
+};
+
+const migration52 = (dashboardConfig) => {
+  const holeOptions = dashboardConfig?.account?.['World 5']?.hole?.options;
+  if (Array.isArray(holeOptions)) {
+    const motherlodeIndex = holeOptions.findIndex(o => o?.name === 'motherlode');
+    const insertAt = motherlodeIndex !== -1 ? motherlodeIndex + 1 : holeOptions.length;
+    const toInsert = [];
+    if (!holeOptions.some(o => o?.name === 'evertree')) {
+      toInsert.push({ name: 'evertree', checked: true });
+    }
+    if (!holeOptions.some(o => o?.name === 'bottomlessTrench')) {
+      toInsert.push({ name: 'bottomlessTrench', checked: true });
+    }
+    if (toInsert.length) {
+      holeOptions.splice(insertAt, 0, ...toInsert);
+    }
+  }
+  dashboardConfig.version = 52;
+  return dashboardConfig;
+};
+
+const migration53 = (dashboardConfig) => {
+  const world5 = dashboardConfig?.timers?.['World 5'];
+  if (world5) {
+    // Selective villagers: turn the plain villagers timer into one with a per-villager array option,
+    // defaulting all 5 to the user's current checked state so behavior is unchanged until they narrow it.
+    if (world5.villagers && !world5.villagers.options?.some((o) => o?.name === 'villagers')) {
+      const wasChecked = world5.villagers.checked ?? true;
+      world5.villagers.options = [{
+        name: 'villagers',
+        type: 'array',
+        props: { value: { explore: wasChecked, engineer: wasChecked, bonuses: wasChecked, measure: wasChecked, studies: wasChecked } },
+        checked: wasChecked
+      }];
+    }
+    // Rename the "monument" timer to "bravery" (label fix), preserving its position in the list.
+    if (world5.monument && !world5.bravery) {
+      const rebuilt = {};
+      Object.keys(world5).forEach((key) => {
+        if (key === 'monument') rebuilt.bravery = world5.monument;
+        else rebuilt[key] = world5[key];
+      });
+      dashboardConfig.timers['World 5'] = rebuilt;
+    }
+  }
+  dashboardConfig.version = 53;
+  return dashboardConfig;
+};
+
 // Registry of migration functions indexed by target version.
 // Each migration receives (config, baseTrackers) — baseTrackers is only used by some.
 const migrations = {
@@ -1225,6 +1299,10 @@ const migrations = {
   47: migration47,
   48: migration48,
   49: migration49,
+  50: migration50,
+  51: migration51,
+  52: migration52,
+  53: migration53,
 };
 
 export const migrateConfig = (baseTrackers, userConfig) => {

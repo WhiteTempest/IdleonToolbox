@@ -82,7 +82,7 @@ declare module '@website-data' {
   export const legendTalents: {
       name: string;
       x1: number;
-      x2: number | null;
+      x2: number;
       bonus: string;
       description: string;
     }[];
@@ -109,7 +109,7 @@ declare module '@website-data' {
         x4: number;
         x5: number;
         x6: number;
-        x7: number | null;
+        x7: number;
       }[])[];
   export const spelunkingChapters: ({
         name: string;
@@ -1471,7 +1471,7 @@ declare module '@website-data' {
       x9: number;
       x10: number;
       description: string;
-      baseIconIndex: null | number;
+      baseIconIndex: number;
     }[];
   export const abominations: {
       name: string;
@@ -1510,6 +1510,16 @@ declare module '@website-data' {
       x4: number | string;
       description: string;
     }[];
+  export const holeFountUpg: ({
+        name: string;
+        prereqIndex: number;
+        position: string;
+        currencyType: number;
+        baseCost: number;
+        costMulti: number;
+        bonusPerLevel: number;
+        description: string;
+      }[])[];
   export const killRoySkullShop: {
       description: string;
       x1: number;
@@ -1549,7 +1559,7 @@ declare module '@website-data' {
       x1: number;
       x2: number;
       x3: number;
-      x4: null;
+      x4: number;
     }[];
   export const marketInfo: {
       name: string;
@@ -1854,7 +1864,7 @@ declare module '@website-data' {
       blessingMultiplier: number;
       x4: number;
       x5: number;
-      x7: null;
+      x7: number;
       x8: number;
       x9: number;
       x10: number;
@@ -1925,7 +1935,7 @@ declare module '@website-data' {
         num2: number;
         num3: number;
         totalLevels: number;
-        meritCost: number | null;
+        meritCost: number;
         text1: string;
         text2: string;
         extraStr: string;
@@ -2006,7 +2016,7 @@ declare module '@website-data' {
           amount: number;
         }[] | {
           rawName: string;
-          name?: string;
+          name: string | null;
           amount: number;
         }[];
       effect: string;
@@ -2016,7 +2026,7 @@ declare module '@website-data' {
       name: string;
       filler: string;
       material: string;
-      foodIndex: null | number;
+      foodIndex: number;
       baseMatCost: number;
       costMatScale: number;
       baseCost: number;
@@ -2232,7 +2242,7 @@ declare module '@website-data' {
       x1: number;
       x2: number;
       x3: number;
-      order?: number;
+      order: number | null;
     }[];
   export const anvilProducts: Record<string, {
       rawName: string;
@@ -2306,11 +2316,11 @@ declare module '@website-data' {
       Defence: number;
       MoveSPEED: number;
       Damages: number[];
+      mapIndex: null | number;
       sprite?: string;
       spriteAcross?: number;
       spriteDown?: number;
       spriteNumFrames?: number;
-      mapIndex?: number;
       worldIndex?: number;
     }>;
   export const items: Record<string, {
@@ -3402,200 +3412,12 @@ declare module '@website-data' {
       name: string;
       sections: any;
     }[];
-  export const bundles: {
-    bun_a: {
+  export const bundles: Record<string, {
       message: string;
-      price: number;
-    };
-    bun_b: {
-      message: string;
-      price: number;
-    };
-    bun_c: {
-      message: string;
-      price: number;
-    };
-    bun_d: {
-      message: string;
-      price: number;
-    };
-    bun_e: {
-      message: string;
-      price: number;
-    };
-    bun_f: {
-      message: string;
-      price: number;
-    };
-    bun_g: {
-      message: string;
-      price: number;
-    };
-    bun_h: {
-      message: string;
-      price: number;
-    };
-    bun_i: {
-      message: string;
-      price: number;
-    };
-    bun_j: {
-      message: string;
-      price: number;
-    };
-    bun_k: {
-      message: string;
-      price: number;
-    };
-    bun_l: {
-      message: string;
-      price: number;
-    };
-    bun_m: {
-      message: string;
-      price: number;
-    };
-    bun_n: {
-      message: string;
-      price: number;
-    };
-    bun_o: {
-      message: string;
-      price: number;
-    };
-    bun_p: {
-      message: string;
-      price: number;
-    };
-    bun_q: {
-      message: string;
-      price: number;
-    };
-    bun_r: {
-      message: string;
-      price: number;
-    };
-    bun_s: {
-      message: string;
-      price: number;
-    };
-    bun_t: {
-      message: string;
-      price: number;
-    };
-    bun_u: {
-      message: string;
-      price: number;
-    };
-    bun_v: {
-      message: string;
-      price: number;
-    };
-    bun_w: {
-      message: string;
-      price: number;
-    };
-    bun_x: {
-      message: string;
-      price: number;
-    };
-    bun_y: {
-      message: string;
-      price: number;
-    };
-    bun_z: {
-      message: string;
-      price: number;
-    };
-    bon_a: {
-      message: string;
-      price: number;
-    };
-    bon_c: {
-      message: string;
-      price: number;
-    };
-    bon_d: {
-      message: string;
-      price: number;
-    };
-    bon_e: {
-      message: string;
-      price: number;
-    };
-    bon_f: {
-      message: string;
-      price: number;
-    };
-    bon_g: {
-      message: string;
-      price: number;
-    };
-    bon_h: {
-      message: string;
-      price: number;
-    };
-    bon_i: {
-      message: string;
-      price: number;
-    };
-    bon_j: {
-      message: string;
-      price: number;
-    };
-    bon_k: {
-      message: string;
-      price: number;
-    };
-    bon_l: {
-      message: string;
-      price: number;
-    };
-    bon_m: {
-      message: string;
-      price: number;
-    };
-    bon_n: {
-      message: string;
-      price: number;
-    };
-    bon_o: {
-      message: string;
-      price: number;
-    };
-    bon_p: {
-      message: string;
-    };
-    bon_q: {
-      message: string;
-    };
-    bon_r: {
-      message: string;
-    };
-    bon_s: {
-      message: string;
-    };
-    bon_t: {
-      message: string;
-    };
-    bon_u: {
-      message: string;
-    };
-    bon_v: {
-      message: string;
-    };
-    ban_a: {
-      message: string;
-    };
-    ban_b: {
-      message: string;
-    };
-    ban_c: {
-      message: string;
-    };
-  };
+      price: number | null;
+    }>;
   export const shops: Record<string, {
-      name?: string;
+      name: string | null;
       items: {
           name: string;
           rawName: string;
@@ -3706,7 +3528,7 @@ declare module '@website-data' {
       x2: number;
       itemReq: {
           rawName: string;
-          name?: string;
+          name: string | null;
         }[];
     }>;
   export const cauldrons: {
@@ -4335,8 +4157,8 @@ declare module '@website-data' {
           effect: string;
           rawName: string;
         }[] | null;
+      description: null | string;
       tree: string;
-      description?: string;
     }[];
   export const starSignByIndexMap: Record<string, {
       starName: string;
@@ -4346,8 +4168,8 @@ declare module '@website-data' {
           effect: string;
           rawName: string;
         }[] | null;
+      description: null | string;
       tree: string;
-      description?: string;
     }>;
   export const classes: string[];
   export const talents: {
@@ -4358,8 +4180,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -4370,8 +4192,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -4382,8 +4204,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -4394,8 +4216,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -4406,8 +4228,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -4418,8 +4240,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -4430,8 +4252,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -4442,8 +4264,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -4454,8 +4276,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -4466,8 +4288,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -4478,8 +4300,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -4490,8 +4312,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -4502,8 +4324,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -4514,8 +4336,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -4526,8 +4348,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -4562,8 +4384,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -4584,8 +4406,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -4630,8 +4452,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -4642,8 +4464,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -4654,8 +4476,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -4666,8 +4488,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -4690,8 +4512,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -4712,8 +4534,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -4724,8 +4546,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -4736,8 +4558,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -4748,8 +4570,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -4762,8 +4584,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -4784,8 +4606,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -4830,8 +4652,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -4842,8 +4664,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -4854,8 +4676,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -4866,8 +4688,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -4890,8 +4712,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -4936,8 +4758,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -4948,8 +4770,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -4960,8 +4782,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -5042,8 +4864,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -5054,8 +4876,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -5114,8 +4936,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -5126,8 +4948,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -5138,8 +4960,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -5150,8 +4972,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -5162,8 +4984,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -5176,8 +4998,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -5188,8 +5010,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -5200,8 +5022,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -5212,8 +5034,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -5224,8 +5046,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -5236,8 +5058,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -5248,8 +5070,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -5260,8 +5082,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -5272,8 +5094,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -5284,8 +5106,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -5296,8 +5118,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -5308,8 +5130,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -5320,8 +5142,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -5332,8 +5154,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -5344,8 +5166,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -5358,8 +5180,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -5402,8 +5224,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -5414,8 +5236,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -5448,8 +5270,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -5460,8 +5282,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -5472,8 +5294,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -5484,8 +5306,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -5496,8 +5318,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -5508,8 +5330,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -5530,8 +5352,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -5542,8 +5364,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -5554,8 +5376,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -5566,8 +5388,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -5668,8 +5490,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -5692,8 +5514,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -5704,8 +5526,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -5716,8 +5538,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -5728,8 +5550,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -5740,8 +5562,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -5774,8 +5596,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -5786,8 +5608,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -5798,8 +5620,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -5878,8 +5700,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -5912,8 +5734,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -5924,8 +5746,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -5936,8 +5758,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -5948,8 +5770,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -5960,8 +5782,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -5972,8 +5794,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -5994,8 +5816,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -6006,8 +5828,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -6018,8 +5840,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -6030,8 +5852,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -6044,8 +5866,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -6110,8 +5932,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -6122,8 +5944,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -6134,8 +5956,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -6146,8 +5968,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -6182,8 +6004,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -6194,8 +6016,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -6228,8 +6050,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -6240,8 +6062,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -6252,8 +6074,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -6266,8 +6088,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -6300,8 +6122,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -6322,8 +6144,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -6344,8 +6166,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -6356,8 +6178,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -6368,8 +6190,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -6404,8 +6226,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -6416,8 +6238,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -6428,8 +6250,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -6440,8 +6262,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -6452,8 +6274,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -6464,8 +6286,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -6478,8 +6300,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -6500,8 +6322,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -6568,8 +6390,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -6580,8 +6402,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -6604,8 +6426,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -6616,8 +6438,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -6628,8 +6450,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -6640,8 +6462,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -6652,8 +6474,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -6664,8 +6486,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -6676,8 +6498,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -6690,8 +6512,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -6702,8 +6524,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -6714,8 +6536,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -6726,8 +6548,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -6738,8 +6560,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -6750,8 +6572,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -6762,8 +6584,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -6774,8 +6596,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -6786,8 +6608,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -6798,8 +6620,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -6810,8 +6632,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -6822,8 +6644,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -6834,8 +6656,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -6846,8 +6668,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -6858,8 +6680,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -6916,8 +6738,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -6950,8 +6772,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -6962,8 +6784,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -6974,8 +6796,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -6986,8 +6808,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -6998,8 +6820,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -7010,8 +6832,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -7034,8 +6856,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -7058,8 +6880,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -7070,8 +6892,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -7128,8 +6950,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -7162,8 +6984,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -7174,8 +6996,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -7186,8 +7008,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -7198,8 +7020,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -7210,8 +7032,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -7222,8 +7044,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -7234,8 +7056,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -7246,8 +7068,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -7258,8 +7080,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -7270,8 +7092,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -7282,8 +7104,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -7296,8 +7118,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -7340,8 +7162,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -7384,8 +7206,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -7396,8 +7218,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -7408,8 +7230,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -7420,8 +7242,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -7432,8 +7254,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -7444,8 +7266,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -7478,8 +7300,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -7490,8 +7312,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -7502,8 +7324,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -7514,8 +7336,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -7528,8 +7350,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -7616,8 +7438,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -7628,8 +7450,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -7640,8 +7462,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -7676,8 +7498,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -7688,8 +7510,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -7700,8 +7522,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -7712,8 +7534,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -7724,8 +7546,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -7736,8 +7558,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -7838,8 +7660,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -7850,8 +7672,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -7862,8 +7684,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -7898,8 +7720,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -7932,8 +7754,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -7944,8 +7766,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -7956,8 +7778,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -7968,8 +7790,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -7982,8 +7804,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -8004,8 +7826,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -8026,8 +7848,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -8038,8 +7860,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -8072,8 +7894,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -8096,8 +7918,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -8108,8 +7930,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -8120,8 +7942,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -8142,8 +7964,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -8166,8 +7988,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -8178,8 +8000,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -8190,8 +8012,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -8204,8 +8026,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -8216,8 +8038,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -8228,8 +8050,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -8240,8 +8062,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -8252,8 +8074,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -8264,8 +8086,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -8276,8 +8098,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -8288,8 +8110,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -8300,8 +8122,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -8312,8 +8134,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -8324,8 +8146,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -8336,8 +8158,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -8360,8 +8182,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -8372,8 +8194,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -8386,8 +8208,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -8408,8 +8230,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -8430,8 +8252,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -8442,8 +8264,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -8476,8 +8298,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -8488,8 +8310,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -8500,8 +8322,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -8512,8 +8334,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -8524,8 +8346,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -8558,8 +8380,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -8570,8 +8392,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -8582,8 +8404,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -8608,8 +8430,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -8718,8 +8540,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -8730,8 +8552,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -8742,8 +8564,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -8754,8 +8576,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -8766,8 +8588,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -8800,8 +8622,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -8812,8 +8634,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -8824,8 +8646,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -8836,8 +8658,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -8850,8 +8672,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -8928,8 +8750,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -8940,8 +8762,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -8952,8 +8774,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -8964,8 +8786,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -8976,8 +8798,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -8988,8 +8810,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -9022,8 +8844,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -9046,8 +8868,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -9058,8 +8880,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -9160,8 +8982,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -9172,8 +8994,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -9184,8 +9006,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -9220,8 +9042,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -9232,8 +9054,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -9244,8 +9066,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -9256,8 +9078,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -9268,8 +9090,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -9280,8 +9102,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -9338,8 +9160,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -9360,8 +9182,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -9372,8 +9194,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -9394,8 +9216,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -9406,8 +9228,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -9442,8 +9264,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -9454,8 +9276,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -9466,8 +9288,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -9478,8 +9300,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -9490,8 +9312,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -9502,8 +9324,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -9516,8 +9338,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -9538,8 +9360,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -9560,8 +9382,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -9572,8 +9394,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -9594,8 +9416,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -9630,8 +9452,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -9642,8 +9464,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -9654,8 +9476,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -9666,8 +9488,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -9690,8 +9512,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -9702,8 +9524,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -9728,8 +9550,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -9740,8 +9562,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -9752,8 +9574,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -9764,8 +9586,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -9776,8 +9598,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -9788,8 +9610,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -9800,8 +9622,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -9812,8 +9634,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -9824,8 +9646,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -9846,8 +9668,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -9858,8 +9680,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -9870,8 +9692,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -9892,8 +9714,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -9906,8 +9728,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -9918,8 +9740,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -9930,8 +9752,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -9942,8 +9764,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -9954,8 +9776,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -9966,8 +9788,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -9978,8 +9800,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -10000,8 +9822,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -10022,8 +9844,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -10034,8 +9856,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -10046,8 +9868,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -10058,8 +9880,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -10106,8 +9928,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -10118,8 +9940,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -10130,8 +9952,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -10142,8 +9964,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -10154,8 +9976,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -10166,8 +9988,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -10178,8 +10000,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -10190,8 +10012,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -10202,8 +10024,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -10214,8 +10036,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -10226,8 +10048,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -10238,8 +10060,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -10252,8 +10074,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -10264,8 +10086,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -10276,8 +10098,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -10288,8 +10110,8 @@ declare module '@website-data' {
         x1: number;
         x2: number;
         funcX: string;
-        y1: null;
-        y2: null;
+        y1: number;
+        y2: number;
         funcY: string;
         lvlUpText: string;
         skillIndex: number;
@@ -10319,14 +10141,4 @@ declare module '@website-data' {
     }[];
   export const randomList: (string[])[];
   export const randomList2: (string[])[];
-  export const holeFountUpg: ({
-        name: string;
-        prereqIndex: number;
-        position: string;
-        currencyType: number;
-        baseCost: number;
-        costMulti: number;
-        bonusPerLevel: number;
-        description: string;
-      }[])[];
 }

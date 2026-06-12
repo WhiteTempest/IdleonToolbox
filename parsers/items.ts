@@ -12,24 +12,23 @@ export const addStoneDataToEquip = (baseItem: any, stoneData: any) => {
 
   const result = Object.keys(stoneData)?.reduce((res, statName) => {
     if (statName === 'UQ1txt' || statName === 'UQ2txt') {
-      return { ...res, [statName]: baseItem?.[statName] || stoneData?.[statName] };
+      const preferStoneTxt = baseItem?.Type === 'KEYCHAIN' && stoneData?.[statName];
+      return {
+        ...res,
+        [statName]: preferStoneTxt ? stoneData[statName] : (baseItem?.[statName] || stoneData?.[statName])
+      };
     }
 
     const baseItemStat = baseItem?.Type === 'KEYCHAIN' ? 0 : baseItem?.[statName];
     const stoneStat = stoneData?.[statName];
-    let sum = baseItemStat;
 
     if (isNaN(stoneStat)) return { ...res, [statName]: stoneStat };
 
-    const shouldIgnore = (stoneData?.['UQ1txt'] && baseItem?.Type !== 'KEYCHAIN' && baseItem?.['UQ1txt'] !== stoneData?.['UQ1txt']);
-    const stoneEffect = shouldIgnore ? 0 : stoneStat;
-
-    // Track the change if the stone is actually modifying a stat (ignoring UQ1txt and UQ2txt)
-    if (stoneEffect !== 0 && statName !== 'UQ1txt' && statName !== 'UQ2txt') {
-      changes.push({ [statName]: stoneEffect });
+    if (stoneStat !== 0) {
+      changes.push({ [statName]: stoneStat });
     }
 
-    sum = (baseItemStat || 0) + stoneEffect;
+    const sum = (baseItemStat || 0) + stoneStat;
     return { ...res, [statName]: parseFloat(sum) };
   }, {});
 

@@ -187,7 +187,8 @@ export const getResearch = (idleonData: any, account: any, characters: any) => {
     const insightLevel = Number(research?.observationInsight?.[observationIndex]) || 0;
     const insightExp = Number(research?.observationInsightExp?.[observationIndex]) || 0;
     const insightExpREQ = getObservationInsightExpREQ(observationIndex, insightLevel);
-    const insightExpRate = getObservationInsightExpRate(account, research, observationIndex) * researchEXPmulti;
+    const realInsightExpRate = getObservationInsightExpRate(account, research, observationIndex);
+    const insightExpRate = realInsightExpRate * researchEXPmulti;
     const researchEXPrate = getResearchEXPrateObj(account, research, observationIndex) * researchEXPmulti;
     const occurrenceData = occurrencesList[observationIndex];
     // Lenses on this observation: type 0 = Magnifying glass, 1 = Kaleidoscope, 2 = Optical Monocle
@@ -218,6 +219,7 @@ export const getResearch = (idleonData: any, account: any, characters: any) => {
       insightExp,
       insightExpREQ,
       insightExpRate,
+      realInsightExpRate,
       researchEXPrate,
       lensTypes, // 0 = Magnifying glass, 1 = Kaleidoscope, 2 = Optical Monocle
       canLevelUp: found && researchLevel >= (occurrenceData?.researchLvReq ?? 0) && gridBonus91Lv >= 1
@@ -548,6 +550,7 @@ function getResearchEXPmulti(account: any, research: any) {
   const arcade63 = account?.arcade?.shop?.[63]?.bonus ?? 0;
   const grid70 = getResearchGridBonusInternal(account, research, 70, 0);
   const grid31 = getResearchGridBonusInternal(account, research, 31, 0);
+  const grid51 = getResearchGridBonusInternal(account, research, 51, 0);
   const grid94_2 = getResearchGridBonusInternal(account, research, 94, 2);
   const prehistoricSetBonus = Math.min(50, getArmorSetBonus(account, 'PREHISTORIC_SET'));
   const killroyResearchBonus = 1 + getKillRoyShopBonus(account, 5) / 100;
@@ -569,6 +572,7 @@ function getResearchEXPmulti(account: any, research: any) {
     cardBonus +
     arcade63 +
     grid31 +
+    grid51 +
     grid94_2 +
     prehistoricSetBonus;
 
@@ -602,6 +606,7 @@ function getResearchEXPmulti(account: any, research: any) {
           { name: 'Card', value: cardBonus },
           { name: 'Arcade', value: arcade63 },
           { name: 'Grid 31', value: grid31 },
+          { name: 'Sharp Eye', value: grid51 },
           { name: 'Obs Levels (Grid 94)', value: grid94_2 },
           { name: 'Prehistoric Set', value: prehistoricSetBonus }
         ]

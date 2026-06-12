@@ -15,7 +15,7 @@ import {
   mergeItemsByOwner
 } from '@parsers/items';
 import { isJadeBonusUnlocked } from '@parsers/world-6/sneaking';
-import { getKillroySchedule, getMiniBossesData } from '@parsers/misc';
+import { getGuaranteedCrystalMobs, getKillroySchedule, getMiniBossesData } from '@parsers/misc';
 import { getRequirementAmount } from '@parsers/world-4/lab';
 import { getLandRank, getProductDoubler, getRanksTotalBonus } from '@parsers/world-6/farming';
 import { isPast } from 'date-fns';
@@ -178,6 +178,9 @@ export const getGeneralAlerts = (account, fields, options, characters) => {
       if (numOfCharacters === 9 && totalLevels >= 1500) {
         newCharactersCounter++;
       }
+      if (numOfCharacters === 10 && totalLevels >= 5000) {
+        newCharactersCounter++;
+      }
       if (newCharactersCounter > 0) {
         etc.newCharacters = newCharactersCounter;
       }
@@ -208,6 +211,13 @@ export const getGeneralAlerts = (account, fields, options, characters) => {
       const currentShopDay = account?.tournament?.global?.S ?? 0;
       if (currentShopDay >= 1 && lastClaimedShopDay < currentShopDay) {
         etc.petMartGems = true;
+      }
+    }
+    if (options?.etc?.dailyCrystals?.checked) {
+      const guaranteedCrystalMobs = getGuaranteedCrystalMobs(account);
+      const remainingDailyCrystals = Math.max(0, guaranteedCrystalMobs - (account?.accountOptions?.[101] ?? 0));
+      if (remainingDailyCrystals > 0) {
+        etc.dailyCrystals = remainingDailyCrystals;
       }
     }
     if (Object.keys(etc).length > 0) {
@@ -566,7 +576,7 @@ export const getWorld3Alerts = (account, fields, options, characters) => {
       }
     }
     if (challenges?.checked) {
-      const hasChallenges = equinox?.challenges.filter(challenge => challenge.active && challenge.current >= challenge.goal)?.length;
+      const hasChallenges = equinox?.challenges.filter(challenge => challenge.active && !challenge.locked && challenge.current >= challenge.goal)?.length;
       if (hasChallenges > 0) {
         equinoxAlerts.challenges = hasChallenges;
       }
@@ -897,6 +907,8 @@ export const getWorld5Alerts = (account, fields, options) => {
     const {
       buckets,
       motherlode,
+      evertree,
+      bottomlessTrench,
       bravery,
       justice,
       wisdom,
@@ -925,6 +937,14 @@ export const getWorld5Alerts = (account, fields, options) => {
     const isMaxedBugs = account?.hole?.caverns?.theHive?.bugs?.maxed;
     if (theHive?.checked && brokenLayersToday < 5 && isMaxedBugs) {
       hole.hiveMaxed = isMaxedBugs;
+    }
+    const isMaxedLogs = account?.hole?.caverns?.evertree?.logs?.maxed;
+    if (evertree?.checked && brokenLayersToday < 5 && isMaxedLogs) {
+      hole.evertreeMaxed = isMaxedLogs;
+    }
+    const isMaxedFish = account?.hole?.caverns?.theBottomlessTrench?.fish?.maxed;
+    if (bottomlessTrench?.checked && brokenLayersToday < 5 && isMaxedFish) {
+      hole.bottomlessTrenchMaxed = isMaxedFish;
     }
     if (bravery?.checked && account?.hole?.caverns?.bravery?.rewardMulti >= bravery?.props?.value) {
       hole.bravery = true;

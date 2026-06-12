@@ -16,7 +16,7 @@ import { getPrinterExclusions } from '@parsers/world-3/printer';
 import { getCrystalCountdownSkills } from '@parsers/talents';
 
 const baseTrackers = {
-  version: 49,
+  version: 53,
   account: {
     General: {
       tasks: {
@@ -53,7 +53,12 @@ const baseTrackers = {
           { name: 'gemsFromBosses', checked: true },
           { name: 'familyObols', checked: true },
           { name: 'freeCompanion', checked: true },
-          { name: 'petMartGems', checked: true }
+          { name: 'petMartGems', checked: true },
+          {
+            name: 'dailyCrystals',
+            checked: true,
+            helperText: 'Alert when daily guaranteed crystal kills remain'
+          }
         ]
       }
     },
@@ -274,6 +279,8 @@ const baseTrackers = {
             checked: true
           },
           { name: 'motherlode', checked: true },
+          { name: 'evertree', checked: true },
+          { name: 'bottomlessTrench', checked: true },
           {
             name: 'bravery',
             checked: true,
@@ -579,10 +586,20 @@ const baseTrackers = {
       equinox: { checked: true, options: [] }
     },
     'World 5': {
-      monument: { checked: true, options: [] },
+      bravery: { checked: true, options: [] },
       justice: { checked: true, options: [] },
       wisdom: { checked: true, options: [] },
-      villagers: { checked: true, options: [] }
+      villagers: {
+        checked: true,
+        options: [{
+          name: 'villagers',
+          type: 'array',
+          props: { value: { explore: true, engineer: true, bonuses: true, measure: true, studies: true } },
+          checked: true
+        }]
+      },
+      coinFill: { checked: true, options: [] },
+      marbleFill: { checked: true, options: [] }
     },
     'World 7': {
       researchLevelUp: { checked: true, options: [] },

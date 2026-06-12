@@ -275,7 +275,7 @@ const calcTimeToXBooks = (bookCount: any, maxCount: any, account: any, character
 //  "BookReqTime"
 export const getTimeToNextBooks = (bookCount: any, account: any, characters: any, idleonData: any) => {
   const towersLevels = tryToParse(idleonData?.Tower) || idleonData?.Tower;
-  const mealBonus = getMealsBonusByEffectOrStat(account, 'Library_checkout_Speed', null);
+  const mealBonus = getMealsBonusByEffectOrStat(account, null, 'Lib');
   const bubbleBonus = getBubbleBonus(account, 'IGNORE_OVERDUES', false);
   const vialBonus = getVialsBonusByEffect(account?.alchemy?.vials, 'Talent_Book_Library');
   const stampBonus = getStampsBonusByEffect(account, 'Talent_Book_Library_Refresh_Speed')
@@ -330,8 +330,16 @@ export const hasItemDropped = (account: any, itemName: any) => {
   return account?.looty?.lootyRaw?.includes(itemName);
 }
 
+// Greenstack = 10,000,000+ of a single item in the Storage Chest (game registers it with no item-type
+// check). The Storage Chest is NOT carry-capped, so any item that stacks there can reach the threshold.
+// Only equipment (typeGen starting with 'a') can't stack — each piece is its own qty-1 slot. So an item
+// is greenstackable iff it stacks, i.e. its typeGen does not start with 'a'.
+const isGreenstackable = (typeGen: any): boolean => typeof typeGen === 'string' && typeGen.charAt(0) !== 'a';
+
 export const getSlab = (idleonData: any) => {
   const lootyRaw = idleonData?.Cards?.[1] || tryToParse(idleonData?.Cards1);
+  const greenStacks = tryToParse(idleonData?.GreenStacks) || idleonData?.GreenStacks || [];
+  const greenStacksSet = new Set(greenStacks);
   const allItems = structuredClone((items)); // Deep clone
   const forcedNames = {
     'Motherlode': 'Motherlode_x1',
@@ -347,16 +355,25 @@ export const getSlab = (idleonData: any) => {
     name: allItems?.[name]?.displayName,
     rawName: (forcedNames as Record<string, any>)?.[name] || name,
     obtained: lootyRaw?.includes(name),
+    greenStacked: greenStacksSet.has(name),
+    greenstackable: isGreenstackable((allItems?.[name] as any)?.typeGen),
     onRotation: filteredGemShopItems?.[name],
     unobtainable: filteredLootyItems?.[name]
   }));
   const missingItems = slabItems?.filter(({ obtained, unobtainable }) => !obtained && !unobtainable)?.length;
+  const greenstackableItems = slabItems?.filter(({ greenstackable }) => greenstackable);
+  const greenstackableCount = greenstackableItems?.length ?? 0;
+  const greenstackableStackedCount = greenstackableItems?.filter(({ greenStacked }) => greenStacked)?.length ?? 0;
 
   return {
     slabItems,
     lootyRaw,
     lootedItems: lootyRaw?.length,
     missingItems,
+    greenStacks,
+    greenStackedCount: greenStacks?.length ?? 0,
+    greenstackableCount,
+    greenstackableStackedCount,
     totalItems: slab?.length,
     rawLootedItems: lootyRaw?.length
   };
@@ -1361,12 +1378,37 @@ export const getKillRoy = (idleonData: any, charactersData: any, accountData: an
     9: 7   // Shop 19: Mystery bonus
   };
 
+  // Decay-based asymptotic cap info (bonus = base + scale * L/(decay+L)).
+  // 3rd fight (i=0) and nugget (i=2) are flat unlocks with no cap.
+  // format: 'mult' = "Xx" multiplier, 'addMult' = "+0.XXx" additive multiplier (Gallery),
+  //         'pct' = "+X%" additive percent (Coral).
+  const permanentUpgradeCapMap: Record<number, { decay: number; cap: number; format: 'mult' | 'addMult' | 'pct' }> = {
+    1: { decay: 300, cap: 2, format: 'mult' },
+    3: { decay: 300, cap: 10, format: 'mult' },
+    4: { decay: 300, cap: 3, format: 'mult' },
+    5: { decay: 200, cap: 10, format: 'addMult' },
+    6: { decay: 200, cap: 2.3, format: 'mult' },
+    7: { decay: 150, cap: 1.8, format: 'mult' },
+    8: { decay: 250, cap: 25, format: 'pct' },
+    9: { decay: 200, cap: 3, format: 'mult' }
+  };
+
+  const formatBonus = (value: number, format: 'mult' | 'addMult' | 'pct') => {
+    if (format === 'mult') return `${Math.floor(value * 100) / 100}x`;
+    if (format === 'addMult') return `+${(value / 100).toFixed(2)}x`;
+    return `+${Math.floor(value * 100) / 100}%`;
+  };
+
   const permanentUpgrades = killRoySkullShop?.slice(10)?.map((upgrade, i) => {
     const levelOption = permanentUpgradeLevelMap[i];
     const bonusIndex = permanentUpgradeBonusMap[i];
+    const capInfo = permanentUpgradeCapMap[i];
 
     const level = levelOption !== null ? (accountData?.accountOptions?.[levelOption] ?? 0) : 0;
     const bonus = bonusIndex !== undefined ? getKillRoyShopBonus(accountData, bonusIndex) : 1;
+    const progress = capInfo ? (level / (level + capInfo.decay)) * 100 : null;
+    const bonusDisplay = capInfo ? formatBonus(bonus, capInfo.format) : null;
+    const capDisplay = capInfo ? formatBonus(capInfo.cap, capInfo.format) : null;
 
     // Special case: Shop 15 (Gallery) changes description when level >= 2
     let description = upgrade?.description;
@@ -1380,6 +1422,9 @@ export const getKillRoy = (idleonData: any, charactersData: any, accountData: an
       ...upgrade,
       level,
       bonus,
+      progress,
+      bonusDisplay,
+      capDisplay,
       description: description?.replace(replacementChar, String(Math.floor(bonus * 100) / 100))
     }
   });

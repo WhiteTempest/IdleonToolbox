@@ -121,7 +121,9 @@ const checkHasMaterials = (materials: any, materialCost: any, account: any, subt
   return materials?.every(({ itemName, type, itemQuantity }: any) => {
     if (type === 'Equip') return true;
     let ownedMats = calculateItemTotalAmount(account?.storage?.list, itemName, true);
-    return subtractGreenStacks ? Math.max(0, ownedMats - 1e7) : ownedMats >= itemQuantity * materialCost;
+    return subtractGreenStacks
+      ? Math.max(0, ownedMats - 1e7) >= itemQuantity * materialCost
+      : ownedMats >= itemQuantity * materialCost;
   })
 }
 
@@ -229,7 +231,7 @@ const getMaterialCostToLevel = (level: any, maxLevel: any, stamp: any, account: 
 
 const getMaterialCost = (level: any, stamp: any, account: any, reduction = 0, gildedStamp: any) => {
   const reductionVial = getVialsBonusByEffect(account?.alchemy?.vials, 'material_cost_for_stamps');
-  const sigilBonus = getSigilBonus(account?.alchemy?.p2w?.sigils, 'ENVELOPE_PILE', true) ?? 0;
+  const sigilBonus = getSigilBonus(account?.alchemy?.p2w?.sigils, 'ENVELOPE_PILE') ?? 0;
   const sigilReduction = (1 / (1 + sigilBonus / 100));
   const stampReducerVal = Math.max(0.1, 1 - reduction / 100);
   const meritocracyBonus = 1 / (1 + getMeritocracyBonus(account, 14) / 100);
