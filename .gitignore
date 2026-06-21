@@ -39,3 +39,6 @@ yarn-error.log*
 
 # claude code
 .claude/settings.local.json
+
+# graphify knowledge-graph output (generated locally)
+graphify-out/
