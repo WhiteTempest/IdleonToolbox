@@ -27,6 +27,13 @@ import { getEventShopBonus } from '@parsers/misc';
 import { altStampsMapping } from '@parsers/world-1/stamps';
 import { getOptimizedGenericUpgrades } from '@parsers/genericUpgradeOptimizer';
 import { getMasterclassCostReduction } from '@parsers/misc';
+import { getLabBonus } from '@parsers/world-4/lab';
+import { getPaletteBonus } from '@parsers/world-5/gaming';
+import { getExoticMarketBonus } from '@parsers/world-6/farming';
+import { getBubbleBonus } from '@parsers/world-2/alchemy';
+import { getLoreBossBonus } from '@parsers/world-7/spelunking';
+import { getMeritocracyBonus } from '@parsers/world-2/voteBallot';
+import { getAllMasterclassDropz } from '@parsers/misc';
 
 export const dustNames = {
   0: 'Stardust',
@@ -279,11 +286,18 @@ const getMedallions = (medallions: any, upgrades: any[]) => {
                 : 'Golden_Chest';
         }
 
+        // Some monsters share a Name with a different mob, so afk_targets/<Name>.png
+        // resolves to the wrong sprite (last writer wins at extraction). For those,
+        // z-processing also emits a unique afk_targets/<Name>_<rawName>.png; target it.
+        // 'ghost' (event mob) collides with 'pghost' (poison minion); both Name "Ghost".
+        const imageNameByRaw: Record<string, string> = { ghost: 'Ghost_ghost' };
+
         return [
           monsterRawName,
           {
             ...monsters[monsterRawName],
             ...(customName ? { Name: customName } : {}),
+            imageName: imageNameByRaw[monsterRawName],
             acquired: medallions?.[monsterRawName],
             weakness,
             drops: [
@@ -532,28 +546,75 @@ export const getExtraDust = (character: any, account: any) => {
   const compassTalent = getTalentBonus(character?.flatTalents, 'COMPASS');
   const arcadeBonus = getArcadeBonus(account?.arcade?.shop, 'Windwalker_Dust')?.bonus;
 
-  const charmBonus = getCharmBonus(account, 'Twinkle_Taffy');
+  const charmBonus = getCharmBonus(account, 'Twinkle_Taffy'); // Pristine charm 19
   const emperorBonus = getEmperorBonus(account, 4);
+  const exoticBonus = getExoticMarketBonus(account, 54) ?? 0;
+  const mainframeBonus = getLabBonus(account?.lab?.labBonuses, 122); // game MainframeBonus(122)
+  const paletteBonus = getPaletteBonus(account, 4) ?? 0;
+  const bubbleBonus = getBubbleBonus(account, account?.alchemy?.bubbles?.quicc?.[13]?.bubbleName) ?? 0; // AlchBubbles.A13
+  const loreBonus = getLoreBossBonus(account, 2) ?? 0; // Tome epilogue (LoreEpiBon 2)
+  const meritocracyBonus = getMeritocracyBonus(account, 25) ?? 0;
+  const { value: allMasterclassDropz, sources: amdSources } = getAllMasterclassDropz(character, account);
 
-  return (1 +
-    (getLocalCompassBonus(upgrades, 31)
-      + getLocalCompassBonus(upgrades, 34)
-      * lavaLog(account?.accountOptions?.[359])) / 100)
-    * (1 + getLocalCompassBonus(upgrades, 38) / 100)
+  const baseUpgrades = getLocalCompassBonus(upgrades, 31)
+    + getLocalCompassBonus(upgrades, 34) * lavaLog(account?.accountOptions?.[359])
+    + exoticBonus;
+  const upgrade38 = getLocalCompassBonus(upgrades, 38);
+  const gearBonus = equipBonus + equipBonus1;
+  const pathBonuses = getLocalCompassBonus(upgrades, 139)
+    + (getLocalCompassBonus(upgrades, 142)
+      + (getLocalCompassBonus(upgrades, 145)
+        + (getLocalCompassBonus(upgrades, 148)
+          + (getLocalCompassBonus(upgrades, 150)
+            + (getLocalCompassBonus(upgrades, 68)
+              + (getLocalCompassBonus(upgrades, 93)
+                + (getLocalCompassBonus(upgrades, 89)
+                  + (compassTalent
+                    + arcadeBonus + mainframeBonus + paletteBonus))))))));
+
+  const value = (1 + baseUpgrades / 100)
+    * (1 + upgrade38 / 100)
+    * allMasterclassDropz
+    * (1 + meritocracyBonus / 100)
     * (1 + charmBonus / 100)
-    * (1 + (equipBonus + equipBonus1) / 100)
-    * (1 + emperorBonus / 100)
-    * (1 + (0 * dustTalent) / 100)
-    * (1 + (getLocalCompassBonus(upgrades, 139)
-      + (getLocalCompassBonus(upgrades, 142)
-        + (getLocalCompassBonus(upgrades, 145)
-          + (getLocalCompassBonus(upgrades, 148)
-            + (getLocalCompassBonus(upgrades, 150)
-              + (getLocalCompassBonus(upgrades, 68)
-                + (getLocalCompassBonus(upgrades, 93)
-                  + (getLocalCompassBonus(upgrades, 89)
-                    + (compassTalent
-                      + arcadeBonus))))))))) / 100);
+    * (1 + loreBonus / 100)
+    * (1 + gearBonus / 100)
+    * (1 + (emperorBonus + bubbleBonus) / 100)
+    * (1 + (0 * dustTalent) / 100) // Spirit Reindeer kills not tracked in save
+    * (1 + pathBonuses / 100);
+
+  return {
+    value,
+    breakdown: {
+      statName: "Extra Dust",
+      totalValue: notateNumber(value, "MultiplierInfo") + 'x',
+      categories: [
+        {
+          name: "Additive / Path",
+          sources: [
+            { name: "Compass Upgrades", value: baseUpgrades },
+            { name: "Per solardust", value: upgrade38 },
+            { name: "Gear", value: gearBonus },
+            { name: "Path Bonuses", value: pathBonuses },
+          ],
+        },
+        {
+          name: "Multipliers",
+          sources: [
+            { name: "Emperor", value: emperorBonus },
+            { name: "Bubble", value: bubbleBonus },
+            { name: "Meritocracy", value: meritocracyBonus },
+            { name: "Tome Epilogue", value: loreBonus },
+            { name: "Charm (Twinkle Taffy)", value: charmBonus },
+          ],
+        },
+        {
+          name: "All Masterclass Drops (mult)",
+          sources: amdSources,
+        },
+      ],
+    }
+  };
 }
 
 const getUpgradeCost = (upgrades: any[], index: number, serverVars: any, accountData: any, forceLegendTalent?: any) => {

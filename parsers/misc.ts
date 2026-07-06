@@ -44,6 +44,8 @@ import { getCardBonusByEffect } from '@parsers/cards';
 import { getTesseractBonus } from '@parsers/class-specific/tesseract';
 import { getPaletteBonus } from '@parsers/world-5/gaming';
 import { getMinorDivinityBonus } from '@parsers/world-5/divinity';
+import { getSpelunkingBonus } from '@parsers/world-7/spelunking';
+import { getButtonBonus } from '@parsers/world-7/button';
 
 export const getRawRefinerySalts = () => {
   return Object.keys(items).filter(key => /^Refinery\d+$/.test(key)).reduce((res, key) => ({ ...res, [key]: true }), {});
@@ -91,7 +93,8 @@ export const getFriendBonusStats = (account: any = {}) => {
     '% Skill Efficiency',
     '% Drop Rate',
     '% Skill EXP gain',
-    '% more Coins'
+    '% more Coins',
+    '% Extra Kills'
   ];
   const companionList = account?.companions?.list;
   const hasMrPig = isCompanionBonusActive(account, 30);
@@ -151,8 +154,8 @@ export const getFriendBonusStats = (account: any = {}) => {
 
 
 const getFriendBonusQuantity = (statIndex: any, level = 0) => {
-  const cappedLevel = Math.min(12000, Math.max(0, level));
-  const scaling = Math.min(1, 0.2 + cappedLevel / (cappedLevel + 3000));
+  const cappedLevel = Math.min(30000, Math.max(0, level));
+  const scaling = Math.min(1.5, 0.25 + (cappedLevel / (cappedLevel + 12000)) * 1.5);
 
   switch (statIndex) {
     case 0:
@@ -167,6 +170,8 @@ const getFriendBonusQuantity = (statIndex: any, level = 0) => {
       return 30 * scaling;
     case 5:
       return 40 * scaling;
+    case 6:
+      return 10 * scaling;
     default:
       return 0;
   }
@@ -332,9 +337,13 @@ export const hasItemDropped = (account: any, itemName: any) => {
 
 // Greenstack = 10,000,000+ of a single item in the Storage Chest (game registers it with no item-type
 // check). The Storage Chest is NOT carry-capped, so any item that stacks there can reach the threshold.
-// Only equipment (typeGen starting with 'a') can't stack — each piece is its own qty-1 slot. So an item
-// is greenstackable iff it stacks, i.e. its typeGen does not start with 'a'.
-const isGreenstackable = (typeGen: any): boolean => typeof typeGen === 'string' && typeGen.charAt(0) !== 'a';
+// An item is greenstackable iff it can sit in the Storage Chest as a stack:
+//   1. not equipment — typeGen starting with 'a' is its own qty-1 slot, never stacks;
+//   2. actually depositable — hole/cavern resources (Type CURRENCY) and dungeon-only drops (DUNGEON_*)
+//      route to their own banks / evaporate on map exit, so they never get a chest slot.
+const NON_STORABLE_TYPES = new Set(['CURRENCY', 'DUNGEON_EVAPORATE', 'DUNGEON_FOOD', 'DUNGEON_ITEM', 'DUNGEON_KEY']);
+const isGreenstackable = (item: any): boolean =>
+  typeof item?.typeGen === 'string' && item.typeGen.charAt(0) !== 'a' && !NON_STORABLE_TYPES.has(item?.Type);
 
 export const getSlab = (idleonData: any) => {
   const lootyRaw = idleonData?.Cards?.[1] || tryToParse(idleonData?.Cards1);
@@ -356,7 +365,7 @@ export const getSlab = (idleonData: any) => {
     rawName: (forcedNames as Record<string, any>)?.[name] || name,
     obtained: lootyRaw?.includes(name),
     greenStacked: greenStacksSet.has(name),
-    greenstackable: isGreenstackable((allItems?.[name] as any)?.typeGen),
+    greenstackable: isGreenstackable(allItems?.[name]),
     onRotation: filteredGemShopItems?.[name],
     unobtainable: filteredLootyItems?.[name]
   }));
@@ -1196,7 +1205,7 @@ export const getMinigameScore = (account: any, bonusName: any) => {
   return account?.highscores?.minigameHighscores?.find(({ name }: any) => name === bonusName)?.score || 0;
 }
 
-export const getCompanions = (companionObject: any = {}) => {
+export const getCompanions = (companionObject: any = {}, accountOptions: any = []) => {
   const maxStorage = companionObject?.p ?? 60;
   const [companionIndex] = companionObject?.e?.split(',') || [];
   const companion = companions?.[companionIndex];
@@ -1214,13 +1223,30 @@ export const getCompanions = (companionObject: any = {}) => {
     }
   }, {});
 
-  const updatedCompanions = companions?.map((comp, index) => ({
-    ...comp,
-    acquired: (ownedCompanions?.[index]?.count || 0) > 0,
-    copies: ownedCompanions?.[index]?.count ?? 0,
-    tradableCount: ownedCompanions?.[index]?.tradableCount ?? 0,
-    nonTradableCount: ownedCompanions?.[index]?.nonTradableCount ?? 0
-  }))
+  // Pet Bonus Token: opt[606] is a comma-list of companion indices the player spent a token on.
+  // The game grants each such companion's full bonus (CompanionDB[i][2]) as if owned, even
+  // without owning the pet. opt[605] tracks tokens owned (capped at 1 usage).
+  const rawTokens = `${accountOptions?.[606] ?? ''}`;
+  const tokenIndices = rawTokens === '' || rawTokens === '0'
+    ? []
+    : rawTokens.split(',').map((value: any) => Number(value)).filter((value: any) => Number.isFinite(value));
+  const tokenIndexSet = new Set(tokenIndices);
+
+  const updatedCompanions = companions?.map((comp, index) => {
+    const owned = (ownedCompanions?.[index]?.count || 0) > 0;
+    const viaToken = !owned && tokenIndexSet.has(index);
+    return {
+      ...comp,
+      acquired: owned || viaToken,
+      viaToken,
+      copies: ownedCompanions?.[index]?.count ?? 0,
+      tradableCount: ownedCompanions?.[index]?.tradableCount ?? 0,
+      nonTradableCount: ownedCompanions?.[index]?.nonTradableCount ?? 0
+    }
+  })
+
+  const tokensOwned = Math.min(1, Number(accountOptions?.[605]) || 0);
+  const tokensUsed = tokenIndices.length;
 
   return {
     totalBoxesOpened: companionObject?.x,
@@ -1228,7 +1254,13 @@ export const getCompanions = (companionObject: any = {}) => {
     list: updatedCompanions,
     lastFreeClaim: companionObject?.t,
     petCrystals: companionObject?.s,
-    maxStorage
+    maxStorage,
+    tokens: {
+      owned: tokensOwned,
+      used: tokensUsed,
+      remaining: Math.max(0, tokensOwned - tokensUsed),
+      usedIndices: tokenIndices
+    }
   };
 }
 
@@ -1452,6 +1484,38 @@ export const getKillRoy = (idleonData: any, charactersData: any, accountData: an
 
 export const getKillroyBonus = (account: any, index: any) => {
   return account?.killroy?.permanentUpgrades?.[index]?.bonus;
+}
+
+// Game: Summoning("AllMasterclassDropz", 0, 0)
+// Shared multiplier applied to AC Tachyons, WW Dust and DB Bones.
+export const getAllMasterclassDropz = (character: any, account: any) => {
+  const killroy = getKillroyBonus(account, 4) ?? 0;
+  const spelunkShop = getSpelunkingBonus(account, 49) ?? 0; // Turquoise Hardhat
+  const vial = getVialsBonusByStat(account?.alchemy?.vials, '7masta') ?? 0;
+  const button = getButtonBonus(account, 4) ?? 0;
+  const companion = isCompanionBonusActive(account, 38) ? (account?.companions?.list?.at(38)?.bonus ?? 0) : 0;
+  const { value: gear101 } = getStatsFromGear(character, 101, account);
+  const { value: gear106 } = getStatsFromGear(character, 106, account);
+
+  const value = (1 + killroy / 100)
+    * (1 + spelunkShop / 100)
+    * (1 + vial / 100)
+    * (1 + button / 100)
+    * (1 + companion)
+    * (1 + gear101 / 100)
+    * (1 + gear106 / 100);
+
+  const sources = [
+    { name: 'Killroy', value: killroy },
+    { name: 'Spelunking Shop (Turquoise Hardhat)', value: spelunkShop },
+    { name: 'Vial', value: vial },
+    { name: 'Button', value: button },
+    { name: 'Companion', value: companion },
+    { name: 'Gear (Masterclass drops)', value: gear101 },
+    { name: 'Gear (Bonus MC drops)', value: gear106 },
+  ];
+
+  return { value, sources };
 }
 
 export const getKillRoyShopBonus = (account: any, index: any) => {

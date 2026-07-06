@@ -45,14 +45,19 @@ const parseFarming = (rawFarmingUpgrades: any, rawFarmingPlot: any, rawFarmingCr
   const beans = rawFarmingUpgrades?.[1];
   const instaGrow = rawFarmingUpgrades?.[19];
   const researchBonus171 = getResearchGridBonus(account, 171, 0);
+  const cheaperDayMarket = Math.max(0.1, 1 - (getExoticMarketBonus(account, 34) ?? 0) / 100)
+    * Math.max(0.1, 1 - (getExoticMarketBonus(account, 35) ?? 0) / 100);
+  const cheaperNightMarket = Math.max(0.1, 1 - (getExoticMarketBonus(account, 36) ?? 0) / 100)
+    * Math.max(0.1, 1 - (getExoticMarketBonus(account, 37) ?? 0) / 100);
   const market = marketInfo?.map((upgrade, index) => {
     const { cropId, cropIdIncrement, cost, costExponent, bonusPerLvl, maxLvl, bonus } = upgrade;
     const level = marketLevels?.[index] ?? 0;
     const emperorBonus = getEmperorBonus(account, 2);
     const emperorCostCalc = Math.max(0.001, 1 - emperorBonus / (emperorBonus + 100));
-    const calculatedCost = emperorCostCalc * cost * Math.pow(costExponent, level);
     const t = Math.floor(index / 8);
     const i = index % 8;
+    const marketCostReduction = t === 1 ? cheaperNightMarket : cheaperDayMarket;
+    const calculatedCost = emperorCostCalc * cost * Math.pow(costExponent, level) * marketCostReduction;
     const effectiveMaxLvl = (i === 0 || (t === 1 && i === 5))
       ? Math.floor(maxLvl)
       : Math.floor(researchBonus171 + maxLvl);
@@ -70,9 +75,10 @@ const parseFarming = (rawFarmingUpgrades: any, rawFarmingPlot: any, rawFarmingCr
         maxLvl: effectiveMaxLvl,
         cost,
         costExponent,
-        emperorCostCalc
+        emperorCostCalc,
+        marketCostReduction
       }),
-      costToMax: calcCostToMax({ level, maxLvl: effectiveMaxLvl, cost, costExponent, emperorCostCalc }),
+      costToMax: calcCostToMax({ level, maxLvl: effectiveMaxLvl, cost, costExponent, emperorCostCalc, marketCostReduction }),
       baseValue: bonus.includes('}') ? (1 + (level * bonusPerLvl) / 100) : level * bonusPerLvl
     }
   });
@@ -381,7 +387,11 @@ const getStickerOddsMulti = (characters: any, account: any) => {
   const superBit55 = isSuperbitUnlocked(account, 'Mo_Stickers_Mo_Bonusers') ? 1 : 0;
   const farmingLevel = getHighestCharacterSkill(characters, 'farming') ?? 0;
   const sushiBonus55 = getSushiBonus(account, 55);
-  return (1 + grid67bonus / 100)
+  // W4 Golden Tome (opt[607]) multiplies sticker odds: 2^min(12,lvl) then +1500 per level past 11
+  const goldenTome = Number(account?.accountOptions?.[607]) || 0;
+  const goldenTomeMulti = Math.max(1, Math.pow(2, Math.min(12, goldenTome)) + 1500 * Math.max(0, goldenTome - 11));
+  return goldenTomeMulti
+    * (1 + grid67bonus / 100)
     * (1 + grid88bonus / 100)
     * (1 + sticker5bonus / 100)
     * (1 + arcade64 / 100)
@@ -686,7 +696,8 @@ const getNextUpgradesReq = ({
                               cost,
                               costExponent,
                               isUnique = true,
-                              emperorCostCalc
+                              emperorCostCalc,
+                              marketCostReduction = 1
                             }: any) => {
   const upgradeMap = new Map();
 
@@ -700,7 +711,7 @@ const getNextUpgradesReq = ({
       level: level + extraLv
     });
 
-    const localCost = emperorCostCalc * cost * Math.pow(costExponent, level + extraLv);
+    const localCost = emperorCostCalc * cost * Math.pow(costExponent, level + extraLv) * marketCostReduction;
 
     if (upgradeMap.has(type) && isUnique) {
       // If the type exists, add the cost to the existing total
@@ -819,10 +830,10 @@ export const getLandRankTotalBonus = (account: any, index: any) => {
               getLandRank(account?.farming?.ranks, 16)) : 1;
 }
 
-const calcCostToMax = ({ level, maxLvl, cost, costExponent, emperorCostCalc }: any) => {
+const calcCostToMax = ({ level, maxLvl, cost, costExponent, emperorCostCalc, marketCostReduction = 1 }: any) => {
   let costToMax = 0;
   for (let i = level; i < maxLvl; i++) {
-    costToMax += emperorCostCalc * cost * Math.pow(costExponent, i)
+    costToMax += emperorCostCalc * cost * Math.pow(costExponent, i) * marketCostReduction
   }
   return costToMax ?? 0;
 }

@@ -4,6 +4,47 @@ import React from 'react';
 /* eslint-disable react/jsx-key */
 export const patchNotes = [
   {
+    'ver': '3.3.53',
+    'gameVer': '2.3.523',
+    'date': '03/07/2026',
+    'features': [
+      'Upgrade Vault: new "Vault cost reduction" card showing the total cheaper multiplier, with a source breakdown',
+      'Hole Fountain: the fountain bars now show the Rubber Ducky chance and the active coin-fill multiplier',
+      'Dashboard: the better class-specific weapon alert now names the exact item and its stats',
+      'Dashboard: new alert for a better class-specific ring in your inventory',
+      'Dashboard: new Arcade alert for unmaxed upgrades in the current shop rotation, with an optional Super (Lv 101) check',
+      'Dashboard: new Pet Tournament registration reminder',
+      'Pinned pages: drag to reorder them'
+    ]
+  },
+  {
+    'ver': '3.3.52',
+    'gameVer': '2.3.523',
+    'date': '23/06/2026',
+    'features': [
+      'Updated the website with version 2.3.523 (Summer Event) data and assets',
+      'Pets: Pet Bonus Token support — token-applied pets give their bonus everywhere, even without owning the pet',
+      'New Glowfish card and the Glowing Underbelly map'
+    ],
+    'fixes': [
+      'Friend Bonus rescaled to the new cap, plus the new "Extra Kills" bonus type',
+      'Updated Research EXP, Hat Rack, Artifact Find, Sticker odds, and Glimbo costs with the new bonuses'
+    ]
+  },
+  {
+    'ver': '3.3.51',
+    'gameVer': '2.3.522',
+    'date': '17/06/2026',
+    'features': [
+      'Updated the website with version 2.3.522 data and assets',
+      'Caverns: new Cavern 18 "Crystal Glunko Cove" — gooey shapes, the Crystal & Jeweled upgrade tabs (with per-upgrade unlock requirements), and the Cove\'s Drop Rate / AFK Gains / Multikill stats'
+    ],
+    'fixes': [
+      'Damage now includes the Crystal Glunko Cove damage upgrade',
+      'Cooking Mastery EXP rate now includes the Green Water bonus'
+    ]
+  },
+  {
     'ver': '3.3.50',
     'gameVer': '2.3.509',
     'date': '11/06/2026',

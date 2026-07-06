@@ -1,6 +1,6 @@
 import { tryToParse, notateNumber } from '@utility/helpers';
 import { items, itemsArray } from '@website-data';
-import { getEventShopBonus } from '@parsers/misc';
+import { getEventShopBonus, isCompanionBonusActive } from '@parsers/misc';
 import { getMineheadBonusQTY } from '@parsers/world-7/minehead';
 import { getSushiBonus } from '@parsers/world-7/sushiStation';
 
@@ -28,7 +28,8 @@ export const getHatRackBonusMulti = (rawSpelunk: any, account: any) => {
   const eventShopBonus = getEventShopBonus(account, 30);
   const mineheadBonus = getMineheadBonusQTY(account, 21);
   const sushiBonus = getSushiBonus(account, 36);
-  return 1 + (hatCount + 10 * eventShopBonus + mineheadBonus + sushiBonus) / 100;
+  const companion31 = isCompanionBonusActive(account, 31) ? (account?.companions?.list?.at(31)?.bonus ?? 0) : 0;
+  return 1 + (hatCount + companion31 + 10 * eventShopBonus + mineheadBonus + sushiBonus) / 100;
 }
 
 export const getHatBonuses = (rawSpelunk: any, account: any) => {
@@ -45,10 +46,10 @@ export const getHatBonuses = (rawSpelunk: any, account: any) => {
       if (hat) {
         // Build modified item with bonus values
         const modifiedItem: any = { ...hat };
-        if (hat.UQ1txt && hat.UQ1txt != '0' && hat.UQ1val && hat.UQ1val != 0) {
+        if (hat.UQ1txt && hat.UQ1txt as any != '0' && hat.UQ1val && hat.UQ1val != 0) {
           modifiedItem.UQ1val = notateNumber(hat.UQ1val * bonusMulti, 'MultiplierInfo');
         }
-        if (hat.UQ2txt && hat.UQ2txt != '0' && hat.UQ2val && hat.UQ2val != 0) {
+        if (hat.UQ2txt && hat.UQ2txt as any != '0' && hat.UQ2val && hat.UQ2val != 0) {
           modifiedItem.UQ2val = notateNumber(hat.UQ2val * bonusMulti, 'MultiplierInfo');
         }
         modifiedItem.hatIndex = hatIndex;
@@ -116,10 +117,10 @@ const getAllPremiumHelmets = (rawSpelunk: any, account: any) => {
 
       if (isAcquired) {
         // Apply bonus multiplier for acquired hats
-        if (item.UQ1txt && item.UQ1txt != '0' && item.UQ1val && item.UQ1val != 0) {
+        if (item.UQ1txt && item.UQ1txt as any != '0' && item.UQ1val && item.UQ1val != 0) {
           modifiedItem.UQ1val = notateNumber(item.UQ1val * bonusMulti, 'MultiplierInfo');
         }
-        if (item.UQ2txt && item.UQ2txt != '0' && item.UQ2val && item.UQ2val != 0) {
+        if (item.UQ2txt && item.UQ2txt as any != '0' && item.UQ2val && item.UQ2val != 0) {
           modifiedItem.UQ2val = notateNumber(item.UQ2val * bonusMulti, 'MultiplierInfo');
         }
         modifiedItem.hatMultiplier = bonusMulti;

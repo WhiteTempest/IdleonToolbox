@@ -6,6 +6,7 @@ import Tooltip from '@components/Tooltip';
 import Tabber from '@components/common/Tabber';
 import { PAGES } from '@components/constants';
 import { CardWithBreakdown } from '../commons';
+import { Breakdown } from '@components/common/Breakdown/Breakdown';
 
 const TheJars = ({ hole }) => {
   return <>
@@ -40,7 +41,7 @@ const TheJars = ({ hole }) => {
     <Divider sx={{ mb: 2 }}/>
     <Tabber tabs={getTabs(PAGES.ACCOUNT['world 5'].categories, 'hole', 'Explore', 'The Jars')} queryKey={'dnt'}>
       <Stack direction={'row'} gap={2} flexWrap={'wrap'} alignItems={'center'}>
-        {hole?.caverns?.theJars?.jars?.map(({ name, unlocked, req, effect, destroyed }, index) => {
+        {hole?.caverns?.theJars?.jars?.map(({ name, unlocked, req, effect, destroyed, enchant }, index) => {
           return <Card key={`jar-${index}`}>
             <CardContent sx={{
               width: 350,
@@ -52,8 +53,14 @@ const TheJars = ({ hole }) => {
                      alt={`jar-${index}`}/>
                 <Typography variant={'body1'}>{cleanUnderscore(name)}</Typography>
               </Stack>
-              <Typography sx={{ height: 41, display: 'flex', alignItems: 'center' }}
-                          variant={'body1'}>{effect}</Typography>
+              <Stack direction={'row'} alignItems={'center'} gap={1} sx={{ height: 41 }}>
+                <Typography variant={'body1'}>{effect}</Typography>
+                {enchant ? <Breakdown data={enchant.breakdown}>
+                  <Stack alignContent={'center'}>
+                    <IconInfoCircleFilled size={18} style={{ flexShrink: 0 }}/>
+                  </Stack>
+                </Breakdown> : null}
+              </Stack>
               <Divider sx={{ mt: .5, mb: 1 }}/>
               <Stack direction={'row'} alignItems={'center'} gap={1}>
                 <Typography variant={'body1'}>Jars per

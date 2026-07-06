@@ -22,6 +22,8 @@ import { getButtonBonus } from '@parsers/world-7/button';
 import { getKillRoyShopBonus } from '@parsers/misc';
 import { isJadeBonusUnlocked } from '@parsers/world-6/sneaking';
 import { getEquinoxBonus } from '@parsers/world-3/equinox';
+import { getFountainBonusTotal } from '@parsers/world-5/caverns/the-fountain';
+import { getCglunkoBonus } from '@parsers/world-5/caverns/crystal-glunko-cove';
 
 // Save key for Research: game may use idleonData.Research or similar
 const getRawResearch = (idleonData: any) => {
@@ -541,12 +543,13 @@ function getResearchEXPmulti(account: any, research: any) {
   const msaBonus = account?.msaTotalizer?.researchExp?.value ?? 0;
   const slab = getSlabBonus(account, 7) ?? 0;
   const tomeLoreEpi = account?.spelunking?.loreBonuses?.[7]?.bonus ?? 0;
-  // Research EXP passive cards (w7b1, w7b4), plus w7a11 (Gallery_Bonus passive) which the game also adds here
+  // Research EXP passive cards (w7b1, w7b4, w7b8 Glowfish), plus w7a11 (Gallery_Bonus passive) which the game also adds here
   const cardResearchBonus = getCardBonusByEffect(account?.cards, 'Research_EXP_(Passive)');
   const cardGalleryBonus = getCardBonusByEffect(account?.cards, 'Gallery_Bonus_(Passive)');
-  // Game caps each card at 10; only Eggroll (w7b4, bonus=2) can exceed this
-  const eggrollOverflow = Math.max(0, calcCardBonus(account?.cards?.Eggroll) - 10);
-  const cardBonus = cardResearchBonus + cardGalleryBonus - eggrollOverflow;
+  // Game caps each card individually: w7b1/w7a11 at 10, Eggroll (w7b4) at 15, Glowfish (w7b8) at 20
+  const eggrollOverflow = Math.max(0, calcCardBonus(account?.cards?.Eggroll) - 15);
+  const glowfishOverflow = Math.max(0, calcCardBonus(account?.cards?.Glowfish) - 20);
+  const cardBonus = cardResearchBonus + cardGalleryBonus - eggrollOverflow - glowfishOverflow;
   const arcade63 = account?.arcade?.shop?.[63]?.bonus ?? 0;
   const grid70 = getResearchGridBonusInternal(account, research, 70, 0);
   const grid31 = getResearchGridBonusInternal(account, research, 31, 0);
@@ -582,7 +585,10 @@ function getResearchEXPmulti(account: any, research: any) {
   const companionFactor = Math.max(1, (1 + companion52) * (1 + companion153));
   const nonstopStudies = getEquinoxBonus(account?.equinox?.upgrades, 'Nonstop_Studies');
   const nonstopFactor = 1 + nonstopStudies / 100;
-  const value = additiveFactor * grid70Factor * nonstopFactor * companionFactor * (1 + getSushiBonus(account, 0) / 100) * (1 + getButtonBonus(account, 0) / 100) * killroyResearchBonus;
+  const holesObject = account?.hole?.holesObject;
+  const greenWaterFactor = 1 + getFountainBonusTotal(holesObject, 2, 16) / 100; // Pen N Paper (Green Water)
+  const cglunkoFactor = 1 + getCglunkoBonus(account, 11) / 100; // Researchy (Crystal Glunko Cove)
+  const value = additiveFactor * grid70Factor * nonstopFactor * companionFactor * (1 + getSushiBonus(account, 0) / 100) * (1 + getButtonBonus(account, 0) / 100) * killroyResearchBonus * greenWaterFactor * cglunkoFactor;
 
   const breakdown = {
     statName: 'Research EXP Multi',

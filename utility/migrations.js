@@ -1248,6 +1248,73 @@ const migration53 = (dashboardConfig) => {
   return dashboardConfig;
 };
 
+const migration54 = (dashboardConfig) => {
+  const holeOptions = dashboardConfig?.account?.['World 5']?.hole?.options;
+  if (Array.isArray(holeOptions) && !holeOptions.some(o => o?.name === 'jarsFull')) {
+    holeOptions.push({ name: 'jarsFull', checked: true });
+  }
+  dashboardConfig.version = 54;
+  return dashboardConfig;
+};
+
+const migration55 = (dashboardConfig) => {
+  const arcadeOptions = dashboardConfig?.account?.['World 2']?.arcade?.options;
+  if (Array.isArray(arcadeOptions)) {
+    if (!arcadeOptions.some((o) => o?.name === 'unmaxedRotation')) {
+      arcadeOptions.push({ name: 'unmaxedRotation', checked: true });
+    }
+    if (!arcadeOptions.some((o) => o?.name === 'includeSuper')) {
+      arcadeOptions.push({ name: 'includeSuper', checked: false });
+    }
+  }
+  dashboardConfig.version = 55;
+  return dashboardConfig;
+};
+
+const migration56 = (dashboardConfig) => {
+  const etcOptions = dashboardConfig?.account?.General?.etc?.options;
+  if (Array.isArray(etcOptions) && !etcOptions.some((o) => o?.name === 'tournamentRegister')) {
+    etcOptions.push({ name: 'tournamentRegister', checked: true });
+  }
+  dashboardConfig.version = 56;
+  return dashboardConfig;
+};
+
+const migration57 = (dashboardConfig) => {
+  const classSpecificOptions = dashboardConfig?.characters?.classSpecific?.options;
+  if (Array.isArray(classSpecificOptions) && !classSpecificOptions.some((o) => o?.name === 'betterRing')) {
+    classSpecificOptions.push({ name: 'betterRing', checked: true });
+  }
+  dashboardConfig.version = 57;
+  return dashboardConfig;
+};
+
+// Idempotent catch-up: re-ensures the options added in 55-57 exist, healing any config
+// that landed on a partial/intermediate version. Safe to run repeatedly.
+const ensureDashboardOptions = (dashboardConfig) => {
+  const ensure = (options, name, extra = {}) => {
+    if (Array.isArray(options) && !options.some((o) => o?.name === name)) {
+      options.push({ name, checked: true, ...extra });
+    }
+  };
+  ensure(dashboardConfig?.account?.General?.etc?.options, 'tournamentRegister');
+  ensure(dashboardConfig?.account?.['World 2']?.arcade?.options, 'unmaxedRotation');
+  ensure(dashboardConfig?.account?.['World 2']?.arcade?.options, 'includeSuper', { checked: false });
+  ensure(dashboardConfig?.characters?.classSpecific?.options, 'betterRing');
+};
+
+const migration58 = (dashboardConfig) => {
+  ensureDashboardOptions(dashboardConfig);
+  dashboardConfig.version = 58;
+  return dashboardConfig;
+};
+
+const migration59 = (dashboardConfig) => {
+  ensureDashboardOptions(dashboardConfig);
+  dashboardConfig.version = 59;
+  return dashboardConfig;
+};
+
 // Registry of migration functions indexed by target version.
 // Each migration receives (config, baseTrackers) — baseTrackers is only used by some.
 const migrations = {
@@ -1303,6 +1370,12 @@ const migrations = {
   51: migration51,
   52: migration52,
   53: migration53,
+  54: migration54,
+  55: migration55,
+  56: migration56,
+  57: migration57,
+  58: migration58,
+  59: migration59,
 };
 
 export const migrateConfig = (baseTrackers, userConfig) => {

@@ -1,6 +1,6 @@
 import { AppContext } from '@components/common/context/AppProvider';
 import React, { forwardRef, useContext, useState } from 'react';
-import { Box, FormControl, FormControlLabel, FormLabel, Radio, RadioGroup, Stack } from '@mui/material';
+import { Box, FormControl, FormControlLabel, FormLabel, Radio, RadioGroup, Stack, TextField } from '@mui/material';
 import { cleanUnderscore, notateNumber, prefix } from '@utility/helpers';
 import HtmlTooltip from '@components/Tooltip';
 import { NextSeo } from 'next-seo';
@@ -11,6 +11,7 @@ import { getSlabBonus } from '@parsers/world-5/sailing';
 const Slab = () => {
   const { state } = useContext(AppContext);
   const [display, setDisplay] = useState('missing');
+  const [search, setSearch] = useState('');
 
   const shouldDisplayItem = (item, itemDisplay) => {
     if (itemDisplay === 'all') return true;
@@ -19,10 +20,13 @@ const Slab = () => {
     else if (itemDisplay === 'rotation' && item?.onRotation) return true;
     else if (itemDisplay === 'unobtainable' && item?.unobtainable) return true;
     else if (itemDisplay === 'greenstacked' && item?.greenStacked) return true;
-    else if (itemDisplay === 'greenstackable' && item?.greenstackable) return true;
+    else if (itemDisplay === 'greenstackable' && item?.greenstackable && !item?.greenStacked) return true;
   }
 
-  const slabItems = state?.account?.looty?.slabItems?.filter((item) => shouldDisplayItem(item, display));
+  const searchTerm = search.trim().toLowerCase();
+  const slabItems = state?.account?.looty?.slabItems
+    ?.filter((item) => shouldDisplayItem(item, display))
+    ?.filter((item) => !searchTerm || cleanUnderscore(item?.name)?.toLowerCase().includes(searchTerm));
   const slabBonuses = [
     { name: 'Tot. Dmg', icon: 'Arti2', value: state?.account?.sailing?.artifacts?.[2]?.bonus ?? 0 },
     { name: 'Sail Spd', icon: 'Arti10', value: state?.account?.sailing?.artifacts?.[10]?.bonus ?? 0 },
@@ -71,9 +75,16 @@ const Slab = () => {
           <FormControlLabel value="rotation" control={<Radio/>} label="GemShop rotation"/>
           <FormControlLabel value="unobtainable" control={<Radio/>} label="Unobtainable"/>
           <FormControlLabel value="greenstacked" control={<Radio/>} label="Greenstacks"/>
-          <FormControlLabel value="greenstackable" control={<Radio/>} label="Greenstackable"/>
+          <FormControlLabel value="greenstackable" control={<Radio/>} label="Missing greenstacks"/>
         </RadioGroup>
       </FormControl>
+      <TextField
+        size={'small'}
+        label={'Search'}
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+        sx={{ mt: 1, display: 'block', maxWidth: 300 }}
+      />
     </Box>
     <Stack direction={'row'} gap={1} flexWrap={'wrap'}>
       {slabItems?.map((item, index) => {

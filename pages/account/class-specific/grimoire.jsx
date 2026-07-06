@@ -1,8 +1,9 @@
-import { Divider, Stack, Typography } from '@mui/material';
+import { Divider, Select, Stack, Typography } from '@mui/material';
 import { CardTitleAndValue } from '@components/common/styles';
+import MenuItem from '@mui/material/MenuItem';
 import React, { useContext, useEffect, useState } from 'react';
 import { AppContext } from '@components/common/context/AppProvider';
-import { cleanUnderscore, commaNotation, getTabs, notateNumber } from '@utility/helpers';
+import { cleanUnderscore, commaNotation, getTabs, notateNumber, prefix } from '@utility/helpers';
 import InfoIcon from '@mui/icons-material/Info';
 import Tooltip from '@components/Tooltip';
 import { NextSeo } from 'next-seo';
@@ -13,6 +14,8 @@ import Monsters from '@components/account/Misc/class-specific/Grimoire/Monsters'
 import { boneNames, getWraithStats } from '@parsers/class-specific/grimoire';
 import UpgradeOptimizer from '@components/account/Misc/class-specific/Grimoire/UpgradeOptimizer';
 import { checkCharClass, CLASSES } from '@parsers/talents';
+import { Breakdown } from '@components/common/Breakdown/Breakdown';
+import { IconInfoCircleFilled } from '@tabler/icons-react';
 
 const Grimoire = () => {
   const { state } = useContext(AppContext);
@@ -33,6 +36,22 @@ const Grimoire = () => {
       description="Keep track of your grimoire levels, upgrades and wraith stats"
     />
     <Stack direction={'row'} gap={{ xs: 1, md: 3 }} flexWrap={'wrap'}>
+      {deathBringers.length > 1 ? <CardTitleAndValue title={'Character'}
+                                                     value={<Select size={'small'} value={selectedChar}
+                                                                    onChange={(e) => setSelectedChar(e.target.value)}>
+                                                       {deathBringers?.map((character, index) => {
+                                                         return <MenuItem key={character?.name + index}
+                                                                          value={character?.playerId}
+                                                                          selected={selectedChar === character?.playerId}>
+                                                           <Stack direction={'row'} alignItems={'center'} gap={2}>
+                                                             <img
+                                                               src={`${prefix}data/ClassIcons${character?.classIndex}.png`}
+                                                               alt="" width={32} height={32}/>
+                                                             <Typography>{character?.name}</Typography>
+                                                           </Stack>
+                                                         </MenuItem>
+                                                       })}
+                                                     </Select>}/> : null}
       <CardTitleAndValue title={'Total Levels'} value={totalUpgradeLevels}/>
       {nextUnlock?.name ? <CardTitleAndValue title={'Next upgrade'} value={<Tooltip title={<Stack gap={1}>
         <Typography sx={{ fontWeight: 'bold' }}>{cleanUnderscore(nextUnlock?.name?.replace(/[船般航舞製]/, '').replace('(Tap_for_more_info)', '').replace('(#)', ''))}</Typography>
@@ -59,7 +78,14 @@ const Grimoire = () => {
       <CardTitleAndValue title={'Wraith Crit Damage *'}
                          value={`${notateNumber(wraithStats?.critDamage, 'MultiplierInfo')}x`}/>
       <CardTitleAndValue title={'Wraith Base Extra Bones'}
-                         value={`${notateNumber(wraithStats?.extraBones, 'MultiplierInfo')}x`}/>
+                         value={<Stack direction={'row'} alignItems={'center'} gap={1}>
+                           <Typography>{`${notateNumber(wraithStats?.extraBones, 'MultiplierInfo')}x`}</Typography>
+                           <Breakdown data={wraithStats?.extraBonesBreakdown}>
+                             <Stack justifyContent={'center'}>
+                               <IconInfoCircleFilled size={18}/>
+                             </Stack>
+                           </Breakdown>
+                         </Stack>}/>
     </Stack>
     <Divider sx={{ mb: 3, mt: { xs: 2, md: 0 } }}/>
     <Tabber tabs={getTabs(PAGES.ACCOUNT['class-specific'].categories, 'grimoire')}>
