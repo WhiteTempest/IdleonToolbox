@@ -1,7 +1,6 @@
 import { format, getDaysInMonth, getDaysInYear, intervalToDuration, isValid } from 'date-fns';
 import { drawerPages } from '@components/constants';
 import merge from 'lodash.merge';
-import { mapEnemiesArray, mapNames, monsters } from '@website-data'
 
 export const getTabs = (array, label, tabName, nestedTabName) => {
   const navItem = array.find((item) => item.label === label);
@@ -879,8 +878,25 @@ const sanitizeRawData = (data) => {
   };
 };
 
+export const setRawJson = (payload) => {
+  const serialized = JSON.stringify(payload);
+  try {
+    sessionStorage.setItem('rawJson', serialized);
+    return true;
+  } catch (error) {
+    try {
+      sessionStorage.removeItem('rawJson');
+      sessionStorage.setItem('rawJson', serialized);
+      return true;
+    } catch (retryError) {
+      console.error('Could not cache raw save data in sessionStorage:', retryError);
+      return false;
+    }
+  }
+};
+
 export const copyForSupport = async (account, characters) => {
-  const { expandLeaderboardInfo } = await import('../services/profiles');
+  const { expandLeaderboardInfo } = await import('../services/leaderboardInfo');
   const data = JSON.parse(sessionStorage.getItem('rawJson'));
   const extraData = expandLeaderboardInfo(account, characters);
   const sanitized = { ...data, data: sanitizeRawData(data?.data) };
@@ -901,7 +917,7 @@ export const handleLoadJson = async (dispatch) => {
     const lastUpdated = new Date().getTime();
     localStorage.setItem('lastUpdated', JSON.stringify(lastUpdated));
     // console.log('Manual Import', { ...parsedData, lastUpdated, manualImport: true });
-    sessionStorage.setItem('rawJson', JSON.stringify({
+    setRawJson({
       data,
       charNames,
       companion,
@@ -909,7 +925,7 @@ export const handleLoadJson = async (dispatch) => {
       serverVars,
       tournament,
       lastUpdated
-    }))
+    });
     dispatch({ type: 'data', data: { ...parsedData, lastUpdated, manualImport: true } });
 
     if (typeof window.gtag !== 'undefined') {
@@ -956,30 +972,6 @@ export const excludedPortals = {
   166: [0],
   213: [0],
   264: [0]
-}
-export const getFilteredPortals = () => {
-  const excludedMaps = [
-    'Nothing', 'Z', 'Copper',
-    'Iron', 'Starfire', 'Plat', 'Void',
-    'Filler', 'JungleZ', 'Grandfrog\'s_Gazebo',
-    'Grandfrog\'s_Backyard', 'Gravel_Tomb', 'Heaty_Hole',
-    'Igloo\'s_Basement', 'Inside_the_Igloo', 'End_Of_The_Road',
-    'Efaunt\'s_Tomb', 'Eycicles\'s_Nest', 'Enclave_a_la_Troll',
-    'Chizoar\'s_Cavern', 'KattleKruk\'s_Volcano', 'Castle_Interior', 'Emperor\'s_Castle'].toSimpleObject();
-  return Object.entries(mapNames).map(([mapIndex, mapName], index) => {
-    const rawName = mapEnemiesArray?.[index];
-    const { AFKtype } = monsters?.[rawName] || {};
-    return {
-      mapName,
-      mapIndex,
-      afkType: AFKtype
-    }
-  }).filter(({
-    mapName,
-    afkType
-  }) => afkType === 'FIGHTING' &&
-  !excludedMaps[mapName]
-  && !afkType.includes('Fish') && !afkType.includes('Bug') && !mapName.includes('Colosseum'));
 }
 
 // Parses shorthand notations like '12B', '2QQ', '3.2QQQ' into numbers

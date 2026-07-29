@@ -20,6 +20,7 @@ import CookiePolicyDialog from '@components/common/Etc/CookiePolicyDialog';
 import Button from '@mui/material/Button';
 import useGdprRegion, { getConsentObject } from '../hooks/useGdprRegion';
 import DynamicBreadcrumbs from '@components/common/DynamicBreadcrumbs';
+import RouteProgress from '@components/common/RouteProgress';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 const clientSideEmotionCache = createEmotionCache();
@@ -107,10 +108,11 @@ const MyApp = (props) => {
           more</Button>
       </CookieConsent>}
       <ConsentScripts/>
-      <Script
+      {/* Plain script rather than next/script: afterInteractive injects post-hydration,
+          which keeps structured data out of the static export entirely. */}
+      <script
         id="schema-structured-data"
         type="application/ld+json"
-        strategy="afterInteractive"
         dangerouslySetInnerHTML={{
           __html: JSON.stringify({
             '@context': 'https://schema.org',
@@ -133,10 +135,9 @@ const MyApp = (props) => {
           })
         }}
       />
-      <Script
+      <script
         id="schema-website"
         type="application/ld+json"
-        strategy="afterInteractive"
         dangerouslySetInnerHTML={{
           __html: JSON.stringify({
             '@context': 'https://schema.org',
@@ -160,13 +161,16 @@ const MyApp = (props) => {
           <EmotionThemeProvider theme={darkTheme}>
             <CookiePolicyDialog open={openPolicy} onClose={() => setOpenPolicy(false)}/>
             <CssBaseline/>
+            <RouteProgress/>
             <WaitForRouter>
               <PreferencesProvider>
               <AppProvider>
                 <NavBar>
+                  {/* No title/description here on purpose. next-seo re-emits DefaultSeo's head
+                      after the page's NextSeo on every client route change, so any title or
+                      description set here overwrites the page's own. 105 of 108 pages define
+                      their own NextSeo; the rest set one locally. */}
                   <DefaultSeo
-                    title="Idleon Toolbox - Essential Tools for Legends of Idleon"
-                    description="Power up your Legends of Idleon adventure with Idleon Toolbox's essential tools and resources for optimizing gameplay, character builds, crafting, and more."
                     canonical={canonicalUrl}
                     openGraph={{
                       type: 'website',

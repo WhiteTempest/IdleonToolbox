@@ -4,10 +4,16 @@ import styled from '@emotion/styled';
 import Tooltip from '../Tooltip';
 import { Box, Stack, Tab, Tabs, Typography } from '@mui/material';
 import { TalentTooltip } from '../common/styles';
-import InfoIcon from '@mui/icons-material/Info';
 import { Breakdown } from '../common/Breakdown/Breakdown';
 import { IconInfoCircleFilled } from '@tabler/icons-react';
 
+
+const BOOK_ELIGIBLE_MAX_INDEX = 615;
+// Talents excluded from Talent Book Library increases (game's RANDOlist[16] check —
+// shows "This Book is not Available" instead of a Book Lv Range). These are the page 1
+// stat-allocation talents (STR/AGI/WIS/LUK) plus their paired Basics-tab talents, which use
+// a different level mechanic than the book library system.
+const BOOK_INELIGIBLE_INDICES = [10, 11, 12, 23, 75, 79, 86, 87, 266, 267, 446, 447];
 
 const Talents = ({
   talents,
@@ -16,6 +22,7 @@ const Talents = ({
   addedLevels,
   addedLevelsBreakdown,
   selectedTalentPreset,
+  maxBookLv,
   account
 }) => {
   const STAR_TAB_INDEX = Object.keys(talents || {}).length === 5 ? 5 : 4;
@@ -133,13 +140,36 @@ const Talents = ({
         </Stack>
       </Breakdown>
     </Stack>
+    <Stack gap={1} direction={'row'} justifyContent={'center'} alignItems={'center'}>
+      <Typography component={'div'} variant={'caption'}>Level color legend</Typography>
+      <Tooltip title={
+        <Stack gap={0.5}>
+          <Typography variant={'caption'}>White: not maxed yet, points still available</Typography>
+          <Typography variant={'caption'} sx={{ color: '#5fc9fd' }}>Blue: maxed, Library can still raise it</Typography>
+          <Typography variant={'caption'} sx={{ color: '#fd5f2f' }}>Orange: maxed, Library can't raise it further</Typography>
+        </Stack>
+      }>
+        <Stack alignContent={'center'}>
+          <IconInfoCircleFilled size={18} />
+        </Stack>
+      </Tooltip>
+    </Stack>
     <div className="talents-wrapper">
       {activeTalents?.orderedTalents?.map((talentDetails, index) => {
         const { talentId, level, baseLevel, maxLevel, name, isSuperTalent } = talentDetails;
         if (index >= 15) return null;
         const isActiveTalent = talentDetails.hasOwnProperty('manaCost') && talentDetails.hasOwnProperty('cooldown');
-        const hardMaxed = activeTab === STAR_TAB_INDEX ? true : baseLevel < maxLevel;
+        const isStarTab = activeTab === STAR_TAB_INDEX;
+        const isMaxed = isStarTab ? true : baseLevel >= maxLevel;
+        const isBookEligible = !isStarTab && Number(talentId) < BOOK_ELIGIBLE_MAX_INDEX
+          && !BOOK_INELIGIBLE_INDICES.includes(Number(talentId));
+        const pendingLibraryBooks = isMaxed && isBookEligible && maxLevel < maxBookLv;
         const levelText = getLevelAndMaxLevel(level, maxLevel);
+        const levelTextSx = isStarTab || !isMaxed
+          ? {}
+          : pendingLibraryBooks
+            ? { fontWeight: 500, textShadow: '0px 0px 15px #5fc9fd', color: '#5fc9fd' }
+            : { fontWeight: 500, textShadow: '0px 0px 15px #fd5f2f', color: '#fd5f2f' };
 
         return (talentId === 'Blank' || talentId === '84' || talentId === 'arrow') ?
           <div key={talentId + '' + index} className={`blank ${(index === 10 || index === 14) && 'arrow'}`}>
@@ -164,13 +194,7 @@ const Talents = ({
               {isSuperTalent && <TalentIcon style={{ position: 'absolute' }} src={`${prefix}etc/Super_Talent_${isActiveTalent ? 'Active' : 'Passive'}_Border.png`} alt="" />}
               {!name ? <TalentIcon src={`${prefix}data/UISkillIconLocke.png`} alt="" /> : <TalentIcon
                 src={`${prefix}data/UISkillIcon${talentId}.png`} alt="" />}
-              <Typography fontSize={12} sx={{
-                ...(!hardMaxed ? {
-                  fontWeight: 500,
-                  textShadow: '0px 0px 15px #fd5f2f',
-                  color: '#fd5f2f'
-                } : {})
-              }}>
+              <Typography fontSize={12} sx={levelTextSx}>
                 {levelText}
               </Typography>
             </div>
