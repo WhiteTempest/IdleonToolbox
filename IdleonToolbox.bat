@@ -24,6 +24,9 @@ echo.
 
 REM Open the browser a few seconds later, once the server is actually up.
 REM ponytail: ping, not timeout -- see IdleonToolboxKill.bat for why.
-start /min "" cmd /c "ping -n 5 127.0.0.1 >nul && explorer http://localhost:3001"
+start /min "" cmd /c "ping -n 3 127.0.0.1 >nul && explorer http://localhost:3001"
 
-npx serve@latest out -l 3001
+REM Exact version pin: @latest is a moving tag, so npx asks the registry every
+REM boot (~10s); a pinned version + --prefer-offline runs from cache (~1.5s).
+REM Bump the pin by hand if serve ever needs updating -- it's a file server.
+npx --yes --prefer-offline serve@14.2.6 out -l 3001
