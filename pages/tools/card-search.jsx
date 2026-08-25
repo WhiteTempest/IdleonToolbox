@@ -1,7 +1,7 @@
 import React, { useContext, useState } from 'react';
 import { Checkbox, Chip, FormControlLabel, InputAdornment, Stack, TextField, Typography } from '@mui/material';
 import { cleanUnderscore, prefix } from 'utility/helpers';
-import { cards, cardSets, stats } from 'data/website-data';
+import { cards, cardSets, stats } from '@website-data';
 import ClearIcon from '@mui/icons-material/Clear';
 import styled from '@emotion/styled';
 import { AppContext } from 'components/common/context/AppProvider';
@@ -37,15 +37,24 @@ const additionalEffects = {
   luk: [stats.AllStat]
 }
 
-const isSkillMasteryPassiveCards = ({ effect, rawName, account }) => {
-  const miningCardsArePassives = effect?.includes('Mining') && isMasteryBonusUnlocked(account?.rift, account?.totalSkillsLevels?.mining?.rank, 2);
-  const fishingCardsArePassives = rawName?.includes('Fish') && isMasteryBonusUnlocked(account?.rift, account?.totalSkillsLevels?.fishing?.rank, 2);
-  const choppingCardsArePassives = rawName?.includes('Tree') && isMasteryBonusUnlocked(account?.rift, account?.totalSkillsLevels?.chopping?.rank, 2);
-  const trappingCardsArePassives = rawName?.includes('Critter') && isMasteryBonusUnlocked(account?.rift, account?.totalSkillsLevels?.trapping?.rank, 2);
-  const worshipCardsArePassives = rawName?.includes('Soul') && isMasteryBonusUnlocked(account?.rift, account?.totalSkillsLevels?.worship?.rank, 2);
-  const spelunkingCardsArePassives = effect?.includes('Spelunking') && isMasteryBonusUnlocked(account?.rift, account?.totalSkillsLevels?.spelunking?.rank, 2);
-  const dropRateCardsArePassives = effect?.includes('Card_Drop_Chance') && getUpgradeVaultBonus(account?.upgradeVault?.upgrades, 44);
-  return miningCardsArePassives || fishingCardsArePassives || choppingCardsArePassives || trappingCardsArePassives || worshipCardsArePassives || dropRateCardsArePassives || spelunkingCardsArePassives;
+// The game decides passive cards from the card's effect text, not its name (TalentCalc.js)
+const worshipPassiveEffects = ['+{%_Charge_Rate', '+{_Starting_Pts_in_Worship', '+{%_Max_Charge'];
+const skillMasteryPassiveEffects = {
+  mining: (effect) => effect?.includes('Mining'),
+  chopping: (effect) => effect?.includes('Choppin'),
+  fishing: (effect) => effect?.includes('Fishing'),
+  catching: (effect) => effect?.includes('Catching'),
+  trapping: (effect) => effect?.includes('Trapping') || effect === '+{%_Shiny_Critter_Chance',
+  worship: (effect) => worshipPassiveEffects.includes(effect),
+  spelunking: (effect) => effect?.includes('Spelunking')
+};
+
+const isSkillMasteryPassiveCards = ({ effect, account }) => {
+  const skillMasteryPassive = Object.entries(skillMasteryPassiveEffects)
+    .some(([skillName, matchesEffect]) => matchesEffect(effect)
+      && isMasteryBonusUnlocked(account?.rift, account?.totalSkillsLevels?.[skillName]?.rank, 2));
+  const dropRateCardsArePassives = effect === '+{%_Card_Drop_Chance' && getUpgradeVaultBonus(account?.upgradeVault?.upgrades, 44);
+  return skillMasteryPassive || Boolean(dropRateCardsArePassives);
 }
 
 export default function CardSearch() {
@@ -72,8 +81,8 @@ export default function CardSearch() {
   const cardsObject = mapCards(cards, cardSets);
   const localCardObject = Object.keys(cardsObject).reduce((res, cardSet) => {
     const cardsArr = cardsObject[cardSet];
-    const sortedCardArr = cardsArr.filter(({ rawName, effect }) => {
-      const isSkillMasteryPassive = isSkillMasteryPassiveCards({ rawName, effect, account: state?.account });
+    const sortedCardArr = cardsArr.filter(({ effect }) => {
+      const isSkillMasteryPassive = isSkillMasteryPassiveCards({ effect, account: state?.account });
       if (hidePassives && (effect?.includes('(Passive)') || effect?.includes('(P)') || isSkillMasteryPassive)) {
         return false;
       }
@@ -176,21 +185,20 @@ export default function CardSearch() {
               const isCardSets = cardSet === 'Card Sets';
               return (
                 <React.Fragment key={cardSet + '' + cardSetIndex}>
-                  {isCardSets ? <Typography my={1} variant={'h4'}>Card Sets</Typography> :
+                  {isCardSets ? <Typography my={1} variant={'h5'}>Card Sets</Typography> :
                     <img src={`${prefix}etc/${cardSet}_Card_Header.png`}
                          style={{ margin: '20px 0 10px 0' }}
-                         alt=""
+                         alt={cardSet}
                     />}
                   <Stack direction={'row'} flexWrap={'wrap'} gap={2} sx={{ maxWidth: 600 }}>
                     {cardsArr.map((card, index) => {
-                      const { displayName, name, realIndex, rawName, effect } = card;
+                      const { displayName, name, realIndex, effect } = card;
                       let {
                         stars,
                         amount,
                         nextLevelReq
                       } = state?.account?.cards?.[displayName] || {};
                       const isSkillMasteryPassive = isSkillMasteryPassiveCards({
-                        rawName,
                         effect,
                         account: state?.account
                       });

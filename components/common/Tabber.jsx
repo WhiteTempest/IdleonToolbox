@@ -52,13 +52,19 @@ const Tabber = ({
       centered={!useScrollable}
       scrollButtons
       allowScrollButtonsMobile
-      sx={{ marginBottom: 3 }}
+      sx={{
+        marginBottom: 3,
+        // MUI drops `centered` for scrollable tabs. `safe center` keeps them centred while they
+        // fit and falls back to flex-start the moment they overflow, so the leading tabs never
+        // get clipped past the left edge where nothing can scroll them back into view.
+        ...(useScrollable ? { '& .MuiTabs-flexContainer': { justifyContent: 'safe center' } } : {})
+      }}
       variant={useScrollable ? 'scrollable' : 'standard'}
       value={selectedTab} onChange={handleOnClick}>
       {(components ?? tabs)?.map((tab, index) => {
         return <Tab
           iconPosition="start"
-          icon={icons?.[index] ? <img src={`${prefix}${icons?.[index]}.png`}/> : null}
+          icon={icons?.[index] ? <img src={`${prefix}${icons?.[index]}.png`} alt=""/> : null}
           wrapped label={iconsOnly ? '' : tab}
           sx={{ minWidth: 62 }}
           key={`${tab?.[index]}-${index}`}/>;

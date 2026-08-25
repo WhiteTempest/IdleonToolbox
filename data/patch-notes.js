@@ -4,6 +4,272 @@ import React from 'react';
 /* eslint-disable react/jsx-key */
 export const patchNotes = [
   {
+    'ver': '3.3.67',
+    'gameVer': '2.3.523',
+    'date': '25/08/2026',
+    'features': [
+      'Quests: a new Hide completed toggle hides every NPC whose quests you have already finished',
+      'Dashboard: refinery salt alerts now carry an icon showing which one fired: rank up, room to rank up, salt deficit, or missing materials'
+    ],
+    'fixes': [
+      'Speedrun: the portal list counted maps that have no portal, portals that cost no kills, and two unreleased maps. All of them are gone, so the totals now match what a run can actually score',
+      'Speedrun: the Emperor\'s portal payout follows Kattlekruk\'s difficulty rather than its own, which is what the game does',
+      'Dashboard: the W2 weekly boss alert is now two separate alerts, one for the daily fight and one for the weekly trophy that stops once you\'ve beaten 5 skulls'
+    ]
+  },
+  {
+    'ver': '3.3.66',
+    'gameVer': '2.3.523',
+    'date': '24/08/2026',
+    'features': [
+      'Dashboard: a new character alert lists carry capacity bags that aren\'t at their max tier yet'
+    ],
+    'fixes': [
+      'The Jars: rupie value was missing the Cavernicus upgrade from Crystal Glunko Cove, so it read lower than in game'
+    ]
+  },
+  {
+    'ver': '3.3.65',
+    'gameVer': '2.3.523',
+    'date': '23/08/2026',
+    'features': [
+      'Dashboard: a new alert tells you when you can afford the Minehead mine currency upgrades - Miney Farmey I, Miney Farmey II and Miney Damagey Synergy',
+      "Dashboard: a new character alert reminds you which characters haven't done the Picnic Stowaway daily quest today",
+      'Dashboard: the refinery materials alert can now warn you a set number of hours before a salt runs out, instead of only once it has already stalled. Set the lead time in the alert settings',
+      'Killroy: permanent upgrades now show the next level worth stopping at and the bonus it gives, with an info icon listing every breakpoint up to 99% of the cap',
+      'Dashboard: a new alert reminds you to wish on the Glimmerwick Candle each day, and shows how many wishes are left until the Top 0.1% Nametag is guaranteed',
+      'Dashboard: a new alert lists the alchemy p2w cauldron and liquid upgrades you can afford, with the level and coin cost of each',
+      "Dashboard: new alerts for the Arcanist weapon and ring drops left today, and for the Top of the Mornin' kills left today",
+      'Dashboard: the Printer atoms alert can now exclude every refinery salt material, so the mats you park in the printer for the refinery stop setting it off',
+      'Refinery: a new salt chain table shows what each salt produces and consumes per hour, its balance, and the highest rank it can reach without starving the salt before it',
+      'Dashboard: a new alert warns when a salt is at or past the rank the previous salt can keep fuelled. It can also tell you which salts still have room to rank up',
+      'Dashboard: a new timer counts down to the server weekly reset, the one that rolls the weekly bosses, jewel spinner, chip repo and exotic market',
+      'Dashboard: the daily and weekly reset timers now show the exact reset date and time in their tooltip',
+      'Worship: a new Total Max Waves card on the Totems tab sums your best wave across every totem',
+      'Dashboard: a new alert shows how many Blinding Lanterns you can still use today, out of the daily cap of 12',
+      'Dashboard: a new alert tells you when you have enough pearls for a Clamworks worker class promotion',
+      'Spelunking: upgrades with a level cap now show the total amber needed to max them, along with a total for each section',
+      'Dashboard: a new World 3 timer counts down to the next construction flag finishing',
+      'Dashboard: new alerts for talents that still have points to spend, and for maxed talents a Talent Book Library book can raise further. Each lists the talents and the level they can reach, so you no longer have to open every character tab to find them',
+      'Dashboard: a new alert tells you when you own enough of a golden food to rank it up on the beanstalk',
+      'Islands: the trash island page now shows how much garbage is waiting to be collected, and a new dashboard alert warns you before it reaches the 100 cap where the rest is lost',
+      'Pets: tick pets you do not own yet and the whole site counts them as owned, so you can see what their bonuses would be worth before farming for them. A banner shows while the simulation is on',
+      'Farming: a new Rank Optimizer tab plans how to spend your unspent land rank points, with a category for each thing the ranks boost. It tells you when a category is already at its in game cap and the points would buy nothing',
+      'Dashboard: the Equinox Food Lust alert now takes a stacks threshold, so it can remind you at any number of stacks instead of only once it is maxed',
+      'Tools: a new Bone Joe Calculator shows what Bone Joe Pickles and the three monster HP prayers do to each miniboss, and how many pickles every character can carry and still one shot them. Flip Apply to characters to price them off your own setup instead',
+      'Pinned pages: export your pins to a file and import them on another device or after clearing your browser data, so you no longer have to pin everything again from scratch',
+      'God Planner: a new Bonus Calculator shows what a Minor Link Bonus is worth on any character, and how many Divinity, BIG P or Coral Kid levels a target still needs',
+      'God Planner: planned links now show the bonus each god gives, whether it is already linked, and which link a swap would spend. An Elemental Sorcerer holds two gods'
+    ],
+    'fixes': [
+      'God Planner: the minor link bonuses left out the Coral Kid divinity upgrade, so every number on the page was too low',
+      'Refinery: auto refine was shown as a percentage, so it read 0% or 0.01%. It is an on/off toggle in game and now says On or Off',
+      'Bubba: upgrade descriptions showed a stray "@" where the game puts a line break',
+      'Clamworks: the 9th promotion compensation showed a raw placeholder instead of its Class EXP multiplier',
+      'Quests: quests you re-opened to reclaim their reward, and the Promotheus class quest after a Complete Class Redo, no longer show as unfinished on the quest tracker'
+    ]
+  },
+  {
+    'ver': '3.3.64',
+    'gameVer': '2.3.523',
+    'date': '22/08/2026',
+    'features': [
+      'Clam Work: a new Upgrade Optimizer tab picks the next upgrades to buy, either for pearl gain or for cost reduction. The page also shows pearl value, black pearl value, clam mobs and clam HP for a chosen character, with a multikill you can override',
+      'Active Stuff Calculator: the pets section now tracks breedability progress alongside shiny progress, with gain per minute and per hour',
+      'Dashboard: the closest salt timer can now be narrowed to specific salts, so you can track only the ones you care about',
+      'Cooking: the NMLB sort now lists the upcoming No Meal Left Behind procs in order, showing which meal each free level lands on and the ladles it saves. A meal that lags behind takes several procs in a row before anything else is touched',
+      'Speedrun page for Voidwalkers: portal highscore and the bonuses it feeds, every portal grouped by world with kill costs and your clear times, and a breakdown of what drives your portal progress.',
+      'Sushi Station: new Spark Multi and Overtuned Multi cards, each with a breakdown of how fast it grows and the next three breakpoints with time estimates',
+      'Traps: a new Shiny line shows your shiny critter multiplier and how many shinies land per drop, with a breakdown of every source feeding it and the resulting chance for each critter. The Collect as picker now lists your characters instead of Hunter and Non Hunter, and it drives both the collect rates and the shiny numbers',
+      'Dashboard: a new alert shows whether Zenith Cluster Farming is on or off. Pick the state you want to be told about, or both to always see the current one'
+    ],
+    'fixes': [
+      'Cooking: the meal filter showed a "max each" ladle figure and told you to withdraw that much per meal. A ladle stack is spent in full when you use it, so that over-pulled on every meal except the priciest. Removed: use the figure on each meal card',
+      'Prayers: for characters with no prayers equipped, only the first of the three "no prayers equipped" superbits was counted, so every prayer bonus they grant was paid at a fifth instead of up to three fifths. This fed through to Accuracy, Defence and Damage',
+      'Equipment: keychains with an upgrade stone lost their own Defence and Weapon Power, counting for less than they do in game',
+      'Equipment: the Silkrode chips were doubling the base stats of an item as well as its extra bonus. In game they only double the extra bonus',
+      'Defence was rounded at the wrong point in the calculation, landing a few hundred above the in-game value',
+      "Talents: account-wide talent bonuses were read from the highest-level character of that talent's own class. The game checks every character regardless of class, so a talent that appears on several class pages, like The Family Guy, could be read off the wrong one. This affects skill EXP, class EXP, drop rate, cash multiplier and AFK gains",
+      'Talents: added levels were counted in two places the game leaves them out: talents whose level sits in a range the game excludes, and the second bonus line of a talent. Both read higher than in game',
+      'Dashboard: the syphon charge timer now turns red when the charge is full, instead of quietly showing "Full" in plain text',
+      'Multikill: the base rate left out onyx statues and read the wrong stamp, and the per tier rate left out the sneaking mini boss deathnote page, measurements, cards, star signs and the card set. From World 6 onwards the game also runs both through a diminishing curve and counts overkill tiers in steps of 5 instead of 2, so multikill totals there read around ten times too high',
+      'Kill Per Kill read far above the in-game value. The three skull talents stop counting from World 6, the world bonus for World 5 and up was missing, and the family, voting, lab, companion and equipment multipliers, along with several flat sources, were never added',
+      'Damage: the +% Total Damage Multiplier family bonus was read from your highest level Elemental Sorcerer instead of your highest level Arcane Cultist',
+      'Kill Per Kill: Nobisect doubling every kill now also counts when that god comes from a pocket divinity, from the World 7 chosen god, or from an Elemental Sorcerer second link',
+      'Stamps: material costs now round the same way the game does, so cheap stamps no longer read one material above the in-game price',
+      'Sigils: every sigil bonus now includes the meritocracy multiplier, which the game applies and the site was leaving out',
+      'Worship: the "First to full" card skipped characters that were already fully charged, naming someone still charging instead',
+      'Gaming: the Palette final bonus was multiplied by the painter legend talent, which the game only applies to each colour, level up chances were capped at "1 in 1", and locked colours showed an unlock chance even when they were nowhere near a colour you own',
+      'Library: the Library Checkouts superbit was read from your best gamer, while the game uses the character you last played, so books arrived early and the book count could read one ahead. The 16, 18 and 20 book breakpoints also subtracted time that had already been turned into books, which hid them',
+      'Bubbles: the efficiency threshold never showed a target level for hard capped bubbles like Roid Ragin and Big Meaty Claws. They now show your current level next to the level that reaches your chosen threshold, the same as every other bubble'
+    ]
+  },
+  {
+    'ver': '3.3.63',
+    'gameVer': '2.3.523',
+    'date': '20/08/2026',
+    'features': [
+      'Cooking: the meal list can now be narrowed down to the cheapest meals to upgrade, with a readout of how many ladles that takes per meal and in total. A new Book Order toggle lists the filtered meals in cooking book order',
+      'Construction: hovering a slot with a flag in it now shows how long until that flag unlocks, following along as you step through an optimized board'
+    ],
+    'fixes': [
+      'Dashboard & Dungeons: the Happy Hour timer was off by your timezone offset every Thursday, and stopped counting down after the last Happy Hour of the week',
+      'Coral Reef: each Dancing Coral now shows which shrine it raises the max level of and what that shrine does, plus its bonus per shrine level. Corals 4 through 9 were also named wrong',
+      "Tesseract: the Rollin' Tundra map showed the wrong tachyon type and a far higher amount per drop than it actually gives",
+      'Rift: Skill Mastery listed the Smithing, Alchemy and Construction bonuses on the wrong tier, left out the Lv. 150 and Lv. 200 tiers, and showed bonuses for Research, which has none. Locked bonuses now show the level they unlock at',
+      'Card Search: Chopping, Fishing, Catching, Trapping and Worship cards were not counted as passive from Skill Mastery, so they never got the (P) mark and Hide Passive Cards left them on screen',
+      '3D Printer: the Skill Mastery printer bonus was dropped entirely at rift 15 and below',
+      'Bubbles: prisma bubble bonuses were rounded before the prisma multiplier was applied, showing slightly less than the real in-game value',
+      'AFK Gains showed a flat 1% for characters parked at a monument or with no AFK target. The game has no AFK rate for those, so it now shows N/A with the reason, and Kills Per Hour no longer scales by that fake 1%',
+      'Material Tracker: an imported list was lost on refresh, since the import was never saved',
+      'Research: the "Magnifiers" count actually included your Optical Monocles and Kaleidoscopes, since that\'s how the game stores it. It\'s now labelled "Total Lenses", with separate counts for Magnifying Glasses, Optical Monocles and Kaleidoscopes',
+      'Dashboard: while a random event was running, the tile showed that event\'s icon and name next to a countdown to the following event. Both now refer to the same upcoming event',
+      'Refinery: the cycle time breakdown showed the Polymer Refinery bonus 100x too large and listed a Companion bonus that is not part of cycle speed',
+      'Copy buttons could silently copy nothing, and some still reported success. They now fall back to a second copy method when the browser blocks clipboard access, and show an error when the copy really fails',
+      'Star Signs: bonuses with a decimal value showed a stray ".{" after the number, such as Blue Hedgehog\'s Ring Drop',
+      'Sneaking: the max level shown for Charms left out the +100 from the Equinox challenge reward',
+      'Cash Multiplier left out both Sushi Station extra coin bonuses, showing 1.68x lower than the real value',
+      'Drop Rate was missing Mama Troll, Crystal Glunko and several other bonuses',
+      'Drop Rate: passive card bonuses ignored their in-game caps',
+      'Class EXP multi was missing the Tobiko Temaki sushi bonus, showing 1.25x lower than the real value',
+      'Spelunking: Amber gain counted the Litterfish card once instead of twice, missing most of its bonus',
+      'Star Talent Points: passive card bonuses ignored their in-game caps',
+      'Coral Reef: the Coral Kid Divinity upgrade showed a hugely inflated Minor Link multiplier, such as 6.65x instead of 2.08x',
+      'Divinity: an Elemental Sorcerer\'s second linked deity left out the Coral Kid upgrade, showing a lower minor bonus than the real value',
+      'Stamps: turning off the Equipments legend toggle only hid stamps whose equipment you could already afford to craft. It now hides every stamp that needs a crafted equipment',
+      'Compass: Knockoff Compass and the dust Hoarding upgrades showed a blank number instead of their total bonus. Knockoff Compass now shows the real discount, which is lower than its raw bonus',
+      'Killroy: the weekly schedule showed World 5 monsters for accounts that have not reached World 5 yet'
+    ]
+  },
+  {
+    'ver': '3.3.62',
+    'gameVer': '2.3.523',
+    'date': '19/08/2026',
+    'features': [
+      'The Jars: each jar now shows how many you are holding and of which tiers, plus a Total quantity card counting every jar as its tier 1 equivalent',
+      'Upgrade Optimizer: new "Split by resource" option groups the recommended sequence by tachyon, dust or bone type, so you can work through one material at a time',
+      'Builds: authors can now mark which talents to spend Super Talent points on, shown with the in-game golden border'
+    ],
+    'fixes': [
+      'Upgrade Optimizer: the recommended sequence only considered upgrades that were already unlocked when it started, so it kept buying more of a weak upgrade while a stronger one came into range along the way. Upgrades that unlock as you buy now appear, marked with how many purchases they need first',
+      'Upgrade Optimizer: Tesseract, Compass and Grimoire now account for Hoarding upgrades, which scale with how much of a resource you are holding. Spending lowers that bonus, so the optimizer no longer recommends purchases that would drop your stats',
+      'Upgrade Optimizer: upgrades now show the gross gain, what Hoarding takes off it and the net result, plus how long the stash takes to farm back. When holding beats every purchase you can afford, the page says to build your stash up instead of showing an empty list',
+      'Traps: collect rates were rounded down to a whole multiplier, so anything under 200% showed as 100% and every critter total was under-counted',
+      'Characters: star sign panels were sized to their own text, so a character with shorter bonuses got a narrower panel than the rest. They are all the same width now'
+    ]
+  },
+  {
+    'ver': '3.3.61',
+    'gameVer': '2.3.523',
+    'date': '18/08/2026',
+    'features': [
+      'Dashboard: new World 6 timer counting down to the next fully grown crop',
+      'Dashboard: new alert when a character has an empty gear slot. Weapon and armor are checked by default, amulet and rings are optional',
+      'Dashboard: new alert when you have exalted stamps from the compass that you have not applied yet',
+      'Leaderboards: new Total Villager Exp/hr board, adding up every villager instead of only your best one',
+      'Stamps: stamp tooltips now show the minimum stamp reducer % needed to afford the next upgrade',
+      'Stamps: new "Out of reach" legend filter to hide stamps that no reduction can unlock',
+      'Quests: the page now shows how many unique quests you have completed across the account, the number QUEST KAPOW! and QUEST CHUNGUS scale off'
+    ],
+    'fixes': [
+      'Item Planner: materials you are still short on vanished from the missing list when "Include Equipped Items" was on and you already owned one of the crafted parts',
+      'Weekly Bosses: the quest task showed each character\'s own quest count instead of the account-wide unique total the game uses',
+      "Dashboard: Poppy's Fisheroo Reset and Greatest Catch timers could sit on the same value for days. They now count the fish banked up since your last visit, so they match what you actually have when you open her",
+      'Poppy: the Fish and Tars counters left out everything banked up since your last visit, so both read low',
+      'Gem Shop: items without a priority tier vanished when filtering by S/A/B/C. They now show under a new "Unranked" filter',
+      'Breeding: a pet at Breedability level 9 kept counting down to a level 10 that does not exist in game. It now shows Maxed!',
+      'Breeding: the "To level X" estimate on pet cards was too high, and the level box accepted levels above the max',
+      'Stamps: a stamp could ignore the legend filters and stay on screen even with every type switched off'
+    ]
+  },
+  {
+    'ver': '3.3.60',
+    'gameVer': '2.3.523',
+    'date': '16/08/2026',
+    'features': [],
+    'fixes': [
+      "Compass: two upgrades were missing from the Upgrades page - Stop Drop and Roll and Grumblo's Guarantee",
+      'Farming: Night Market future requirements showed several levels added together instead of the next one, making the bean cost look like a huge jump'
+    ]
+  },
+  {
+    'ver': '3.3.59',
+    'gameVer': '2.3.523',
+    'date': '14/08/2026',
+    'features': [
+      'Farming: each plot now shows roughly how long its next OG will take, so a tiny percentage like 0.002% tells you something',
+      'Dashboard: new optional alert for plots that will not double again any time soon - they earn nothing until you collect them'
+    ],
+    'fixes': [
+      'Breeding: the egg power range was too high - the Curviture of the Paw bonus was counted twice over, and it is now taken from your best Wind Walker for that talent, as the game does',
+      'Sneaking: Pristine Charms sitting in your inventory showed a broken image with no name or description',
+      'Sneaking: a weapon past level 110 showed an Infinity stat instead of its real value',
+      'Quests: five NPCs were missing from the page entirely - Obol Altar, Nebula Neddy, Lava Larry, Spirit Sungmin and Zenelith',
+      'Quests: a quest you are still on lost its character marker if you had already finished a later quest from the same NPC',
+      "Quests: Scripticus was missing his first quest, so his list showed 12 of 13",
+      'Quests: an NPC now turns green once every selected character has finished its final quest, instead of staying orange forever over an early quest that can no longer be started',
+      'Monuments: the AFK hours breakdown stopped at 10 characters',
+      'Weekly Boss: the action list fell back to 10 characters when no save was loaded'
+    ]
+  },
+  {
+    'ver': '3.3.58',
+    'gameVer': '2.3.523',
+    'date': '12/08/2026',
+    'features': [
+      'Every page is now viewable without signing in, showing the full game data with your progress at zero. Getting there meant reworking how the site reads your save, which also fixed values that were missing or wrong while signed in'
+    ],
+    'fixes': [
+      'Logging out no longer sends you back to the homepage - you stay on the page you were on, with your numbers at zero',
+      'Colosseum: the table listed nothing until you had a score - it now shows all six arenas',
+      'Shrines: a shrine you have not built yet showed a bonus it does not give, and an unbuilt Crystal Shrine inflated the shrine EXP bonus on every other shrine'
+    ]
+  },
+  {
+    'ver': '3.3.57',
+    'gameVer': '2.3.523',
+    'date': '05/08/2026',
+    'features': [
+      'Pinned Pages: each entry now shows the icon of the page it links to',
+      'Pinned Pages: entries are real links, so middle click or right click opens them in a new tab or window',
+      'Buildings: new "Hide maxed buildings" toggle',
+      'Vials: the vial bonus now has a breakdown showing every source that feeds into it',
+      'Dashboard: the shimmer trial alert now shows this week\'s challenge in its tooltip',
+      'Dashboard: new alert for stamps you can level with the coins you already have, with a setting for how much of your coins you are willing to spend',
+      'Every page now has a proper browser tab title and description straight away, instead of only after the page finishes loading'
+    ],
+    'fixes': [
+      'Vials: the vial bonus shown on the page was missing the Meritocracy vote bonus',
+      'Research: placeholder observations that show up as "Name" / "desc" are no longer listed',
+      'Statistics: the 11th character is now counted in the leaderboards and shown in the class distribution chart, and the total levels chart goes up to 18k'
+    ]
+  },
+  {
+    'ver': '3.3.56',
+    'gameVer': '2.3.523',
+    'date': '04/08/2026',
+    'features': [
+      'Construction: the page has been rebuilt around the optimizer. It is faster, finds better boards, can pull cogs and characters in from your inventory, and has a new Balanced mode that weighs build rate, player XP and flaggy rate together. Results come back as a numbered list of swaps you can step through one at a time with the board following along, cogs are named the way the game names them, off-board steps say exactly which inventory or character slot to look in, a Max chars setting caps how many characters the optimizer is allowed to put on the board, defaulting to 2 so it no longer sends your whole roster out and leaves nobody making cogs, and a new Small cogs panel points out stronger small cogs sitting unused'
+    ],
+    'fixes': []
+  },
+  {
+    'ver': '3.3.55',
+    'gameVer': '2.3.523',
+    'date': '02/08/2026',
+    'features': [
+      'Dashboard: new alert for unspent yellow and/or purple Cooking Mastery points',
+      'Dashboard: new alert for unclaimed Tome ranking nametags, which reset monthly',
+      'Dashboard: World 7 timers now show an insight level-up countdown per observation',
+      'Dashboard: Material Tracker alerts now link to the Material Tracker page, and its config toggle points you there to set thresholds',
+      'Sneaking: gemstones moved to their own tab, with a progress bar showing how close each gem is to its 10M gem cap and a tooltip with the exact current and capped bonus'
+    ],
+    'fixes': [
+      'Material Tracker: items split across multiple stacks in the same storage or inventory now count every stack instead of only the first',
+      'Golden Food: the companion source in the breakdown is now correctly named Vanillie instead of Potluck'
+    ]
+  },
+  {
     'ver': '3.3.54',
     'gameVer': '2.3.523',
     'date': '17/07/2026',
@@ -2440,7 +2706,7 @@ export const patchNotes = [
     features: [
       'Added a dashboard alert for max capacity liquids in alchemy',
       <Typography>Added liquids progress to the <Link
-        href={'https://idleontoolbox.com/account/orld-2/cauldrons'}>cauldrons</Link> page</Typography>,
+        href={'https://idleontoolbox.com/account/world-2/cauldrons'}>cauldrons</Link> page</Typography>,
       'Added 0 to 20 (static) timer to library '
     ],
     fixes: [

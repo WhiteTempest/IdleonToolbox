@@ -88,13 +88,63 @@ export const getTome = (idleonData: IdleonData, account: Account, characters: an
     }
   }
   tops = tops.toSorted((a: number, b: number) => b - a)
+
+  // Tome nametag rewards: reaching rank tiers 0-6 (Top 50% down to Top 0.1%) each grant one
+  // claimable nametag (EquipmentNametag22..28). accountOptions[447] = nametags claimed this period,
+  // accountOptions[448] = month stamp of last reset. The tome (and claim count) reset ~monthly, so
+  // if the stored month stamp no longer matches the current month the claimed count is treated as 0.
+  const nametagClaim = getNametagClaim(account, top, serverVars);
+
   return {
     tome,
     bonuses,
     totalPoints,
     tops,
-    top
+    top,
+    nametagClaim
   };
+}
+
+// Odds that a Glimmerwick Candle (Quest114) wish grants the Top 0.1% Tome Nametag. The game keys
+// this off the tome rank tier, and hard-guarantees the wish once you've failed 1/chance times in a
+// row (accountOptions[490]), so the reciprocal doubles as the pity count.
+const getTomeWishChance = (top: number) => {
+  if (top < 0) return 1 / 120;
+  switch (top) {
+    case 6:
+      return 1 / 30;
+    case 5:
+      return 1 / 40;
+    case 4:
+      return 1 / 50;
+    case 3:
+      return 1 / 60;
+    case 2:
+      return 1 / 70;
+    case 1:
+      return 1 / 80;
+    default:
+      return 1 / 90;
+  }
+}
+
+export const getTomeWishPity = (account: any) => {
+  const top = account?.tome?.top ?? -1;
+  return {
+    attempts: Math.round(account?.accountOptions?.[490] ?? 0),
+    pity: Math.round(1 / getTomeWishChance(top))
+  };
+}
+
+const getNametagClaim = (account: any, top: number, serverVars: any) => {
+  const tomeUnlocked = serverVars?.TomeOn === 1;
+  const claimed = account?.accountOptions?.[447] ?? 0;
+  const monthStamp = account?.accountOptions?.[448] ?? 0;
+  const currentMonth = Math.floor((account?.timeAway?.GlobalTime ?? 0) / 2628e3);
+  const effectiveClaimed = currentMonth !== monthStamp ? 0 : claimed;
+  const rewardTier = top >= 0 && top <= 6 ? Math.min(top, 6) : -1;
+  const available = rewardTier >= 0 ? Math.max(0, rewardTier + 1 - effectiveClaimed) : 0;
+  return { tomeUnlocked, available, claimed: effectiveClaimed, rewardTier };
 }
 
 const getRequiredQuantitiesEfficient = (bonus: any) => {
@@ -303,7 +353,7 @@ export const calcTomeQuantity = (account: any, characters: any[], idleonData?: a
   quantities.push(account?.gaming?.totalPlantsPicked);
   quantities.push(calcArtifactsAcquired(account?.sailing?.artifacts));
   quantities.push(account?.sailing?.lootPile?.[0]?.amount);
-  quantities.push(Math.max(...(account?.sailing?.captains?.map(({ level }: any) => level) || [])));
+  quantities.push(Math.max(0, ...(account?.sailing?.captains?.map(({ level }: any) => level) || [])));
   quantities.push(Math.max(account?.gaming?.snailLevel, account.accountOptions?.[210]));
   quantities.push(account?.gaming?.bestNugget);
   quantities.push(account?.looty?.lootyRaw?.length);
@@ -339,11 +389,11 @@ export const calcTomeQuantity = (account: any, characters: any[], idleonData?: a
   quantities.push(Math.round(account?.accountOptions?.[369])); // 95
   quantities.push(account?.summoning?.totalSummoningStonesKills); // 96
   quantities.push(account?.spelunking?.coralReefLevels?.reduce((sum: number, level: number) => sum + level, 0));
-  quantities.push(Math.max(...(account?.spelunking?.bestCaveLevels || [0]))); // 98
+  quantities.push(Math.max(0, ...(account?.spelunking?.bestCaveLevels || []))); // 98
   quantities.push(account?.sneaking?.totalNinjaUpgradeLevels);
   quantities.push(account?.accountOptions?.[445]); // 100
   quantities.push(account?.accountOptions?.[446]);
-  quantities.push(Math.max(...(account?.spelunking?.biggestHauls || [0]))); // 102
+  quantities.push(Math.max(0, ...(account?.spelunking?.biggestHauls || []))); // 102
   quantities.push(account?.spelunking?.totalUpgradeLevels); // 103
   quantities.push(account?.spelunking?.discoveriesCount); // 104
   quantities.push(account?.spelunking?.highestSpelunkingLevelCharacter); // 105

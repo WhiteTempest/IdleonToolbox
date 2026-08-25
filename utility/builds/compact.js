@@ -9,7 +9,9 @@
 //   }
 //
 // Output (what we store under `payload`):
-//   { v: 1, tabs: [ null | { note, talents: { [skillIndex]: number | string } } ] }
+//   { v: 1, tabs: [ null | { note, talents: { [skillIndex]: number | string } } ], super: [skillIndex] }
+
+import { collectSuperTalents } from './superTalents';
 
 const isMeaningfulLevel = (level) => {
   if (level == null) return false;
@@ -19,7 +21,7 @@ const isMeaningfulLevel = (level) => {
     // numeric strings: "0" → false, "35" → true
     const n = Number(trimmed);
     if (!Number.isNaN(n)) return n !== 0;
-    // annotation strings like "*1" — keep
+    // annotation strings like "*1" - keep
     return true;
   }
   return level !== 0;
@@ -56,11 +58,14 @@ export const compactPayload = (fullBuild) => {
   // Trim trailing nulls so we don't waste bytes on empty tails
   while (tabs.length > 0 && tabs[tabs.length - 1] == null) tabs.pop();
 
-  return { v: 1, tabs };
+  const superTalents = collectSuperTalents(fullBuild?.tabs);
+  const payload = { v: 1, tabs };
+  if (superTalents.length > 0) payload.super = superTalents;
+  return payload;
 };
 
 // Hard caps mirror the editor-level constraints. The editor enforces them via
-// `CharacterCount.configure({ limit })`, but that's a DOM-layer guard only —
+// `CharacterCount.configure({ limit })`, but that's a DOM-layer guard only -
 // direct API POSTs or edits of legacy content can exceed the cap. Re-slicing
 // here guarantees the stored document respects the limit regardless of path.
 const MAX_TITLE = 120;

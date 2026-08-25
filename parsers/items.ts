@@ -4,6 +4,7 @@ import { getGalleryBonus } from './world-7/gallery';
 import { getHatRackBonus } from './world-3/hatRack';
 import { getResearchGridBonus } from './world-7/research';
 
+
 export const addStoneDataToEquip = (baseItem: any, stoneData: any) => {
   if (!baseItem || !stoneData) return {};
 
@@ -19,7 +20,14 @@ export const addStoneDataToEquip = (baseItem: any, stoneData: any) => {
       };
     }
 
-    const baseItemStat = baseItem?.Type === 'KEYCHAIN' ? 0 : baseItem?.[statName];
+    // A keychain's stone replaces its UQ entry rather than adding to it, and the base UQ value can be
+    // a comma list ("2,4,6") that would string-concat onto the stone's number. Zero only those - the
+    // keychain's own combat stats still count, the way the game reads them off the item definition.
+    const rawBaseStat = baseItem?.[statName];
+    const isUqValue = statName === 'UQ1val' || statName === 'UQ2val';
+    const baseItemStat = ((baseItem?.Type === 'KEYCHAIN' && isUqValue) || isNaN(rawBaseStat))
+      ? 0
+      : rawBaseStat;
     const stoneStat = stoneData?.[statName];
 
     if (isNaN(stoneStat)) return { ...res, [statName]: stoneStat };
@@ -63,6 +71,7 @@ export const getStatsFromGear = (character: any, bonusIndex: any, account?: any,
   const silkroadProcessor = account?.lab?.playersChips?.[character?.playerId]?.find((chip: any) => chip.index === 18) ?? 0;
 
   // Resolve bonus name from index if needed
+  const isEtcBonus = !isNaN(bonusIndex);
   const bonusName = isNaN(bonusIndex) ? bonusIndex : bonuses?.etcBonuses?.[bonusIndex];
 
   // Items tracked in gallery (TROPHY, NAMETAG) or hatRack (PREMIUM_HELMET) should be skipped
@@ -82,7 +91,9 @@ export const getStatsFromGear = (character: any, bonusIndex: any, account?: any,
       return total; // Skip - bonus comes from gallery/hatRack
     }
     const statValue = getStatFromEquipment(item, bonusName);
-    const chipMultiplier = ((index === 3 && silkroadProcessor) || (index === 10 && silkroadMotherboard) || (index === 9 && silkroadSoftware)) ? 2 : 1;
+    // The Silkrode chips double the slot's UQ/etc bonus only - TotalStats applies them inside the
+    // UQ branch, never to an item's base stats.
+    const chipMultiplier = isEtcBonus && ((index === 3 && silkroadProcessor) || (index === 10 && silkroadMotherboard) || (index === 9 && silkroadSoftware)) ? 2 : 1;
     const researchMultiplier = index === 15 ? wellDressedMulti : 1;
     return total + (statValue * chipMultiplier * researchMultiplier);
   }, 0) || 0;
@@ -136,7 +147,7 @@ export const getStatFromEquipment = (item: any, statName: string) => {
 
 export const createItemsWithUpgrades = (charItems: any, stoneData: any, owner: string) => {
 
-  return Array.from(Object.values(charItems)).reduce((res: any[], item: any, itemIndex) => {
+  return Array.from(Object.values(charItems ?? {})).reduce((res: any[], item: any, itemIndex) => {
     const stoneResult = addStoneDataToEquip(items?.[item], stoneData?.[itemIndex]);
     let misc = '';
     const maxUpgradeSlots = Math.max((stoneResult as any)?.Upgrade_Slots_Left ?? 0, items?.[item]?.Upgrade_Slots_Left ?? 0);
@@ -182,14 +193,16 @@ export const getTotalStatFromEquipment = (arr: any, statKey: any, statName: any)
 
 export const findItemInInventory = (arr: any, itemName: any) => {
   if (!itemName) return {};
-  return arr.reduce((res: any, item: any) => {
+  return (arr ?? []).reduce((res: any, item: any) => {
     const { name, owner, amount } = item;
     if (name === itemName) {
+      // an owner can hold the same item in multiple stacks, sum them all
+      const stackAmount = amount ?? 1;
       if (res?.[owner]) {
-        return { ...res, [owner]: { amount: res?.[owner]?.amount + 1 } };
+        return { ...res, [owner]: { amount: res?.[owner]?.amount + stackAmount } };
       }
       else {
-        return { ...res, [owner]: { amount } };
+        return { ...res, [owner]: { amount: stackAmount } };
       }
     }
     return res;
@@ -198,7 +211,7 @@ export const findItemInInventory = (arr: any, itemName: any) => {
 
 export const findItemByDescriptionInInventory = (arr: any, desc: any) => {
   if (!desc) return {};
-  const relevantItems = arr.filter(({
+  const relevantItems = (arr ?? []).filter(({
     misc,
     description
   }: any) => cleanUnderscore(description)?.toLowerCase()?.includes(desc?.toLowerCase()) || cleanUnderscore(misc)?.toLowerCase()?.includes(desc?.toLowerCase()), []);
@@ -258,7 +271,7 @@ export const findQuantityOwned = (items: any, itemName: any) => {
 }
 
 export const addEquippedItems = (characters: any, shouldInclude: any) => {
-  return shouldInclude ? characters?.reduce((res: any, {
+  return shouldInclude ? (characters ?? []).reduce((res: any, {
     tools,
     equipment,
     food
@@ -276,7 +289,7 @@ export const getAllItems = (characters: any, account: any) => {
 export const mergeItemsByOwner = (items: any) => {
   const mergedItems: Record<string, any> = {};
 
-  items.forEach((item: any) => {
+  (items ?? []).forEach((item: any) => {
     if (!item.displayName) return;
     const key = item.owner + item.displayName;
     if (mergedItems[key]) {

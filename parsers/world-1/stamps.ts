@@ -1,5 +1,6 @@
 import { groupByKey, growth, tryToParse } from '@utility/helpers';
 import { crafts, items, stamps } from '@website-data';
+import { liveEntries } from '@parsers/catalog';
 import { getTalentBonus } from '@parsers/talents';
 import { calculateItemTotalAmount, flattenCraftObject } from '@parsers/items';
 import { getEventShopBonus, getHighestCapacityCharacter, isBundlePurchased } from '@parsers/misc';
@@ -16,6 +17,8 @@ import { getPaletteBonus } from '@parsers/world-5/gaming';
 import { getMeritocracyBonus } from '@parsers/world-2/voteBallot';
 import { getSushiBonus } from '@parsers/world-7/sushiStation';
 
+export const MAX_STAMP_REDUCTION = 90;
+
 export const stampsMapping = { 0: 'combat', 1: 'skills', 2: 'misc' };
 export const altStampsMapping = { _: 'combat', a: 'skills', b: 'misc' };
 
@@ -26,17 +29,14 @@ export const getStamps = (idleonData: any, account: any) => {
 }
 
 export const parseStamps = (stampLevelsRaw: any, stampMaxLevelsRaw: any, account: any) => {
-  const stampsObject = stampLevelsRaw?.reduce((result: any, item: any, index: any) => ({
-    ...result,
-    [(stampsMapping as Record<string, any>)?.[index]]: Object.keys(item).reduce((res: any[], key, stampIndex) => (key !== 'length' ? [
-      ...res,
-      { level: parseFloat(item[key]), maxLevel: stampMaxLevelsRaw?.[index]?.[stampIndex] }
-    ]
-      : res), [])
-  }), {});
-  return Object.entries(stampsObject)?.reduce((acc, [category, stampsLevels]: any) => {
-    const stampList = stampsLevels?.map((stamp: any, index: any) => {
-      const stampDetails = (stamps as Record<string, any>)[category][index];
+  return Object.entries(stampsMapping).reduce((acc: any, [categoryIndexStr, category]) => {
+    const categoryIndex = Number(categoryIndexStr);
+    const categoryCatalog = Object.values((stamps as Record<string, any>)[category as string]);
+    const stampList = liveEntries<any>(categoryCatalog).map(({ entry: stampDetails, index }) => {
+      const rawLevel = stampLevelsRaw?.[categoryIndex]?.[index];
+      const level = rawLevel != null ? parseFloat(rawLevel) : 0;
+      const rawMaxLevel = stampMaxLevelsRaw?.[categoryIndex]?.[index];
+      const maxLevel = rawMaxLevel != null ? parseFloat(rawMaxLevel) : 0;
       const requiredItem = stampDetails?.itemReq?.[0];
       const materials = flattenCraftObject(crafts[requiredItem?.name]);
       const ownedMats = account?.storage?.list?.reduce((sum: any, { rawName: storageRawName, amount }: any) => {
@@ -44,9 +44,9 @@ export const parseStamps = (stampLevelsRaw: any, stampMaxLevelsRaw: any, account
         return sum + (amount || 0);
       }, 0);
       const greenStackOwnedMats = Math.max(0, ownedMats - 1e7);
-      return { ...stampDetails, ...stamp, materials, ownedMats, greenStackOwnedMats, itemReq: requiredItem, category }
-    })
-    return { ...acc, [category]: stampList };
+      return { ...stampDetails, level, maxLevel, materials, ownedMats, greenStackOwnedMats, itemReq: requiredItem, category };
+    });
+    return { ...acc, [category as string]: stampList };
   }, {});
 }
 
@@ -75,8 +75,9 @@ export const getStampsPerDay = (account: any) => {
   };
 }
 
-export const evaluateStamp = (stamp: any, account: any, characters: any, gildedStamp = true, forcedStampReducer: any, forceMaxCapacity = false) => {
-  const stampReducer = forcedStampReducer ?? account?.atoms?.stampReducer;
+export const evaluateStamp = (stamp: any, account: any, characters: any, gildedStamp = true, forcedStampReducer: any, forceMaxCapacity = false, withMinReduction = false) => {
+  const rawStampReducer = forcedStampReducer ?? account?.atoms?.stampReducer;
+  const stampReducer = Number.isFinite(rawStampReducer) ? rawStampReducer : 0;
   const bestCharacter = getHighestCapacityCharacter(items?.[stamp?.itemReq?.rawName], characters, account, forceMaxCapacity);
   const goldCost = getGoldCost(stamp?.level, stamp, account);
   const hasMoney = account?.currencies?.rawMoney >= goldCost;
@@ -94,6 +95,13 @@ export const evaluateStamp = (stamp: any, account: any, characters: any, gildedS
 
   const enoughPlayerStorage = bestCharacter?.maxCapacity >= materialCost;
 
+  // Only the stamps page displays this, and it costs several cost evaluations per stamp, so
+  // serialization (which runs updateStamps once per pass) skips it.
+  let minReduction = null;
+  if (withMinReduction) {
+    minReduction = getMinReduction(stamp, account, gildedStamp, bestCharacter?.maxCapacity ?? 0);
+  }
+
   const newStampData = {
     ...stamp,
     bestCharacter,
@@ -102,7 +110,8 @@ export const evaluateStamp = (stamp: any, account: any, characters: any, gildedS
     enoughPlayerStorage,
     greenStackHasMaterials,
     hasMaterials,
-    hasMoney
+    hasMoney,
+    minReduction
   };
 
   const futureCosts = getFutureCosts(newStampData, account, stampReducer, gildedStamp);
@@ -110,9 +119,9 @@ export const evaluateStamp = (stamp: any, account: any, characters: any, gildedS
 }
 
 // Updated version of updateStamps that uses the new evaluateStamp function
-export const updateStamps = (account: any, characters: any, gildedStamp = true, forcedStampReducer?: any, forceMaxCapacity?: any) => {
+export const updateStamps = (account: any, characters: any, gildedStamp = true, forcedStampReducer?: any, forceMaxCapacity?: any, withMinReduction = false) => {
   const flatten = Object.values(account?.stamps || {}).flat().map(stamp =>
-    evaluateStamp(stamp, account, characters, gildedStamp, forcedStampReducer, forceMaxCapacity)
+    evaluateStamp(stamp, account, characters, gildedStamp, forcedStampReducer, forceMaxCapacity, withMinReduction)
   );
   return groupByKey(flatten, ({ category }: any) => category);
 }
@@ -125,6 +134,27 @@ const checkHasMaterials = (materials: any, materialCost: any, account: any, subt
       ? Math.max(0, ownedMats - 1e7) >= itemQuantity * materialCost
       : ownedMats >= itemQuantity * materialCost;
   })
+}
+
+// Smallest stamp reducer % that brings the current level's material cost inside the best
+// character's carry capacity. Stored materials deliberately play no part: being short on a
+// material is a "Missing Materials" state the player fixes by farming, while a cost that outgrows
+// carry capacity is a wall no reducer value can climb. Reduction is a single linear factor inside
+// getMaterialCost, so the value is solved directly instead of scanning every reducer step. A null
+// reduction means even the game's 90% cap leaves the cost above capacity.
+const getMinReduction = (stamp: any, account: any, gildedStamp: any, storageLimit: number) => {
+  const limit = Number.isFinite(storageLimit) ? Math.max(0, storageLimit) : 0;
+  const costAt = (reduction: number) => Math.floor(getMaterialCost(stamp?.level, stamp, account, reduction, gildedStamp));
+
+  if (costAt(MAX_STAMP_REDUCTION) > limit) return { reduction: null };
+  if (costAt(0) <= limit) return { reduction: 0 };
+
+  const estimate = Math.ceil(100 * (1 - limit / getMaterialCost(stamp?.level, stamp, account, 0, gildedStamp)));
+  let reduction = Math.min(MAX_STAMP_REDUCTION, Math.max(0, estimate));
+  // The Math.floor/Math.max clamps inside getMaterialCost can shift the analytic result by a step.
+  while (reduction > 0 && costAt(reduction - 1) <= limit) reduction--;
+  while (reduction < MAX_STAMP_REDUCTION && costAt(reduction) > limit) reduction++;
+  return { reduction };
 }
 
 const getFutureCosts = (stamp: any, account: any, stampReducer: any, gildedStamp: any) => {
@@ -221,6 +251,17 @@ const getGoldCost = (level: any, stamp: any, account: any) => {
   return Math.floor(finalCost);
 }
 
+// Total coins needed to take a stamp from its current level up to its already unlocked max level.
+export const getGoldCostToMaxLevel = (stamp: any, account: any) => {
+  const { level, maxLevel } = stamp || {};
+  if (typeof level !== 'number' || typeof maxLevel !== 'number') return 0;
+  let total = 0;
+  for (let i = level; i < maxLevel; i++) {
+    total += getGoldCost(i, stamp, account);
+  }
+  return total;
+}
+
 const getMaterialCostToLevel = (level: any, maxLevel: any, stamp: any, account: any, reduction = 0, gildedStamp: any) => {
   let total = 0;
   for (let i = level; i < maxLevel; i += stamp?.reqItemMultiplicationLevel) {
@@ -235,18 +276,33 @@ const getMaterialCost = (level: any, stamp: any, account: any, reduction = 0, gi
   const sigilReduction = (1 / (1 + sigilBonus / 100));
   const stampReducerVal = Math.max(0.1, 1 - reduction / 100);
   const meritocracyBonus = 1 / (1 + getMeritocracyBonus(account, 14) / 100);
+  const vialReduction = Math.max(0.1, 1 - (reductionVial / 100));
 
-  return Math.max(1, (stamp?.baseMatCost * (gildedStamp ? 0.05 : 1)
+  const tierExponent = Math.max(0, Math.round(level / stamp?.reqItemMultiplicationLevel) - 1);
+  const cost = stamp?.baseMatCost * (gildedStamp ? 0.05 : 1)
     * meritocracyBonus
     * stampReducerVal
     * sigilReduction
-    * Math.pow(stamp?.powMatBase, Math.pow(Math.round(level / stamp?.reqItemMultiplicationLevel) - 1, 0.8)))
-    * Math.max(0.1, 1 - (reductionVial / 100)));
+    * Math.pow(stamp?.powMatBase, Math.pow(tierExponent, 0.8));
+
+  // The game truncates before and after the vial cut, but skips both past 2b.
+  return Math.max(1, cost > 2e9 ? cost * vialReduction : Math.floor(Math.floor(cost) * vialReduction));
 }
 
 export const getStampsBonusByEffect = (account: any, effectName: any, character?: any) => {
   return account?.stamps && Object.entries(account?.stamps)?.reduce((final: any, [stampTreeName, stampTree]: any) => {
     const foundStamps = stampTree?.filter(({ effect }: any) => effect?.includes(effectName));
+    const sum = foundStamps?.reduce((stampsSum: any, { rawName }: any) => stampsSum + getStampBonus(account, stampTreeName, rawName, character), 0);
+    return final + sum;
+  }, 0);
+}
+
+// The game's StampBonusOfTypeX looks the name up in CustomLists.StampBonusIndex, which is the
+// stamp's `stat` column rather than its display effect, and matches it whole. Multikill_Stamp is
+// the case where that matters: its stat is "Overkill" while its effect reads "Base_Multikill_Rate".
+export const getStampsBonusByStat = (account: any, statName: any, character?: any) => {
+  return account?.stamps && Object.entries(account?.stamps)?.reduce((final: any, [stampTreeName, stampTree]: any) => {
+    const foundStamps = stampTree?.filter(({ stat }: any) => stat === statName);
     const sum = foundStamps?.reduce((stampsSum: any, { rawName }: any) => stampsSum + getStampBonus(account, stampTreeName, rawName, character), 0);
     return final + sum;
   }, 0);

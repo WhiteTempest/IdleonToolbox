@@ -8,11 +8,12 @@ import {
   randomList
 } from '@website-data';
 import { getLabBonus } from "@parsers/world-4/lab";
-import { CLASSES, getHighestTalentByClass } from "@parsers/talents";
+import { getBestActiveCharacter, getHighestTalentAcrossCharacters } from "@parsers/talents";
 import { getLegendTalentBonus } from "@parsers/world-7/legendTalents";
 import { getUpgradeVaultBonus } from "@parsers/misc/upgradeVault";
 import { getPaletteBonus } from "@parsers/world-5/gaming";
 import { getCompassBonus } from "@parsers/class-specific/compass";
+import { getCloudBonus } from "@parsers/world-3/equinox";
 
 export const getSneaking = (idleonData: any, serverVars: any, charactersData: any, account: any) => {
   const rawSneaking = tryToParse(idleonData?.Ninja);
@@ -21,6 +22,14 @@ export const getSneaking = (idleonData: any, serverVars: any, charactersData: an
 };
 
 const doorMaxHps = ninjaExtraInfo?.[3];
+// Gemstone counters are capped at 10M gems.
+const GEMSTONE_MAX_VALUE = 1e7;
+// Pristine charms live in their own list rather than in `ninjaEquipment`, but inventory slots
+// reference them by raw name like any other item.
+const pristineCharmItems: Record<string, any> = rawPristineCharms.reduce((result, charm) => ({
+  ...result,
+  [charm.rawName]: charm
+}), {});
 
 const parseSneaking = (rawSneaking: any, rawSpelunking: any, serverVars: any, charactersData: any, account: any) => {
   const gemStonesUnlocked = rawSneaking?.[106]?.filter((name: any) => name.includes('NjGem'));
@@ -44,25 +53,35 @@ const parseSneaking = (rawSneaking: any, rawSpelunking: any, serverVars: any, ch
 
   gemStones = gemStones.map((data, index) => {
     const bonus = data?.baseValue < .5 ? 0 : getGemstoneBonus(data, index, gemStones?.[5]?.bonus, charactersData);
+    // Gem counters cap at 10M, so the highest reachable bonus is the one you'd get at a full counter.
+    const maxBonus = getGemstoneBonus({ ...data, baseValue: GEMSTONE_MAX_VALUE }, index, gemStones?.[5]?.bonus, charactersData);
     let notatedBonus, description = data.description ?? '';
+    // Descriptions using '$' display a diminishing-returns value instead of the raw bonus.
+    const isDiminishing = data.description.includes('$');
+    const displayBonus = isDiminishing ? 100 * (1 - 1 / (1 + bonus / 100)) : bonus;
+    const displayMaxBonus = isDiminishing ? 100 * (1 - 1 / (1 + maxBonus / 100)) : maxBonus;
 
     if (data.description.includes('}')) {
       notatedBonus = notateNumber(bonus, 'Big');
       description = description.replace('}', notatedBonus);
     }
 
-    if (data.description.includes('$')) {
-      notatedBonus = notateNumber(100 * (1 - 1 / (1 + bonus / 100)), 'Big');
+    if (isDiminishing) {
+      notatedBonus = notateNumber(displayBonus, 'Big');
       description = description.replace('$', notatedBonus);
     }
 
     // The bonus formula is x3 + x5 * (baseValue / (1000 + baseValue)).
-    // The saturating term is how close this gemstone is to its max possible bonus (x5 is the asymptotic cap).
-    const saturationPct = data.baseValue / (1e3 + data.baseValue) * 100;
+    // The saturating term is how close this gemstone is to its max possible bonus, normalized to the 10M counter cap.
+    const maxSaturation = GEMSTONE_MAX_VALUE / (1e3 + GEMSTONE_MAX_VALUE);
+    const saturationPct = Math.min(100, data.baseValue / (1e3 + data.baseValue) / maxSaturation * 100);
 
     return {
       ...data,
       bonus,
+      maxBonus,
+      displayBonus,
+      displayMaxBonus,
       notatedBonus,
       saturationPct,
       description: description.replace('{', '+').replace(/@/g, '')
@@ -71,7 +90,7 @@ const parseSneaking = (rawSneaking: any, rawSpelunking: any, serverVars: any, ch
 
   const sneakingExpThing = rawSneaking?.[102]?.[0];
   const jadeEmporiumUnlocks = rawSneaking?.[102]?.[9];
-  const jadeCoins = rawSneaking?.[102]?.[1];
+  const jadeCoins = rawSneaking?.[102]?.[1] ?? 0;
   const lastLooted = rawSneaking?.[102]?.[2];
   const ninjaUpgradeLevels = rawSneaking?.[103];
   const totalNinjaUpgradeLevels = ninjaUpgradeLevels?.reduce((sum: any, level: any) => sum + level, 0);
@@ -120,7 +139,7 @@ const parseSneaking = (rawSneaking: any, rawSpelunking: any, serverVars: any, ch
     return {
       ...upgrade,
       level,
-      value: level * (upgrade.modifier ?? 1),
+      value: (level ?? 0) * (upgrade.modifier ?? 1),
       isUnlocked,
       isSpecialUpgrade,
       prerequisiteIndex: !isSpecialUpgrade ? upgrade.x9 : null,
@@ -233,7 +252,8 @@ const parseSneaking = (rawSneaking: any, rawSpelunking: any, serverVars: any, ch
 };
 
 export const getLocalNinjaUpgradeBonus = (upgrades: any, index: any, gemstones: any, inventory: any, account: any) => {
-  const { level, modifier } = upgrades?.[index] ?? {};
+  const { level: rawLevel, modifier } = upgrades?.[index] ?? {};
+  const level = rawLevel ?? 0;
   const masteryLootLevel = upgrades?.[3]?.level || 0;
   const selectedMasteryLevel = account?.accountOptions?.[231] || 0;
 
@@ -242,12 +262,14 @@ export const getLocalNinjaUpgradeBonus = (upgrades: any, index: any, gemstones: 
     const fireFrostBonus = gemstones?.[7]?.bonus || 0;
     const paletteBonus30 = getPaletteBonus(account, 30) || 0;
     const vaultBonus88 = getUpgradeVaultBonus(account?.upgradeVault?.upgrades, 88) || 0;
+    // 100 * Dreamstuff("CloudBonus", 53) - equinox challenge "Get a LV. 7 slot in Sneaking, using Symbols"
+    const cloudBonus53 = 100 * getCloudBonus(account?.equinox?.challenges, 53);
     return Math.round(
       level * modifier
       + masteryLootLevel * selectedMasteryLevel
       + goldStar
       + Math.ceil(fireFrostBonus)
-      + Math.floor(paletteBonus30 + vaultBonus88)
+      + Math.floor(paletteBonus30 + vaultBonus88 + cloudBonus53)
     );
   }
   if (index === 6 || index === 7 || index === 10 || index === 12) {
@@ -267,7 +289,7 @@ const getItemsMaxLevel = (upgrades: any, gemstones: any, inventory: any, account
 };
 
 const getGemstoneBonus = (gemstone: any, index: any, fifthGemstoneBonus: any, characters: any) => {
-  const talentBonus = getHighestTalentByClass(characters, CLASSES.Wind_Walker, 'GENERATIONAL_GEMSTONES') ?? 0;
+  const talentBonus = getHighestTalentAcrossCharacters(characters, 'GENERATIONAL_GEMSTONES', getBestActiveCharacter(characters)) ?? 0;
 
   return index === 5
     ? gemstone?.x3 + gemstone?.x5 * (gemstone?.baseValue / (1e3 + gemstone?.baseValue))
@@ -282,13 +304,13 @@ const parseNinjaItems = (array: any, doChunks: any, gemstones: any, account: any
   let result = array?.map(([itemName, level]: any, index: any) => {
     const itemId = baseItemId + index;
     // Symbol upgrades apply to inventory items (raw 60+) and to character equipment item slots
-    // (raw 14+4t and 15+4t — i.e. the last two of each 4-slot character chunk; hat and weapon don't have symbols).
+    // (raw 14+4t and 15+4t - i.e. the last two of each 4-slot character chunk; hat and weapon don't have symbols).
     const isInventoryItem = itemId >= 60;
     const isCharSymbolSlot = !isInventoryItem && itemId >= 14 && (itemId - 14) % 4 < 2;
     const hasSymbol = isInventoryItem || isCharSymbolSlot;
     const symbolLVID = hasSymbol ? itemIdToSymbolLevelId(itemId) : -1;
     return {
-      ...ninjaEquipment[itemName],
+      ...((ninjaEquipment as Record<string, any>)[itemName] ?? pristineCharmItems[itemName]),
       level,
       symbolBonus: hasSymbol ? getSymbolBonus(account, symbolLVID) : 0,
       symbolLevel: hasSymbol ? (account?.spelunking?.sneakingSlots?.[symbolLVID] ?? 0) : 0
@@ -296,25 +318,33 @@ const parseNinjaItems = (array: any, doChunks: any, gemstones: any, account: any
   });
 
   if (doChunks) {
-    return result?.toChunks(4)?.map((array: any) => array.map((item: any) => ({ ...item, value: getItemValue(item) })));
+    return result?.toChunks(4)?.map((array: any) => array.map((item: any) => {
+      // rawValue too, so these items answer getInventoryNinjaItem's comparison like inventory ones
+      const rawValue = getItemValue(item);
+      return { ...item, rawValue, value: rawValue };
+    }));
   }
 
   return result?.map((item: any) => {
-    const legendTalentBonus = getLegendTalentBonus(account, 6);
+    const legendTalentBonus = getLegendTalentBonus(account, 6) || 0;
     const symbolBonus = item?.symbolBonus || 0;
+    const rawValue = getItemValue(item);
 
     return {
       ...item,
-      value: getItemValue(item) * (item?.name?.startsWith('Gold_') ? 1 + gemstoneBonus / 100
-        * (1 + symbolBonus / 100) * (1 + legendTalentBonus / 100) : 1)
+      rawValue,
+      value: rawValue * (item?.name?.startsWith('Gold_')
+        ? (1 + gemstoneBonus / 100) * (1 + legendTalentBonus / 100) * (1 + symbolBonus / 100)
+        : 1)
     }
   });
 };
 
 const getSymbolBonus = (account: any, index: any) => {
+  const slotLevel = account?.spelunking?.sneakingSlots?.[index] ?? 0;
   return 999 == index ?
-    50 * (account?.spelunking?.sneakingSlots?.[index] + 1)
-    : 50 * account?.spelunking?.sneakingSlots?.[index];
+    50 * (slotLevel + 1)
+    : 50 * slotLevel;
 }
 
 const itemIdToSymbolLevelId = (itemId: any) => {
@@ -325,12 +355,16 @@ const getItemValue = ({ type, subType, level, x3, x5 }: any) => {
   if (type === 1) {
     if (subType === 0) {
       return 10 * x3 * ((level + 10) / (level + 40));
-    } else {
+    }
+    if (level < 111) {
       return x3
         * Math.pow(1.23, level)
         * Math.pow(0.92, Math.max(0, level - 80))
         * Math.pow(0.94, Math.max(0, level - 110));
     }
+    // Past 110 the game folds the three terms into a single factor (1.23 * 0.92 * 0.94). Same
+    // curve, but 1.23^level no longer overflows to Infinity on a high level weapon.
+    return x3 * Math.pow(1.23, 110) * Math.pow(0.92, 30) * Math.pow(1.063704, level - 110);
   }
 
   if (type === 2) {
@@ -342,8 +376,15 @@ const getItemValue = ({ type, subType, level, x3, x5 }: any) => {
   return 0;
 };
 
+// Deliberately compares the raw stat against the stored MULTIPLIED value - the game does
+// `if (ItemStat(slot) > NJbonusPerms[subType]) NJbonusPerms[subType] = ItemStat(slot) * gem * legend * symbol`,
+// so the two sides of that test are on different scales. It is a game quirk, not a typo: symbol
+// bonuses are per-item, so which duplicate wins can differ from plain max-by-value. Match it.
 export const getInventoryNinjaItem = (account: any, equipName: any) => {
-  return account?.sneaking?.inventory?.find(({ name }: any) => name === equipName)?.value;
+  return (account?.sneaking?.inventory ?? []).reduce((best: number, item: any) => {
+    if (item?.name !== equipName) return best;
+    return (item?.rawValue ?? 0) > best ? (item?.value ?? 0) : best;
+  }, 0);
 };
 
 export const getNinjaEquipmentBonus = (account: any, playerIndex: any, equipName: any) => {

@@ -7,6 +7,7 @@ import { getStampsBonusByEffect } from '@parsers/world-1/stamps';
 import { getLampBonus } from '@parsers/world-5/caverns/the-lamp';
 import { getMonumentBonus } from '@parsers/world-5/caverns/bravery';
 import { getLegendTalentBonus } from '@parsers/world-7/legendTalents';
+import { getCglunkoBonus } from '@parsers/world-5/caverns/crystal-glunko-cove';
 
 
 const jarNames = [
@@ -32,6 +33,7 @@ export const getTheJars = (holesObject: any, jarsRaw: any, accountData: any) => 
   const enchant = getEnchantChance({ holesObject, account: accountData });
   const rupieValue = getRupieValue({ holesObject, accountData });
   const jarAesthetic = getJarAesthetic({ holesObject });
+  const jarInventory = getJarInventory(jarsRaw);
   const jars = jarNames.map((name, index) => {
     const bonus = index === 1 ? notateNumber(100 * opalChance, 'Small') : index === 2
       ? notateNumber(100 * newCollectibleChance, 'Small')
@@ -42,6 +44,7 @@ export const getTheJars = (holesObject: any, jarsRaw: any, accountData: any) => 
       unlocked: index <= jarTypes,
       req: getProductionReq({ holesObject, i: index }),
       destroyed: holesObject?.extraCalculations?.slice(40, 50)?.[index] || 0,
+      owned: jarInventory?.[index],
       // Enchanted Jar (index 4): expose precise odds, per-tier scaling and source breakdown
       enchant: index === 4 ? enchant : undefined
     }
@@ -63,7 +66,7 @@ export const getTheJars = (holesObject: any, jarsRaw: any, accountData: any) => 
   })
   rupies = [...rupies, ...whiteDarkRupies];
 
-  const collectibles = holesObject?.jarStuff?.slice(0, 40).map((level: any, index: any) => {
+  const collectibles = Array.from({ length: 40 }, (_, index) => holesObject?.jarStuff?.[index]).map((level: any, index: any) => {
     const [name, bonusModifier, , description] = holesInfo?.[67]?.[index]?.split('|') ?? [];
     const bonus = getJarBonus({ holesObject, i: index, account: accountData });
     return {
@@ -89,9 +92,35 @@ export const getTheJars = (holesObject: any, jarsRaw: any, accountData: any) => 
     perHour,
     jars,
     totalJars: jarsRaw?.length,
+    jarInventory,
+    totalJarQuantity: jarInventory.reduce((sum, { quantity }) => sum + quantity, 0),
     totalEnhancingLevels,
     collectibles
   }
+}
+
+// A raw Jars entry is [typeIndex, tierExponent, x, y, roll]. The tier exponent is
+// what the game raises 10 to when a jar is broken (rupie value, opal odds and
+// enchant odds all scale by 10^exponent), so one jar is worth 10^exponent
+// base-tier jars. Displayed tier is 1-based, hence exponent 0 is "T1".
+const getJarInventory = (jarsRaw: any) => {
+  const inventory = jarNames.map(() => ({ total: 0, quantity: 0, tiers: [] as { tier: number, count: number }[] }));
+  (jarsRaw ?? []).forEach((jar: any) => {
+    const entry = inventory?.[Math.round(parseFloat(jar?.[0]))];
+    if (!entry) return;
+    const tier = Math.round(parseFloat(jar?.[1])) + 1;
+    entry.total += 1;
+    entry.quantity += Math.pow(10, tier - 1);
+    const existing = entry.tiers.find((t) => t.tier === tier);
+    if (existing) {
+      existing.count += 1;
+    }
+    else {
+      entry.tiers.push({ tier, count: 1 });
+    }
+  });
+  inventory.forEach(({ tiers }) => tiers.sort((a, b) => a.tier - b.tier));
+  return inventory;
 }
 
 const _randomInt = (min: number, max: number) => Math.floor(Math.random() * (max - min + 1)) + min;
@@ -111,7 +140,7 @@ const getRupieValue = ({ holesObject, accountData }: any) => {
   const schematicBonus1 = getSchematicBonus({ holesObject, t: 62, i: 1 });
   const schematicBonus2 = getSchematicBonus({ holesObject, t: 65, i: 2 });
   const schematicBonus3 = getSchematicBonus({ holesObject, t: 68, i: 4 });
-  const accountOptionBonus = Math.max(1, Math.pow(1.5, accountData?.accountOptions?.[355]));
+  const accountOptionBonus = Math.max(1, Math.pow(1.5, accountData?.accountOptions?.[355] ?? 0));
   const lampBonus = 1 + getLampBonus({ holesObject, t: 99, i: 0, account: accountData }) / 400;
   const monumentBonus = 1 + getMonumentBonus({ holesObject, t: 2, i: 1 }) / 100;
   const measurementBonus1 = getMeasurementBonus({ holesObject, accountData, t: 10 });
@@ -128,6 +157,7 @@ const getRupieValue = ({ holesObject, accountData }: any) => {
     + getJarBonus({ holesObject, i: 21, account: accountData })
     + getJarBonus({ holesObject, i: 33, account: accountData })) / 100;
   const stampBonusMultiplier = 1 + stampBonus / 100;
+  const cavernicusBonus = 1 + getCglunkoBonus(accountData, 14) / 100;
 
   const value = (1 + schematicBonus1 + schematicBonus2 + schematicBonus3)
     * accountOptionBonus
@@ -140,7 +170,8 @@ const getRupieValue = ({ holesObject, accountData }: any) => {
     * jarBonus2
     * jarBonus3
     * jarBonus4
-    * stampBonusMultiplier;
+    * stampBonusMultiplier
+    * cavernicusBonus;
 
   const breakdown = {
     statName: "Rupie value",
@@ -163,6 +194,7 @@ const getRupieValue = ({ holesObject, accountData }: any) => {
           { name: "Gilded Jars", value: extraCalcBonus },
           { name: "Collectibles", value: jarBonus1 * jarBonus2 * jarBonus3 * jarBonus4 },
           { name: "Stamps", value: stampBonusMultiplier },
+          { name: "Crystal Glunko Cove", value: cavernicusBonus },
         ],
       },
     ],
@@ -362,11 +394,3 @@ const getEnchantChance = ({ holesObject, account }: any) => {
 
   return { value, label: formatEnchantPercent(value), tiers, breakdown };
 }
-
-// TODO: TBD
-// 11 == this._DN4 ? a.engine.getGameAttribute("Holes")[11][39] = c.asNumber(a.engine.getGameAttribute("Holes")[11][39])
-//   + n._customBlock_Holes("JarRupieValue", 0, 0) * Math.pow(10, c.asNumber(a.engine.getGameAttribute("Jars")[this._DRI | 0][1]))
-//   : 10 == this._DN4 ? a.engine.getGameAttribute("Holes")[11][38] = c.asNumber(a.engine.getGameAttribute("Holes")[11][38])
-//     + n._customBlock_Holes("JarRupieValue", 0, 0) * Math.pow(10, c.asNumber(a.engine.getGameAttribute("Jars")[this._DRI | 0][1]))
-//     : a.engine.getGameAttribute("Holes")[9][Math.round(20 + this._DN4)] = c.asNumber(a.engine.getGameAttribute("Holes")[9][Math.round(20 + this._DN4)])
-//       + n._customBlock_Holes("JarRupieValue", 0, 0) * Math.pow(10, c.asNumber(a.engine.getGameAttribute("Jars")[this._DRI | 0][1]))

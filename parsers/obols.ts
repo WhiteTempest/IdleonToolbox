@@ -2,8 +2,14 @@ import { createArrayOfArrays, tryToParse } from '@utility/helpers';
 import { items, obols } from '@website-data';
 import { addStoneDataToEquip } from './items';
 import type { IdleonData } from './types';
+import { getPowerType } from './powerTypes';
+
+// Re-exported so existing importers keep working. Modules needing ONLY this should import
+// from './powerTypes' — obols.ts reaches items.ts and from there the parser graph.
+export { getPowerType };
 
 const obolStats: string[] = ['STR', 'AGI', 'WIS', 'LUK', 'Weapon_Power', 'Defence', 'UQ1txt', 'UQ2txt'];
+
 
 export const getObols = (idleonData: IdleonData, account: boolean = true): Record<string, any> => {
   const obolsOrderRaw = tryToParse(idleonData?.ObolEqO1) || (account
@@ -34,8 +40,8 @@ export const parseObols = (obolsRaw: any, obolsEquippedRaw: any, obolsInvRaw: an
   };
 }
 
-export const createObolsWithUpgrades = (charItems: any[], stoneData: any): any[] => {
-  return charItems.reduce((res: any[], item: any, itemIndex: number) => {
+export const createObolsWithUpgrades = (charItems: any[] | undefined, stoneData: any): any[] => {
+  return (charItems ?? []).reduce((res: any[], item: any, itemIndex: number) => {
     const { rawName } = item;
     if (rawName === 'Blank') return [...res, item];
     const stoneResult = addStoneDataToEquip(items?.[rawName], stoneData?.[itemIndex]);
@@ -47,26 +53,6 @@ export const createObolsWithUpgrades = (charItems: any[], stoneData: any): any[]
   }, []);
 }
 
-export const getPowerType = (type: string): string => {
-  let fixedType = type.toLowerCase();
-  if (!fixedType) return 'Weapon Power';
-  if (fixedType.includes('obolbronzeworship')) {
-    return 'Worship Power';
-  }
-  if (fixedType.includes('obolbronzetrapping')) {
-    return 'Trapping Power';
-  }
-  if (fixedType.includes('mining')) {
-    return 'Mining Power';
-  } else if (fixedType.includes('fishin')) {
-    return 'Fishing Power';
-  } else if (fixedType.includes('choppin')) {
-    return 'Choppin Power';
-  } else if (fixedType.includes('catch')) {
-    return 'Catching Power';
-  }
-  return 'Weapon Power'
-}
 
 const getStatsFromObols = (obols: any[], account: boolean): Record<string, any> => {
   const bonusText = account ? 'familyBonus' : 'personalBonus';

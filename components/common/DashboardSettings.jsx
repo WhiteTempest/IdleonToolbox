@@ -25,6 +25,25 @@ import Tabber from './Tabber';
 import Button from '@mui/material/Button';
 import FileUploadButton from '@components/common/DownloadButton';
 import { IconFileExport } from '@tabler/icons-react';
+import Link from 'next/link';
+
+// Static hints that point a tracker's config toggle at the page where its values are set.
+// Kept out of the saved config so it renders for every user regardless of their stored config version.
+const trackerDescriptions = {
+  materialTracker: {
+    text: 'Set item thresholds in',
+    linkText: 'Tools → Material Tracker',
+    href: '/tools/material-tracker'
+  }
+};
+
+// camelToTitleCase splits on digits too, so names carrying one read wrong ("p2wUpgrades" becomes
+// "P 2w Upgrades"). Names listed here render as written instead.
+const labelOverrides = {
+  p2wUpgrades: 'P2W Upgrades'
+};
+
+const getLabel = (name) => labelOverrides[name] ?? name?.camelToTitleCase();
 
 const DashboardSettings = ({ open, onClose, config, onChange, onFileUpload }) => {
   const isSm = useMediaQuery((theme) => theme.breakpoints.down('sm'), { noSsr: true });
@@ -161,12 +180,18 @@ const Fields = ({ config, onChange, configType, section }) => {
           sx={{ [`.${typographyClasses.root}`]: { fontSize: 14 } }}
           control={<Checkbox name={trackerName} checked={data?.checked} size={'small'}/>}
           onChange={(e) => onChange(e, configType, null, null, section)}
-          label={trackerName?.camelToTitleCase()}/>
+          label={getLabel(trackerName)}/>
         {data?.options?.length > 0 ? <IconButton size={'small'}
                                                  onClick={() => handleArrowClick(trackerName)}>
           {showId === trackerName ? <ArrowDropUpIcon/> : <ArrowDropDownIcon/>}
         </IconButton> : null}
       </Stack>
+      {trackerDescriptions[trackerName] ? <FormHelperText sx={{ ml: 4, mt: -0.5, mb: 0.5 }}>
+        {trackerDescriptions[trackerName].text}{' '}
+        <Link href={trackerDescriptions[trackerName].href} style={{ textDecoration: 'underline', color: 'inherit' }}>
+          {trackerDescriptions[trackerName].linkText}
+        </Link>
+      </FormHelperText> : null}
       <Collapse in={showId === trackerName} unmountOnExit>
         <Stack sx={{ ml: 3, mr: 3 }}>
           {data?.options?.map((option, optionIndex) => {
@@ -184,32 +209,47 @@ const Fields = ({ config, onChange, configType, section }) => {
   })
 }
 
+// Locks every input to the same x. The widest label sharing a row with an input is 23 characters
+// ("Affordable Stamp Levels"), which fits inside this alongside the checkbox. Checkbox-only rows
+// keep their natural width so the few far longer labels ("Show Gilded When No Atom Discount",
+// 33 characters) stay on one line.
+const INPUT_LABEL_WIDTH = 200;
+
 const BaseField = ({ option, trackerName, onChange, configType, section }) => {
   const { type, props } = option || {};
+  const isImageArray = props?.type === 'img';
   return <>
     {option?.category ? <Typography variant={'caption'}>{option?.category?.camelToTitleCase()}</Typography> : null}
-    <Stack direction={'row'}>
-      {type !== 'array' ? <Stack>
-        <FormControlLabel
-          sx={{ minWidth: props?.type === 'img' ? 'inherit' : 100, [`.${typographyClasses.root}`]: { fontSize: 14 } }}
+    <Stack>
+      {/* The helper sits under the whole row, not beside the label - a long one used to stretch
+       the label column and knock that row's input out of line with every other row. */}
+      <Stack direction={'row'} gap={2}>
+        {type !== 'array' ? <FormControlLabel
+          sx={{
+            minWidth: isImageArray ? 'inherit' : 100,
+            // Only lock the width once there's room for it - on a phone the label keeps its
+            // natural size so the row doesn't overflow sideways.
+            ...(type === 'input' ? { width: { xs: 'auto', sm: INPUT_LABEL_WIDTH }, flexShrink: 0 } : {}),
+            [`.${typographyClasses.root}`]: { fontSize: 14 }
+          }}
           control={<Checkbox name={option?.name}
                              checked={option?.checked}
                              size={'small'}
           />}
           onChange={(e) => onChange(e, configType, option, trackerName, section)}
           label={<>
-            <Typography>{option?.name?.camelToTitleCase()}</Typography>
+            <Typography>{getLabel(option?.name)}</Typography>
           </>}
-        />
-        {option?.helperText ? <FormHelperText sx={{ ml: 3, mt: 0 }}>{option?.helperText}</FormHelperText> : null}
-      </Stack> : null}
-      {type === 'input' ?
-        <InputField option={option} trackerName={trackerName} configType={configType} onChange={onChange}
-                    section={section}/> : null}
-      {type === 'array'
-        ? <ArrayField option={option} trackerName={trackerName} configType={configType} onChange={onChange}
-                      section={section}/>
-        : null}
+        /> : null}
+        {type === 'input' ?
+          <InputField option={option} trackerName={trackerName} configType={configType} onChange={onChange}
+                      section={section}/> : null}
+        {type === 'array'
+          ? <ArrayField option={option} trackerName={trackerName} configType={configType} onChange={onChange}
+                        section={section}/>
+          : null}
+      </Stack>
+      {option?.helperText ? <FormHelperText sx={{ ml: 3, mt: 0 }}>{option?.helperText}</FormHelperText> : null}
     </Stack></>
 }
 

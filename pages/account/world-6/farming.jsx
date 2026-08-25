@@ -9,6 +9,7 @@ import Crop from '@components/account/Worlds/World6/Farming/Crop';
 import { CardTitleAndValue } from '@components/common/styles';
 import { commaNotation, getTabs, notateNumber, prefix } from '@utility/helpers';
 import RankDatabase from '@components/account/Worlds/World6/Farming/RankDatabase';
+import LandRankOptimizer from '@components/account/Worlds/World6/Farming/UpgradeOptimizer';
 import { PAGES } from '@components/constants';
 import ExoticMarket from '@components/account/Worlds/World6/Farming/ExoticMarket';
 import ExoticMarketRotation from '@components/account/Worlds/World6/Farming/ExoticMarketRotation';
@@ -69,7 +70,7 @@ const Farming = () => {
       title="Farming | Idleon Toolbox"
       description="Track your farming garden plots, crop progress, OG bonuses, and evolution upgrades in Legends of Idleon"
     />
-    <Stack direction={'row'} gap={1} flexWrap={'wrap'} alignItems={'center'}>
+    <Stack mb={3} direction={'row'} gap={1} flexWrap={'wrap'} alignItems={'center'}>
       <CardTitleAndValue title={'Character'} stackProps>
         <FormControl sx={{ width: 170, mt: 1 }}>
           <InputLabel id="farming-selected-character">Character</InputLabel>
@@ -94,7 +95,7 @@ const Farming = () => {
       </CardTitleAndValue>
       <CardTitleAndValue title={'Bean Trade'}>
         <Stack direction={'row'} alignItems={'center'} gap={1}>
-          <img style={{ objectFit: 'contain', width: 24 }} src={`${prefix}data/Quest80_x1.png`} alt=""/>
+          <img style={{ objectFit: 'contain', width: 24 }} src={`${prefix}data/Quest80_x1.png`} alt="Quest80"/>
           <Typography>{notateNumber(Math.round(beanTrade))}</Typography>
           {stats?.magicBean ? <Breakdown data={stats.magicBean}>
             <Stack alignContent={'center'}>
@@ -127,7 +128,7 @@ const Farming = () => {
                            breakdown={stats?.cropValue}/>
       </Stack> : null}
     </Stack>
-    <Stack direction={'row'} gap={1} flexWrap={'wrap'} mt={1}>
+    <Stack mb={3} direction={'row'} gap={1} flexWrap={'wrap'} mt={1}>
       {Object.entries(cropDepot).map(([stat, { name, value }], index) => {
         const isMulti = stat === 'gamingEvo' || stat === 'cookingSpeed';
         const isBase = stat === 'critters';
@@ -147,6 +148,7 @@ const Farming = () => {
       <ExoticMarket market={exoticMarket} crop={crop}/>
       <ExoticMarketRotation/>
       <RankDatabase ranks={ranks} hasLandRank={hasLandRank}/>
+      <LandRankOptimizer/>
       <Crop crop={crop} maxTimes={maxTimes}/>
       <Stickers/>
     </Tabber>

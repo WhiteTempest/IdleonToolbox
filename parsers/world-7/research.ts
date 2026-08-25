@@ -43,7 +43,7 @@ export const getResearch = (idleonData: any, account: any, characters: any) => {
   const occurrenceFoundState = raw[2] ?? [];
   const observationInsightExp = raw[3] ?? []; // current insight EXP per observation (progress to next level)
   const observationInsight = raw[4] ?? []; // insight level per observation
-  // raw[5] = 80 shapes × 4: [pixelX, pixelY, observationIndex, type] per shape. Type: 0=EXP, 1=Kaleidoscope, 2=Magnifier.
+  // raw[5] = 80 shapes × 4: [pixelX, pixelY, observationIndex, type] per shape. Type: 0=Magnifying Glass (Research EXP), 1=Optical Monocle (Insight), 2=Kaleidoscope.
   const shapePlacements = raw[5] ?? [];
   const optionsListAccount = account?.accountOptions ?? [];
   // raw[9] = sticker level per sticker type (farming: indices 0–4)
@@ -88,7 +88,7 @@ export const getResearch = (idleonData: any, account: any, characters: any) => {
   );
   const gridPTSavailable = Math.round(gridPTSearned - gridPTSpent);
 
-  // Map grid index -> shape type (0=EXP, 1=Kaleidoscope, 2=Magnifier). Game stores cell->shape in raw[1], type in raw[5][4*shapeIndex+3].
+  // Map grid index -> shape type (0=Magnifying Glass (Research EXP), 1=Optical Monocle (Insight), 2=Kaleidoscope). Game stores cell->shape in raw[1], type in raw[5][4*shapeIndex+3].
   const gridIndexToPlacementType: Record<number, any> = {};
   for (let gridCellIndex = 0; gridCellIndex < 240; gridCellIndex++) {
     const shapeIndexOnCell = gridShapeIndex[gridCellIndex];
@@ -112,7 +112,7 @@ export const getResearch = (idleonData: any, account: any, characters: any) => {
     const canSelect = getResearchGridCanSelect(research, index);
     const gridRow = Math.floor(index / 20);
     const gridCol = index % 20;
-    const placementType = gridIndexToPlacementType[index] ?? null; // 0=EXP, 1=Kaleidoscope, 2=Magnifier
+    const placementType = gridIndexToPlacementType[index] ?? null; // 0=Magnifying Glass (Research EXP), 1=Optical Monocle (Insight), 2=Kaleidoscope
     const shapeIndexOnCell = gridShapeIndex[index];
     const placementShapeIndex =
       shapeIndexOnCell != null && Number(shapeIndexOnCell) >= 0 ? Number(shapeIndexOnCell) : null;
@@ -185,6 +185,9 @@ export const getResearch = (idleonData: any, account: any, characters: any) => {
   const numShapeSlots = Math.round(shapePlacementsList.length / 4);
   const observations = [];
   for (let observationIndex = 0; observationIndex < occurrencesList.length; observationIndex++) {
+    const occurrenceData = occurrencesList[observationIndex];
+    // Placeholder entries in the game data ("Name" / "desc") aren't real observations yet, skip them
+    if (occurrenceData?.name === 'Name') continue;
     const found = (Number(research?.occurrenceFoundState?.[observationIndex]) || 0) >= 1;
     const insightLevel = Number(research?.observationInsight?.[observationIndex]) || 0;
     const insightExp = Number(research?.observationInsightExp?.[observationIndex]) || 0;
@@ -192,8 +195,7 @@ export const getResearch = (idleonData: any, account: any, characters: any) => {
     const realInsightExpRate = getObservationInsightExpRate(account, research, observationIndex);
     const insightExpRate = realInsightExpRate * researchEXPmulti;
     const researchEXPrate = getResearchEXPrateObj(account, research, observationIndex) * researchEXPmulti;
-    const occurrenceData = occurrencesList[observationIndex];
-    // Lenses on this observation: type 0 = Magnifying glass, 1 = Kaleidoscope, 2 = Optical Monocle
+    // Lenses on this observation: type 0 = Magnifying Glass (Research EXP), 1 = Optical Monocle (Insight), 2 = Kaleidoscope
     const lensTypes: any[] = [];
     for (let shapeSlotIndex = 0; shapeSlotIndex < numShapeSlots; shapeSlotIndex++) {
       if (Number(shapePlacementsList[4 * shapeSlotIndex + 2]) === observationIndex) {
@@ -223,7 +225,7 @@ export const getResearch = (idleonData: any, account: any, characters: any) => {
       insightExpRate,
       realInsightExpRate,
       researchEXPrate,
-      lensTypes, // 0 = Magnifying glass, 1 = Kaleidoscope, 2 = Optical Monocle
+      lensTypes, // 0 = Magnifying Glass (Research EXP), 1 = Optical Monocle (Insight), 2 = Kaleidoscope
       canLevelUp: found && researchLevel >= (occurrenceData?.researchLvReq ?? 0) && gridBonus91Lv >= 1
     });
   }
@@ -236,6 +238,10 @@ export const getResearch = (idleonData: any, account: any, characters: any) => {
 
   const farmingStickerDMGUnlocked = getResearchGridBonusInternal(account, research, 47, 0) >= 1 ? 1 : 0;
 
+  const opticalMonocleOwned = Math.round(gridBonus91Lv);
+  const kaleidoscopeOwned = Math.round(getResearchGridBonusInternal(account, research, 72, 1) + (getEventShopBonus(account, 33) ? 1 : 0));
+  const magnifiersOwned = getMagnifiersOwned(account, research, researchLevel, gridBonus91Lv);
+
   return {
     gridSquares,
     observations,
@@ -246,9 +252,12 @@ export const getResearch = (idleonData: any, account: any, characters: any) => {
     rollsPerDay: Math.round(3 + gridBonus90Lv + 3 * (getEventShopBonus(account, 35) ? 1 : 0) + getSushiBonus(account, 2)),
     dailyRollsLeft,
     canLevelUpObservations: gridBonus91Lv >= 1 ? 1 : 0,
-    opticalMonocleOwned: Math.round(gridBonus91Lv),
-    kaleidoscopeOwned: Math.round(getResearchGridBonusInternal(account, research, 72, 1) + (getEventShopBonus(account, 33) ? 1 : 0)),
-    magnifiersOwned: getMagnifiersOwned(account, research, researchLevel, gridBonus91Lv),
+    opticalMonocleOwned,
+    kaleidoscopeOwned,
+    magnifiersOwned,
+    // Lens slots holding a Magnifying Glass (type 0). The game never stores this directly: MagnifiersOwned
+    // is the total slot count across all three lens types, so the glasses are whatever's left over.
+    magnifyingGlassOwned: Math.max(0, magnifiersOwned - kaleidoscopeOwned - opticalMonocleOwned),
     magnifiersPerSlot: Math.min(
       4,
       Math.round(
@@ -361,7 +370,7 @@ function getResearchGridBonusInternal(account: any, research: any, gridIndex: an
   if (obsIndex == null || Number(obsIndex) < 0) {
     return baseBonus * level * Math.max(1, allMulti);
   }
-  // Game: CustomLists.Research[5][Research[1][t]] / 100 — static observation bonus percentages
+  // Game: CustomLists.Research[5][Research[1][t]] / 100 - static observation bonus percentages
   const observationBonuses = (researchData[5] ?? []).map(Number);
   const observationBonusPct = observationBonuses[Number(obsIndex)] ?? 0;
   return baseBonus * level * (1 + observationBonusPct / 100) * Math.max(1, allMulti);
@@ -397,6 +406,9 @@ export function getResearchGridSquareDescription(account: any, research: any, gr
   return result;
 }
 
+// Game: _customBlock_ResearchStuff("MagnifiersOwned"). Despite the name this is the TOTAL number of lens
+// slots, covering all three lens types (Magnifying Glass, Optical Monocle, Kaleidoscope) - the game adds
+// KaleidoscopeOwned and OpticalMonocleOwned into the total, then draws ResMagni{type}.png for each slot.
 function getMagnifiersOwned(account: any, research: any, researchLevel: any, gridBonus91Lv: any) {
   const kaleidoscopeOwned = Math.round(getResearchGridBonusInternal(account, research, 72, 1) + (getEventShopBonus(account, 33) ? 1 : 0));
   const opticalMonocleOwned = Math.round(gridBonus91Lv);
@@ -494,17 +506,17 @@ function getObservationInsightExpREQ(observationIndex: any, insightLevel: any) {
 function getObservationInsightExpRate(account: any, research: any, observationIndex: any) {
   const shapePlacements = research?.shapePlacements ?? [];
   const numShapeSlots = Math.round((shapePlacements?.length ?? 0) / 4);
-  let kaleidoscopeCountOnObservation = 0;
+  let opticalMonocleCountOnObservation = 0;
   for (let shapeSlotIndex = 0; shapeSlotIndex < numShapeSlots; shapeSlotIndex++) {
     const slotType = Number(shapePlacements?.[4 * shapeSlotIndex + 3]);
     const slotObsIndex = Number(shapePlacements?.[4 * shapeSlotIndex + 2]);
-    if (slotType === 1 && slotObsIndex === observationIndex) kaleidoscopeCountOnObservation++;
+    if (slotType === 1 && slotObsIndex === observationIndex) opticalMonocleCountOnObservation++;
   }
   const grid92Bonus = getResearchGridBonusInternal(account, research, 92, 0);
   const grid91Bonus = getResearchGridBonusInternal(account, research, 91, 0);
   const opticalMonocle = Number(isJadeBonusUnlocked(account, 'Optimal_Optometry'));
   const kaleidoscopeMultiplier = getKaleiMultiTot(account, research, observationIndex);
-  return 3 * kaleidoscopeCountOnObservation * (1 + (grid92Bonus + grid91Bonus) / 100) * (1 + 35 * opticalMonocle / 100) * kaleidoscopeMultiplier;
+  return 3 * opticalMonocleCountOnObservation * (1 + (grid92Bonus + grid91Bonus) / 100) * (1 + 35 * opticalMonocle / 100) * kaleidoscopeMultiplier;
 }
 
 /** Grid_CanWeSelect: whether this grid square can be selected in the UI. */

@@ -3,10 +3,12 @@ import { checkUserStatus, signInWithCustom, signInWithToken, subscribe, userSign
 import { useRouter } from 'next/router';
 import useInterval from '@hooks/useInterval';
 import { getUserToken } from '../../../services/auth/google';
-import { offlineTools } from '../NavBar/AppDrawer/ToolsDrawer';
 import { geAppleStatus } from '../../../services/auth/apple';
 import { getProfile } from '../../../services/profiles';
 import { setRawJson } from '@utility/helpers';
+import { errorMessage, trackEvent } from '@utility/analytics';
+import { readLocalStorageValue } from '@mantine/hooks';
+import { simulatedCompanionsKey } from '@components/constants';
 
 export const AppContext = createContext({});
 
@@ -31,13 +33,21 @@ function appReducer(state, action) {
   const actionHandlers = {
     [ACTION_TYPES.LOGIN]: () => ({ ...state, ...action.data }),
     [ACTION_TYPES.DATA]: () => ({ ...state, ...action.data }),
-    [ACTION_TYPES.LOGOUT]: () => ({
-      characters: null,
-      account: null,
-      signedIn: false,
-      emailPassword: null,
-      appleLogin: null
-    }),
+    // Keeps UI preferences, drops everything else. A blocklist was tried and rotted immediately:
+    // spreading state and naming the account keys to clear missed loginType/loginData, which the
+    // auth poll below reads whenever waitingForAuth is set. Both login components arm that flag
+    // before their fresh credentials arrive, so a second sign-in re-subscribed with the previous
+    // user's uid and token. A whitelist drops any future session key by default.
+    [ACTION_TYPES.LOGOUT]: () => {
+      const { filters, pinnedPages, displayedCharacters, trackers, godPlanner, planner, settings,
+        showRankOneOnly, showUnmaxedBoxesOnly } = state;
+      return {
+        filters, pinnedPages, displayedCharacters, trackers, godPlanner, planner, settings,
+        showRankOneOnly, showUnmaxedBoxesOnly,
+        signedIn: false,
+        isLoading: false
+      };
+    },
     [ACTION_TYPES.DISPLAYED_CHARACTERS]: () => ({ ...state, displayedCharacters: action.data }),
     [ACTION_TYPES.FILTERS]: () => ({ ...state, filters: action.data }),
     [ACTION_TYPES.PINNED_PAGES]: () => ({ ...state, pinnedPages: action.data }),
@@ -102,6 +112,12 @@ function init() {
   };
 }
 
+// Pets page simulation. Only ever applied to the user's own save - a profile view or the demo
+// account must show what that account really has.
+const getOwnAccountParseOptions = () => ({
+  simulatedCompanions: readLocalStorageValue({ key: simulatedCompanionsKey, defaultValue: [] })
+});
+
 const AppProvider = ({ children }) => {
   const [state, dispatch] = useReducer(appReducer, {}, init);
   const router = useRouter();
@@ -109,13 +125,6 @@ const AppProvider = ({ children }) => {
   const [waitingForAuth, setWaitingForAuth] = useState(false);
   const unsubscribeRef = useRef(null);
   const isInitializedRef = useRef(false);
-
-  const checkOfflineTool = () => {
-    if (!router.pathname.includes('tools')) return false;
-    const endPoint = router.pathname.split('/')?.[2] || '';
-    const formattedEndPoint = endPoint?.replace('-', ' ')?.toCamelCase();
-    return !state?.signedIn && router.pathname.includes('tools') && offlineTools[formattedEndPoint];
-  };
 
   const handleCloudUpdate = async (
     data, 
@@ -155,9 +164,10 @@ const AppProvider = ({ children }) => {
       guildData,
       serverVars,
       accountCreateTimeInSeconds * 1000,
-      tournament
+      tournament,
+      getOwnAccountParseOptions()
     );
-    
+
     localStorage.setItem('manualImport', JSON.stringify(false));
 
     dispatch({
@@ -165,6 +175,7 @@ const AppProvider = ({ children }) => {
       data: {
         ...parsedData,
         signedIn: true,
+        emptyAccount: false,
         manualImport: false,
         profile: false,
         lastUpdated,
@@ -188,11 +199,20 @@ const AppProvider = ({ children }) => {
     parsedData = null;
   };
 
-  const logout = (manualImport, data) => {
+  const loadEmptyAccount = async () => {
+    const { parseData } = await import('@parsers/index');
+    const parsedData = parseData(undefined, [], null, null, undefined, undefined, null);
+    dispatch({
+      type: ACTION_TYPES.DATA,
+      data: { ...parsedData, signedIn: false, emptyAccount: true, isLoading: false }
+    });
+  };
+
+  const logout = async (manualImport, data) => {
     if (unsubscribeRef.current) {
       unsubscribeRef.current();
     }
-    
+
     userSignOut();
     
     if (typeof window?.gtag !== 'undefined') {
@@ -207,12 +227,13 @@ const AppProvider = ({ children }) => {
     sessionStorage.removeItem('rawJson');
     dispatch({ type: ACTION_TYPES.LOGOUT });
     setWaitingForAuth(false);
-    
-    if (!manualImport) {
-      router.push({ pathname: '/', query: router.query });
-    } else {
+
+    if (manualImport) {
       dispatch({ type: ACTION_TYPES.DATA, data });
+      return;
     }
+
+    await loadEmptyAccount();
   };
 
   useEffect(() => {
@@ -243,6 +264,7 @@ const AppProvider = ({ children }) => {
             companion,
             guildData,
             serverVars,
+            accountCreateTime,
             tournament,
             lastUpdated: timestamp
           });
@@ -259,6 +281,7 @@ const AppProvider = ({ children }) => {
             profile: true,
             manualImport: false,
             signedIn: !!user,
+            emptyAccount: false,
             lastUpdated,
             isLoading: false
           }
@@ -273,7 +296,12 @@ const AppProvider = ({ children }) => {
         }
       } catch (err) {
         console.error('Failed to load data from profile api', err);
-        router.push({ pathname: '/404', query: { reason: 'profile', name: router?.query?.profile } });
+        trackEvent('import_failed', { import_source: 'profile', error_message: errorMessage(err) });
+        // Masked with a bare `as`: the 404 still reads reason/name off router.query (Next derives
+        // it from the href, not from `as`), but the address bar stays /404. Spelling them into the
+        // URL put them in router.query for every link built afterwards, which is how Search Console
+        // ended up with hundreds of /leaderboards?reason=profile&name=... duplicates.
+        router.push({ pathname: '/404', query: { reason: 'profile', name: router?.query?.profile } }, '/404');
         dispatch({
           type: ACTION_TYPES.DATA,
           data: {
@@ -296,6 +324,7 @@ const AppProvider = ({ children }) => {
           ...parsedData,
           lastUpdated: timestamp,
           demo: true,
+          emptyAccount: false,
           isLoading: false
         }
       });
@@ -316,20 +345,7 @@ const AppProvider = ({ children }) => {
           const unsub = await subscribe(user?.uid, user?.accessToken, handleCloudUpdate);
           unsubscribeRef.current = unsub;
         } else {
-          // /guilds is public and links to both of these, so logged-out visitors clicking
-          // through were silently bounced home. Neither page reads any account state.
-          const isAllowedPath = router.pathname === '/' ||
-            checkOfflineTool() ||
-            router.pathname === '/guilds' ||
-            router.pathname === '/guilds/detail' ||
-            router.pathname === '/guilds/ecosystem' ||
-            router.pathname === '/statistics' ||
-            router.pathname === '/leaderboards';
-
-          if (!isAllowedPath) {
-            router.push({ pathname: '/', query: router?.query });
-          }
-          dispatch({ type: ACTION_TYPES.SET_LOADING, data: false });
+          await loadEmptyAccount();
         }
       } catch (error) {
         console.error(error);
@@ -428,7 +444,9 @@ const AppProvider = ({ children }) => {
             if (appleCredential?.id_token) {
               id_token = appleCredential;
             }
-          } else {
+          } else if (state?.loginType === 'google') {
+            // Anything else (a poll armed a tick before loginType landed) falls through to the
+            // counter checks below instead of hitting google with an undefined device code.
             const user = (await getUserToken(state?.loginData?.deviceCode)) || {};
             id_token = user?.id_token;
 
@@ -482,12 +500,45 @@ const AppProvider = ({ children }) => {
     waitingForAuth ? (authCounter === 0 ? 1000 : 5000) : null
   );
 
+  // Re-runs the parsers over the cached raw save so a companion simulation change takes effect
+  // without a round trip to the cloud. Without a cached save there's nothing to re-parse, so fall
+  // back to a reload, which re-fetches and picks up the new setting on the way in.
+  const reparseOwnAccount = async () => {
+    let rawJson;
+    try {
+      rawJson = JSON.parse(sessionStorage.getItem('rawJson'));
+    } catch (err) {
+      console.warn('Could not read cached raw save:', err);
+    }
+
+    if (!rawJson?.data) {
+      window.location.reload();
+      return;
+    }
+
+    dispatch({ type: ACTION_TYPES.SET_LOADING, data: true });
+    const { data, charNames, companion, guildData, serverVars, accountCreateTime, tournament, lastUpdated } = rawJson;
+    const { parseData } = await import('@parsers/index');
+    const parsedData = parseData(data, charNames, companion, guildData, serverVars, accountCreateTime, tournament,
+      getOwnAccountParseOptions());
+
+    dispatch({
+      type: ACTION_TYPES.DATA,
+      data: {
+        ...parsedData,
+        lastUpdated: lastUpdated ?? state?.lastUpdated,
+        isLoading: false
+      }
+    });
+  };
+
   const providerValue = {
     state,
     dispatch,
     logout,
     waitingForAuth,
-    setWaitingForAuth
+    setWaitingForAuth,
+    reparseOwnAccount
   };
 
   return (

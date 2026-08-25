@@ -1,207 +1,55 @@
-import React, { useContext, useEffect, useState } from 'react';
-import {
-  Alert,
-  Box,
-  Button,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogContentText,
-  DialogTitle,
-  IconButton,
-  Stack,
-  Typography
-} from '@mui/material';
-import Tooltip from '@components/Tooltip';
-import SimpleLoader from '@components/common/SimpleLoader';
+import React from 'react';
 import { useRouter } from 'next/router';
-import Link from 'next/link';
 import { NextSeo } from 'next-seo';
-import EditIcon from '@mui/icons-material/Edit';
-import DeleteIcon from '@mui/icons-material/DeleteOutline';
-import VisibilityIcon from '@mui/icons-material/Visibility';
-import { AppContext } from '@components/common/context/AppProvider';
-import BuildDetail from '@components/tools/builds/BuildDetail';
-import LikeButton from '@components/tools/builds/LikeButton';
-import UseAsTemplateButton from '@components/tools/builds/UseAsTemplateButton';
-import { getBuild, deleteBuild, getBuildState } from 'services/builds';
+import BuildView from '@components/tools/builds/BuildView';
+import { fetchAllBuildsAtBuildTime } from '@utility/builds/static-fetch.mjs';
+import {
+  buildSeoDescription,
+  buildSeoTitle,
+  buildStaticHref,
+  findInManifest,
+  toBuildSummary
+} from '@utility/builds/build-pages.mjs';
 
-const ViewBuild = () => {
-  const router = useRouter();
-  const { state } = useContext(AppContext);
-  const signedIn = !!state?.signedIn;
-  const shortId = router.query?.id;
+// One URL serving every build. Each build in the manifest also has its own static page, so this
+// route exists for the builds that don't: anything published since the last deploy, which
+// fallback: false would otherwise 404. Links elsewhere in the app prefer the static path.
 
-  const [build, setBuild] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [liked, setLiked] = useState(false);
-  const [isOwner, setIsOwner] = useState(false);
-  const [deleting, setDeleting] = useState(false);
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-
-  useEffect(() => {
-    if (!shortId) return;
-    let cancelled = false;
-    setLoading(true);
-    setError('');
-    getBuild(shortId)
-      .then((doc) => {
-        if (!cancelled) setBuild(doc);
-      })
-      .catch((err) => {
-        if (!cancelled) setError(err?.message || 'Unable to load build.');
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
-    // View count bumps happen server-side inside the GET detail handler —
-    // no extra round-trip from the client.
-    return () => {
-      cancelled = true;
-    };
-  }, [shortId]);
-
-  // Single cheap call for viewer-specific flags. Detail responses scrub
-  // ownerUid, so the worker derives `owner` on the server side.
-  useEffect(() => {
-    if (!signedIn || !shortId) {
-      setLiked(false);
-      setIsOwner(false);
-      return;
-    }
-    let cancelled = false;
-    getBuildState(shortId, state?.accessToken)
-      .then((res) => {
-        if (cancelled || !res) return;
-        setLiked(!!res.liked);
-        setIsOwner(!!res.owner);
-      })
-      .catch(() => {});
-    return () => {
-      cancelled = true;
-    };
-  }, [signedIn, shortId, state?.accessToken]);
-
-  const handleDeleteClick = () => setDeleteDialogOpen(true);
-
-  const handleConfirmDelete = async () => {
-    if (!build?.shortId) return;
-    setDeleting(true);
-    try {
-      await deleteBuild(build.shortId, state?.accessToken);
-      setDeleteDialogOpen(false);
-      router.push('/tools/builds');
-    } catch (err) {
-      setError(err?.message || 'Delete failed.');
-      setDeleting(false);
-      setDeleteDialogOpen(false);
+export async function getStaticProps() {
+  const builds = await fetchAllBuildsAtBuildTime();
+  return {
+    props: {
+      manifest: builds.map(toBuildSummary),
+      // One URL serving 121 builds, every one of which has its own page. The canonical below
+      // would say so, but <NextSeo> renders under the <WaitForRouter> gate and never runs during
+      // the export - so in the served HTML this would be an indexable duplicate of every build
+      // page, defended by nothing. noindex ships statically from _app (see seoNoindex there),
+      // which is the mechanism that actually reaches a crawler.
+      seoNoindex: true
     }
   };
+}
+
+const ViewBuild = ({ manifest }) => {
+  const router = useRouter();
+  const shortId = router.query?.id;
+  // Resolves synchronously on first render for any build present at build time.
+  const summary = findInManifest(manifest, shortId);
 
   return (
     <>
       <NextSeo
-        title={`${build?.title || 'Build'} | Idleon Toolbox`}
-        description={build?.description || 'Community build for Legends of Idleon'}
+        title={buildSeoTitle(summary)}
+        description={buildSeoDescription(summary)}
+        // Must repeat the seoNoindex above: next-seo emits a robots tag either way, and it
+        // replaces _app's by meta-name dedupe on hydration. Without this the page ships
+        // noindex and then un-noindexes itself as soon as JS runs.
+        noindex
+        // Two URLs serving one build splits its ranking signals, so this one defers to the
+        // static page whenever there is one to defer to.
+        canonical={summary ? `https://idleontoolbox.com${buildStaticHref(summary)}` : undefined}
       />
-      <Stack mt={2} gap={2}>
-        {loading ? (
-          <SimpleLoader message="Loading build…"/>
-        ) : error ? (
-          <Alert severity="error">{error}</Alert>
-        ) : build ? (
-          <BuildDetail
-            build={build}
-            backHref="/tools/builds"
-            actions={
-              <>
-                {/* Stats cluster */}
-                <Stack direction="row" alignItems="center" gap={1}>
-                  <LikeButton
-                    shortId={build.shortId}
-                    initialLiked={liked}
-                    initialCount={build.likeCount || 0}
-                  />
-                  <Tooltip title={`${build.viewCount || 0} view${build.viewCount === 1 ? '' : 's'}`}>
-                    <Stack direction="row" alignItems="center" gap={0.5} sx={{ color: 'text.secondary' }}>
-                      <VisibilityIcon sx={{ fontSize: 18 }}/>
-                      <Typography variant="body2">{build.viewCount || 0}</Typography>
-                    </Stack>
-                  </Tooltip>
-                </Stack>
-
-                <Box sx={{ flexGrow: 1 }}/>
-
-                {/* Actions cluster — wraps together, not individually */}
-                <Stack direction="row" alignItems="center" gap={0.5} flexWrap="wrap">
-                  <UseAsTemplateButton shortId={build.shortId}/>
-                  {isOwner && (
-                    <>
-                      <Tooltip title="Edit">
-                        <IconButton
-                          component={Link}
-                          href={`/tools/builds/edit?id=${encodeURIComponent(build.shortId)}`}
-                          size="small"
-                          color="primary"
-                        >
-                          <EditIcon fontSize="small"/>
-                        </IconButton>
-                      </Tooltip>
-                      <Tooltip title={deleting ? 'Deleting…' : 'Delete'}>
-                        <span>
-                          <IconButton
-                            onClick={handleDeleteClick}
-                            size="small"
-                            color="error"
-                            disabled={deleting}
-                          >
-                            <DeleteIcon fontSize="small"/>
-                          </IconButton>
-                        </span>
-                      </Tooltip>
-                    </>
-                  )}
-                </Stack>
-              </>
-            }
-          />
-        ) : (
-          <Alert severity="info">Build not found.</Alert>
-        )}
-      </Stack>
-
-      <Dialog
-        open={deleteDialogOpen}
-        onClose={() => !deleting && setDeleteDialogOpen(false)}
-        maxWidth="xs"
-        fullWidth
-      >
-        <DialogTitle>Delete this build?</DialogTitle>
-        <DialogContent>
-          <DialogContentText>
-            This will remove <strong>{build?.title}</strong> and can't be undone.
-          </DialogContentText>
-        </DialogContent>
-        <DialogActions>
-          <Button
-            onClick={() => setDeleteDialogOpen(false)}
-            color="inherit"
-            disabled={deleting}
-          >
-            Cancel
-          </Button>
-          <Button
-            onClick={handleConfirmDelete}
-            variant="contained"
-            color="error"
-            disabled={deleting}
-            autoFocus
-          >
-            {deleting ? 'Deleting…' : 'Delete'}
-          </Button>
-        </DialogActions>
-      </Dialog>
+      <BuildView shortId={shortId} summary={summary}/>
     </>
   );
 };

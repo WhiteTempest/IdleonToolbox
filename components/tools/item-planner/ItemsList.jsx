@@ -6,6 +6,63 @@ import Tooltip from 'components/Tooltip';
 import { Card, CardContent, Stack, Typography } from '@mui/material';
 import { crafts } from '@website-data';
 
+// Every copy of a craftable equip you already own is a copy you no longer have to build, so the
+// materials that copy would have consumed drop out of the requirement. Credits are keyed by item
+// name and gathered up front so the result doesn't depend on where the equip sits in the list.
+//
+// Equips on one upgrade chain are walked outermost-first, because an owned outer equip already
+// accounts for every tier below it: crediting an inner one again would double-count the materials
+// they share and hide a row that is still short. An ancestor's flattened recipe is a superset of
+// its descendants', so recipe size orders the chain; unrelated chains never overlap.
+export const getOwnedEquipCredits = (itemsList, inventoryItems) => {
+  const equips = (itemsList ?? [])
+    .filter((item) => item?.type === 'Equip')
+    .map((item) => ({ item, recipe: flattenCraftObject(crafts[item?.itemName]) ?? [] }))
+    .sort((a, b) => b.recipe.length - a.recipe.length);
+
+  return equips.reduce((credits, { item, recipe }) => {
+    const { amount } = findQuantityOwned(inventoryItems, item?.itemName);
+    const stillToBuild = Math.max(0, (item?.itemQuantity ?? 0) - (credits[item?.itemName] ?? 0));
+    const covered = Math.min(amount ?? 0, stillToBuild);
+    if (covered <= 0) return credits;
+    recipe.forEach(({ itemName, itemQuantity }) => {
+      credits[itemName] = (credits[itemName] ?? 0) + (itemQuantity ?? 0) * covered;
+    });
+    return credits;
+  }, {});
+};
+
+export const mapItems = (items, itemDisplay, inventoryItems, account) => {
+  const equipCredits = itemDisplay === '0' ? getOwnedEquipCredits(items, inventoryItems) : {};
+  return (items ?? []).reduce((res, item) => {
+    let quantityOwned, owner;
+    if (item?.itemName === 'Dungeon_Credits_Flurbo_Edition') {
+      quantityOwned = account?.dungeons?.flurbos ?? 0;
+      owner = ['account'];
+    } else {
+      const found = findQuantityOwned(inventoryItems, item?.itemName);
+      quantityOwned = found?.amount;
+      owner = found?.owner;
+    }
+    if (itemDisplay === '0') {
+      const required = Math.max(0, (item?.itemQuantity ?? 0) - (equipCredits?.[item?.itemName] ?? 0));
+      if (required <= 0 || quantityOwned >= required) return res;
+      return {
+        ...res,
+        [item?.subType]: [
+          ...(res?.[item?.subType] || []),
+          { ...item, itemQuantity: required, owner, quantityOwned }
+        ]
+      };
+    }
+    if (itemDisplay !== '1') return res;
+    return {
+      ...res,
+      [item?.subType]: [...(res?.[item?.subType] || []), { ...item, quantityOwned, owner }]
+    };
+  }, {});
+};
+
 const ItemsList = ({
                      account,
                      inventoryItems,
@@ -14,74 +71,7 @@ const ItemsList = ({
                      itemDisplay
                    }) => {
 
-  const mapItems = (items, itemDisplay) => {
-    return items?.reduce((res, item) => {
-      let quantityOwned, owner;
-      if (item?.itemName === 'Dungeon_Credits_Flurbo_Edition') {
-        quantityOwned = account?.dungeons?.flurbos ?? 0;
-        owner = ['account'];
-      } else {
-        const res = findQuantityOwned(inventoryItems, item?.itemName);
-        quantityOwned = res?.amount;
-        owner = res?.owner;
-      }
-      if (itemDisplay === '0') {
-        const remaining = item?.itemQuantity - quantityOwned;
-        if (item?.type === 'Equip' && remaining !== item?.itemQuantity) {
-          const removableItems = flattenCraftObject(crafts[item?.itemName])?.map((i) => {
-            const { amount: quantityOwned, owner } = findQuantityOwned(inventoryItems, i?.itemName);
-            return {
-              ...i,
-              baseQuantity: i?.itemQuantity,
-              itemQuantity: i?.itemQuantity * remaining,
-              quantityOwned,
-              owner
-            }
-          });
-          removableItems.forEach((removableItem) => {
-            const existingItem = res?.[removableItem?.subType]?.find((i) => i?.itemName === removableItem?.itemName);
-            let allItems = res?.[removableItem?.subType]?.filter((i) => i?.itemName !== removableItem?.itemName);
-            if (existingItem && remaining > 0 && (existingItem?.itemQuantity - quantityOwned) > existingItem?.quantityOwned) {
-              allItems = [...(allItems || []),
-                { ...existingItem, itemQuantity: existingItem?.itemQuantity - quantityOwned }];
-            }
-            res = {
-              ...res,
-              [removableItem?.subType]: allItems
-            }
-          })
-          if (remaining > 0) {
-            res = {
-              ...res,
-              [item?.subType]: [
-                ...(res?.[item?.subType] || []),
-                { ...item, quantityOwned: 0, owner, itemQuantity: remaining }
-              ]
-            }
-          }
-          return res;
-        } else {
-          if (quantityOwned >= item?.itemQuantity) {
-            return res;
-          }
-          return {
-            ...res,
-            [item?.subType]: [
-              ...(res?.[item?.subType] || []),
-              { ...item, owner, quantityOwned }
-            ]
-          };
-        }
-      }
-      if (itemDisplay !== '1') return res;
-      return {
-        ...res,
-        [item?.subType]: [...(res?.[item?.subType] || []), { ...item, quantityOwned, owner }]
-      };
-    }, {});
-  };
-
-  const categorize = mapItems(itemsList, itemDisplay);
+  const categorize = mapItems(itemsList, itemDisplay, inventoryItems, account);
 
   return (
     <Stack flexWrap={'wrap'} direction={'row'} gap={4}>

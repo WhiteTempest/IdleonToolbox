@@ -8,6 +8,7 @@ import Tooltip from '@components/Tooltip';
 import ItemDisplay from '@components/common/ItemDisplay';
 import AutoGrid from '@components/common/AutoGrid';
 import { CardTitleAndValue } from '@components/common/styles';
+import { getGoldenFoodBonus } from '@parsers/misc';
 
 const Tasks = () => {
   const { state } = useContext(AppContext);
@@ -19,10 +20,10 @@ const Tasks = () => {
 
   return (<>
     <NextSeo
-      title="Tasks | Idleon Toolbox"
+      title="Task Unlocks | Idleon Toolbox"
       description="Track your task board unlock progression, merit rewards, and task tier requirements in Legends of Idleon"
     />
-    <Stack direction={'row'} alignItems={'center'} gap={2}>
+    <Stack mb={3} direction={'row'} alignItems={'center'} gap={2}>
       <CardTitleAndValue title={'Available unlocks'}
                          value={Math.max(0, state?.account?.taskUnlocks?.unlockPointsOwned - state?.account?.taskUnlocks?.unlockedRecipes) + ''}/>
       <CardTitleAndValue title={'Next unlock'}
@@ -43,7 +44,7 @@ const Tasks = () => {
                 {unlocks?.map((item, itemIndex) => {
                   if (!item?.rawName) return null;
                   return <Stack key={item?.rawName + itemIndex} direction={'row'} alignItems={'center'} gap={2}>
-                    <Tooltip title={<ItemDisplay {...item} account={state?.account}/>}>
+                    <Tooltip title={<ItemDisplay {...item} account={state?.account} getGoldenFoodBonus={getGoldenFoodBonus}/>}>
                       <img style={{ width: 32 }} src={`${prefix}data/${item?.rawName}.png`}
                            alt={'item' + index + itemIndex}/>
                     </Tooltip>

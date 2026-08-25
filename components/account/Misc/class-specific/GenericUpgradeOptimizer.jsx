@@ -5,11 +5,14 @@ import {
   Button,
   Card,
   CardContent,
+  Checkbox,
+  Chip,
   Dialog,
   DialogContent,
   DialogTitle,
   Divider,
   FormControl,
+  FormControlLabel,
   InputLabel,
   MenuItem,
   Paper,
@@ -36,6 +39,28 @@ import { getLegendTalentBonus } from '@parsers/world-7/legendTalents';
 
 const maxUpgradesOptions = [5, 10, 25, 50, 100, 200, 300];
 const groupModes = ['None', 'Upgrade', 'Summary'];
+// Not every upgrade set has a max level - clam work upgrades are uncapped, and "5 / undefined"
+// reads as a bug.
+const formatLevel = (upgrade) => (Number.isFinite(upgrade?.x4)
+  ? `${upgrade.level} / ${upgrade.x4}`
+  : `${upgrade.level}`);
+// Sums one statChange into a per-stat map; shared by the Upgrade and Summary grouping branches so
+// a field added to one can't silently produce NaN sums in the other.
+const accumulateStatChange = (map, statChange) => {
+  if (!map[statChange.stat]) {
+    map[statChange.stat] = {
+      stat: statChange.stat,
+      change: 0,
+      percentChange: 0,
+      grossPercentChange: 0,
+      hoardingPercentChange: 0
+    };
+  }
+  map[statChange.stat].change += statChange.change;
+  map[statChange.stat].percentChange += statChange.percentChange;
+  map[statChange.stat].grossPercentChange += statChange.grossPercentChange ?? statChange.percentChange;
+  map[statChange.stat].hoardingPercentChange += statChange.hoardingPercentChange ?? 0;
+};
 const GenericUpgradeOptimizer = ({
   character,
   account,
@@ -48,16 +73,28 @@ const GenericUpgradeOptimizer = ({
   getResourceType,
   getUpgradeIconIndex,
   getResourceAmount,
-  tooltipText
+  tooltipText,
+  defaultCategory = 'damage',
+  showMasterclassReduction = true,
+  showSplitByResource = true,
+  statLabels
 }) => {
+  // Stat keys are camelCase; the fallback spaces them out so "pearlGain" reads as "Pearl Gain".
+  const statLabel = (stat) => statLabels?.[stat]
+    ?? stat.replace(/([A-Z])/g, ' $1').replace(/^./, c => c.toUpperCase()).trim();
   const [viewMode, setViewMode] = useLocalStorage({
     key: `${resourceKey}:genericUpgradeOptimizer:viewMode`,
     defaultValue: 'grid'
   });
-  const [category, setCategory] = useLocalStorage({
+  const [storedCategory, setCategory] = useLocalStorage({
     key: `${resourceKey}:genericUpgradeOptimizer:category`,
-    defaultValue: 'damage'
+    defaultValue: defaultCategory
   });
+  // Categories differ per consumer, and the stored value outlives them. Falling back keeps a key
+  // left over from another optimizer (or a renamed category) from reaching the parser as undefined.
+  const category = storedCategory === 'all' || upgradeCategories?.[storedCategory]
+    ? storedCategory
+    : defaultCategory;
   const [maxUpgrades, setMaxUpgrades] = useLocalStorage({
     key: `${resourceKey}:genericUpgradeOptimizer:maxUpgrades`,
     defaultValue: 10
@@ -78,6 +115,11 @@ const GenericUpgradeOptimizer = ({
     key: `${resourceKey}:genericUpgradeOptimizer:groupMode`,
     defaultValue: 'None'
   });
+  const [storedSplitByResource, setSplitByResource] = useLocalStorage({
+    key: `${resourceKey}:genericUpgradeOptimizer:splitByResource`,
+    defaultValue: false
+  });
+  const splitByResource = showSplitByResource && storedSplitByResource;
   const [AffordableCheckboxEl, onlyAffordable] = useCheckbox('Only affordable');
   // const [MasterclassReductionCheckbox, masterClassReduction] = useCheckbox('Masterclass reduction');
   const [masterClassReduction, setMasterClassReduction] = useLocalStorage({
@@ -133,6 +175,9 @@ const GenericUpgradeOptimizer = ({
       getResourceType
     });
   }
+  // read before the grouping below, which maps the array and loses the property
+  const stoppedReason = optimizedUpgrades.stoppedReason ?? null;
+  const holdingBeatsSpending = stoppedReason === 'hoarding';
 
   // Group upgrades by name if consolidation is enabled
   let displayUpgrades;
@@ -175,17 +220,7 @@ const GenericUpgradeOptimizer = ({
       upgrade.sequence.forEach(seq => {
         totalCost += seq.cost;
         if (category !== 'all') {
-          seq.statChanges.forEach(statChange => {
-            if (!combinedStats[statChange.stat]) {
-              combinedStats[statChange.stat] = {
-                stat: statChange.stat,
-                change: 0,
-                percentChange: 0
-              };
-            }
-            combinedStats[statChange.stat].change += statChange.change;
-            combinedStats[statChange.stat].percentChange += statChange.percentChange;
-          });
+          seq.statChanges.forEach(statChange => accumulateStatChange(combinedStats, statChange));
         }
       });
       return {
@@ -220,17 +255,7 @@ const GenericUpgradeOptimizer = ({
       g.totalCost += upgrade.cost;
 
       if (upgrade.statChanges) {
-        upgrade.statChanges.forEach(statChange => {
-          if (!g.combinedStatChanges[statChange.stat]) {
-            g.combinedStatChanges[statChange.stat] = {
-              stat: statChange.stat,
-              change: 0,
-              percentChange: 0
-            };
-          }
-          g.combinedStatChanges[statChange.stat].change += statChange.change;
-          g.combinedStatChanges[statChange.stat].percentChange += statChange.percentChange;
-        });
+        upgrade.statChanges.forEach(statChange => accumulateStatChange(g.combinedStatChanges, statChange));
       }
     });
 
@@ -249,6 +274,28 @@ const GenericUpgradeOptimizer = ({
       const costA = a.totalCost || a.cost;
       const costB = b.totalCost || b.cost;
       return costSortOrder === 'asc' ? costA - costB : costB - costA;
+    });
+  }
+  // numbered once here so the '#' column stays the same whether or not the list is split
+  displayUpgrades = displayUpgrades.map((upgrade, index) => ({ ...upgrade, displayPosition: index + 1 }));
+
+  // Split into per-resource sections, ordered by first appearance so the material to farm first comes first
+  const resourceSections = [];
+  if (splitByResource) {
+    const sectionsByType = {};
+    displayUpgrades.forEach(upgrade => {
+      const resourceType = getResourceType(upgrade);
+      if (!sectionsByType[resourceType]) {
+        sectionsByType[resourceType] = {
+          resourceType,
+          name: resourceNames[resourceType] ?? resourceType,
+          upgrades: [],
+          cost: 0
+        };
+        resourceSections.push(sectionsByType[resourceType]);
+      }
+      sectionsByType[resourceType].upgrades.push(upgrade);
+      sectionsByType[resourceType].cost += upgrade.totalCost || upgrade.cost;
     });
   }
   // Calculate total resource costs by type
@@ -286,10 +333,50 @@ const GenericUpgradeOptimizer = ({
   const formatPercentChange = (percentChange) => {
     return `+${percentChange.toFixed(2).replace(/\.00$/, '')}%`;
   };
-  const renderStatChanges = (statChanges) => {
+  // one precision for the whole breakdown, or the three numbers stop adding up on screen
+  const formatSignedPercent = (percentChange, decimals) => {
+    const sign = percentChange >= 0 ? '+' : '';
+    return `${sign}${percentChange.toFixed(decimals)}%`;
+  };
+  // Hours of farming needed to rebuild the resource this purchase spends
+  const getRebuildTime = (upgrade) => {
+    if (optimizationMethod !== 'rph') return null;
+    const rph = resourcePerHour[getResourceType(upgrade)];
+    if (!rph || isNaN(rph) || rph <= 0) return null;
+    const cost = upgrade.totalCost || upgrade.cost;
+    return cost ? cost / rph : null;
+  };
+  // Hoarding upgrades scale with the resource you're holding, so spending gives some of it back.
+  // Show the gross gain and what hoarding takes off it, plus how long the stash takes to recover.
+  // The test is relative: hoarding loss varies by orders of magnitude between accounts, so what
+  // matters is the share of the gain it eats, not its absolute size.
+  const HOARDING_NOTE_MIN_SHARE = 0.01;
+  const renderHoardingNote = (statChange, rebuildTime) => {
+    if (!(statChange?.hoardingPercentChange > 0) || !(statChange?.grossPercentChange > 0)) return null;
+    if (statChange.hoardingPercentChange < statChange.grossPercentChange * HOARDING_NOTE_MIN_SHARE) return null;
+    const smallest = Math.min(
+      Math.abs(statChange.grossPercentChange),
+      Math.abs(statChange.hoardingPercentChange),
+      Math.abs(statChange.percentChange)
+    );
+    const decimals = smallest >= 0.01 ? 2 : 4;
+    // a rebuild measured in centuries means the rate is a placeholder, not a real farming rate
+    const showRebuild = rebuildTime && rebuildTime >= 1 / 60 && rebuildTime <= 24 * 365;
+    return (
+      <Typography variant="caption" color="text.secondary" component="div">
+        gross {formatSignedPercent(statChange.grossPercentChange, decimals)},
+        hoarding {formatSignedPercent(-statChange.hoardingPercentChange, decimals)},
+        net {formatSignedPercent(statChange.percentChange, decimals)}
+        {showRebuild ? `, stash back in ${splitTime(rebuildTime)}` : ''}
+      </Typography>
+    );
+  };
+  const renderStatChanges = (statChanges, upgrade) => {
+    const rebuildTime = getRebuildTime(upgrade);
     return statChanges.map((change, index) => (
-      <Typography key={index} variant="body2">
-        {change.stat.charAt(0).toUpperCase() + change.stat.slice(1)}: {formatChange(change.change)} ({formatPercentChange(change.percentChange)})
+      <Typography key={index} variant="body2" component="div">
+        {statLabel(change.stat)}: {formatChange(change.change)} ({formatPercentChange(change.percentChange)})
+        {renderHoardingNote(change, rebuildTime)}
       </Typography>
     ));
   };
@@ -303,8 +390,9 @@ const GenericUpgradeOptimizer = ({
           Total Benefits (Levels {upgrade.startLevel} → {upgrade.finalLevel})
         </Typography>
         {upgrade.combinedStatChanges.map((statChange, index) => (
-          <Typography key={index} variant="body2">
-            {statChange.stat.charAt(0).toUpperCase() + statChange.stat.slice(1)}: {formatChange(statChange.change)} ({formatPercentChange(statChange.percentChange)})
+          <Typography key={index} variant="body2" component="div">
+            {statLabel(statChange.stat)}: {formatChange(statChange.change)} ({formatPercentChange(statChange.percentChange)})
+            {renderHoardingNote(statChange, getRebuildTime(upgrade))}
           </Typography>
         ))}
         <Divider sx={{ my: 1 }} />
@@ -366,6 +454,156 @@ const GenericUpgradeOptimizer = ({
     else {
       setCostSortOrder('none');
     }
+  };
+
+  const renderResourceSectionHeader = (section) => {
+    const rph = resourcePerHour[section.resourceType];
+    const hasRph = optimizationMethod === 'rph' && rph && !isNaN(rph) && rph > 0;
+    const farmingHours = hasRph ? section.cost / rph : null;
+    return (
+      <Stack direction="row" gap={1} alignItems="center">
+        <img
+          style={{ objectPosition: '0 -6px' }}
+          src={`${prefix}data/${resourceImagePrefix}${section.resourceType}_x1.png`}
+          alt=""
+          width={24}
+          height={24}
+        />
+        <Typography variant="subtitle1">{section.name}</Typography>
+        <Typography variant="body2" color="text.secondary">
+          {section.upgrades.length} {section.upgrades.length === 1 ? 'upgrade' : 'upgrades'} · {notateNumber(section.cost)}
+          {farmingHours && farmingHours >= (1 / 60) ? ` · ${splitTime(farmingHours)}` : ''}
+        </Typography>
+      </Stack>
+    );
+  };
+
+  const renderUpgradeCard = (upgrade) => {
+    const hasSequence = upgrade.sequence && upgrade.sequence.length > 1;
+    const originalIndex = upgrade.upgradeIndex;
+    const resourceTypeKey = getResourceType(upgrade);
+    let iconIndex = getUpgradeIconIndex ? getUpgradeIconIndex(upgrade) : upgrade.index;
+    return (
+      <Card key={originalIndex} sx={{ width: 350 }}>
+        <CardContent>
+          <Stack direction="row" gap={2} sx={{ position: 'relative' }}>
+            <img
+              style={{ width: 32, height: 32 }}
+              src={`${prefix}data/${upgradeImagePrefix}${iconIndex}.png`}
+              alt=""
+            />
+            <Box>
+              <Typography variant="subtitle1">
+                {cleanUnderscore(upgrade.name.replace(/[船般航舞製]/, '')
+                  .replace('(Tap_for_more_info)', '')
+                  .replace('(#)', ''))} ({formatLevel(upgrade)})
+                {renderUnlockChip(upgrade)}
+              </Typography>
+              <Typography variant="caption" color="text.secondary">
+                {hasSequence
+                  ? `Upgrade Group (#${originalIndex + 1}${upgrade.sequence.length > 1
+                    ? ` to #${originalIndex + upgrade.sequence.length}`
+                    : ''})`
+                  : `Upgrade #${originalIndex + 1}`}
+              </Typography>
+            </Box>
+          </Stack>
+          {hasSequence && upgrade.combinedStatChanges
+            ? renderCombinedStats(upgrade)
+            : (
+              <>
+                <Divider sx={{ my: 1 }} />
+                {category === 'all' ? cleanUnderscore(upgrade.description
+                ) : renderStatChanges(upgrade.statChanges, upgrade)}
+                <Divider sx={{ my: 1 }} />
+                <Stack direction="row" gap={1} alignItems="center">
+                  <img
+                    style={{ objectPosition: '0 -6px' }}
+                    src={`${prefix}data/${resourceImagePrefix}${resourceTypeKey}_x1.png`}
+                    alt=""
+                  />
+                  <Typography variant="body2">
+                    Cost: {notateNumber(upgrade.cost)}
+                  </Typography>
+                </Stack>
+              </>
+            )
+          }
+        </CardContent>
+      </Card>
+    );
+  };
+
+  // Rows can include upgrades that are still locked in game: the plan buys the levels that open
+  // them first. Without this marker the list reads as "buy all of these right now".
+  const renderUnlockChip = (upgrade) => {
+    if (!upgrade.lockedNow) return null;
+    const steps = upgrade.unlocksAfterStep;
+    const label = steps > 0
+      ? `Unlocks after ${steps} ${steps === 1 ? 'purchase' : 'purchases'}`
+      : 'Locked now';
+    return (
+      <Chip
+        size="small"
+        variant="outlined"
+        color="warning"
+        label={label}
+        sx={{ ml: 1, height: 20, '& .MuiChip-label': { px: 0.75, fontSize: 11 } }}
+      />
+    );
+  };
+
+  const renderUpgradeRow = (upgrade) => {
+    const hasSequence = upgrade.sequence && upgrade.sequence.length > 1;
+    const resourceTypeKey = getResourceType(upgrade);
+    let iconIndex = getUpgradeIconIndex ? getUpgradeIconIndex(upgrade) : upgrade.index;
+    return (
+      <TableRow key={upgrade.upgradeIndex}>
+        <TableCell>{upgrade.displayPosition}</TableCell>
+        <TableCell>
+          <img
+            style={{ width: 24, height: 24 }}
+            src={`${prefix}data/${upgradeImagePrefix}${iconIndex}.png`}
+            alt=""
+          />
+        </TableCell>
+        <TableCell>
+          {cleanUnderscore(upgrade.name.replace(/[船般航舞製]/, '').replace('(Tap_for_more_info)', '').replace('(#)', ''))}
+          {renderUnlockChip(upgrade)}
+        </TableCell>
+        <TableCell>{formatLevel(upgrade)}</TableCell>
+        <TableCell>
+          {hasSequence && upgrade.combinedStatChanges
+            ? (
+              <>
+                <Typography
+                  variant="caption">Levels {upgrade.startLevel} → {upgrade.finalLevel}</Typography>
+                {renderStatChanges(upgrade.combinedStatChanges, upgrade)}
+              </>
+            )
+            : (
+              category === 'all'
+                ? cleanUnderscore(upgrade.description)
+                : renderStatChanges(upgrade.statChanges, upgrade)
+            )
+          }
+        </TableCell>
+        <TableCell>
+          <Stack direction="row" gap={1} alignItems="center">
+            <img
+              style={{ objectPosition: '0 -6px' }}
+              src={`${prefix}data/${resourceImagePrefix}${resourceTypeKey}_x1.png`}
+              alt=""
+              width={20}
+              height={20}
+            />
+            {hasSequence && upgrade.totalCost
+              ? notateNumber(upgrade.totalCost)
+              : notateNumber(upgrade.cost)}
+          </Stack>
+        </TableCell>
+      </TableRow>
+    );
   };
 
   return (
@@ -453,23 +691,36 @@ const GenericUpgradeOptimizer = ({
             ))}
           </Select>
         </FormControl>
-        <TextField
-          size="small"
-          type="number"
-          inputProps={{ min: 0 }}
-          sx={{ width: 160 }}
-          label="Masterclass reductions"
-          value={masterClassReduction}
-          onChange={(e) => {
-            const v = parseInt(e.target.value, 10);
-            if (isNaN(v)) {
-              setMasterClassReduction('');
-            }
-            else {
-              setMasterClassReduction(Math.max(0, v));
-            }
-          }}
-        />
+        {showSplitByResource && (
+          <FormControlLabel
+            sx={{ width: 'fit-content' }}
+            control={<Checkbox
+              checked={splitByResource}
+              size="small"
+              onChange={() => setSplitByResource(prev => !prev)}
+            />}
+            label="Split by resource"
+          />
+        )}
+        {showMasterclassReduction && (
+          <TextField
+            size="small"
+            type="number"
+            inputProps={{ min: 0 }}
+            sx={{ width: 160 }}
+            label="Masterclass reductions"
+            value={masterClassReduction}
+            onChange={(e) => {
+              const v = parseInt(e.target.value, 10);
+              if (isNaN(v)) {
+                setMasterClassReduction('');
+              }
+              else {
+                setMasterClassReduction(Math.max(0, v));
+              }
+            }}
+          />
+        )}
         <Tooltip title={tooltipText}> <IconInfoCircleFilled size={16} /> </Tooltip>
         <Stack>
           <AffordableCheckboxEl />
@@ -527,8 +778,7 @@ const GenericUpgradeOptimizer = ({
                         style={{ objectPosition: '0 -3px', marginLeft: -5, marginRight: 5 }}
                         src={`${prefix}data/${resourceImagePrefix}${index}_x1.png`}
                         width={24}
-                        height={24}
-                      />
+                        height={24} alt=""/>
                     }}
                     type="text"
                     size="small"
@@ -560,64 +810,29 @@ const GenericUpgradeOptimizer = ({
       )}
 
       <Typography variant="h6" data-testid="optimizer-heading">Recommended Upgrade Sequence</Typography>
+      {holdingBeatsSpending && displayUpgrades.length > 0 && (
+        <Typography variant="body2" color="text.secondary">
+          Stopping here: past this point, spending costs more in Hoarding bonus than it gains. Build the stash back up first.
+        </Typography>
+      )}
       {displayUpgrades.length > 0 ? (
         viewMode === 'grid' ? (
-          <Stack direction="row" gap={2} flexWrap="wrap">
-            {displayUpgrades.map((upgrade) => {
-              const hasSequence = upgrade.sequence && upgrade.sequence.length > 1;
-              const originalIndex = upgrade.upgradeIndex;
-              const resourceTypeKey = getResourceType(upgrade);
-              let iconIndex = getUpgradeIconIndex ? getUpgradeIconIndex(upgrade) : upgrade.index;
-              return (
-                <Card key={originalIndex} sx={{ width: 350 }}>
-                  <CardContent>
-                    <Stack direction="row" gap={2} sx={{ position: 'relative' }}>
-                      <img
-                        style={{ width: 32, height: 32 }}
-                        src={`${prefix}data/${upgradeImagePrefix}${iconIndex}.png`}
-                        alt=""
-                      />
-                      <Box>
-                        <Typography variant="subtitle1">
-                          {cleanUnderscore(upgrade.name.replace(/[船般航舞製]/, '')
-                            .replace('(Tap_for_more_info)', '')
-                            .replace('(#)', ''))} ({upgrade.level} / {upgrade.x4})
-                        </Typography>
-                        <Typography variant="caption" color="text.secondary">
-                          {hasSequence
-                            ? `Upgrade Group (#${originalIndex + 1}${upgrade.sequence.length > 1
-                              ? ` to #${originalIndex + upgrade.sequence.length}`
-                              : ''})`
-                            : `Upgrade #${originalIndex + 1}`}
-                        </Typography>
-                      </Box>
-                    </Stack>
-                    {hasSequence && upgrade.combinedStatChanges
-                      ? renderCombinedStats(upgrade)
-                      : (
-                        <>
-                          <Divider sx={{ my: 1 }} />
-                          {category === 'all' ? cleanUnderscore(upgrade.description
-                          ) : renderStatChanges(upgrade.statChanges)}
-                          <Divider sx={{ my: 1 }} />
-                          <Stack direction="row" gap={1} alignItems="center">
-                            <img
-                              style={{ objectPosition: '0 -6px' }}
-                              src={`${prefix}data/${resourceImagePrefix}${resourceTypeKey}_x1.png`}
-                              alt=""
-                            />
-                            <Typography variant="body2">
-                              Cost: {notateNumber(upgrade.cost)}
-                            </Typography>
-                          </Stack>
-                        </>
-                      )
-                    }
-                  </CardContent>
-                </Card>
-              )
-            })}
-          </Stack>
+          splitByResource ? (
+            <Stack gap={3}>
+              {resourceSections.map((section) => (
+                <Stack key={section.resourceType} gap={1}>
+                  {renderResourceSectionHeader(section)}
+                  <Stack direction="row" gap={2} flexWrap="wrap">
+                    {section.upgrades.map(renderUpgradeCard)}
+                  </Stack>
+                </Stack>
+              ))}
+            </Stack>
+          ) : (
+            <Stack direction="row" gap={2} flexWrap="wrap">
+              {displayUpgrades.map(renderUpgradeCard)}
+            </Stack>
+          )
         ) : (
           <TableContainer component={Paper} sx={{ maxWidth: '100%', overflowX: 'auto' }}>
             <Table size="small">
@@ -640,74 +855,32 @@ const GenericUpgradeOptimizer = ({
                 </TableRow>
               </TableHead>
               <TableBody>
-                {displayUpgrades.map((upgrade, idx) => {
-                  const hasSequence = upgrade.sequence && upgrade.sequence.length > 1;
-                  const resourceTypeKey = getResourceType(upgrade);
-                  let iconIndex = getUpgradeIconIndex ? getUpgradeIconIndex(upgrade) : upgrade.index;
-                  return (
-                    <TableRow key={upgrade.upgradeIndex}>
-                      <TableCell>{idx + 1}</TableCell>
-                      <TableCell>
-                        <img
-                          style={{ width: 24, height: 24 }}
-                          src={`${prefix}data/${upgradeImagePrefix}${iconIndex}.png`}
-                          alt=""
-                        />
-                      </TableCell>
-                      <TableCell>{cleanUnderscore(upgrade.name.replace(/[船般航舞製]/, '').replace('(Tap_for_more_info)', '').replace('(#)', ''))}</TableCell>
-                      <TableCell>{upgrade.level} / {upgrade.x4}</TableCell>
-                      <TableCell>
-                        {hasSequence && upgrade.combinedStatChanges
-                          ? (
-                            <>
-                              <Typography
-                                variant="caption">Levels {upgrade.startLevel} → {upgrade.finalLevel}</Typography>
-                              {upgrade.combinedStatChanges.map((statChange, i) => (
-                                <div key={i}>
-                                  {statChange.stat.replace(/([A-Z])/g, ' $1').replace(/^./, c => c.toUpperCase()).trim()}: {formatChange(statChange.change)} ({formatPercentChange(statChange.percentChange)})
-                                </div>
-                              ))}
-                            </>
-                          )
-                          : (
-                            category === 'all'
-                              ? cleanUnderscore(upgrade.description)
-                              : upgrade.statChanges.map((statChange, i) => (
-                                <div key={i}>
-                                  {statChange.stat.replace(/([A-Z])/g, ' $1').replace(/^./, c => c.toUpperCase()).trim()}: {formatChange(statChange.change)} ({formatPercentChange(statChange.percentChange)})
-                                </div>
-                              ))
-                          )
-                        }
-                      </TableCell>
-                      <TableCell>
-                        <Stack direction="row" gap={1} alignItems="center">
-                          <img
-                            style={{ objectPosition: '0 -6px' }}
-                            src={`${prefix}data/${resourceImagePrefix}${resourceTypeKey}_x1.png`}
-                            alt=""
-                            width={20}
-                            height={20}
-                          />
-                          {hasSequence && upgrade.totalCost
-                            ? notateNumber(upgrade.totalCost)
-                            : notateNumber(upgrade.cost)}
-                        </Stack>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
+                {splitByResource
+                  ? resourceSections.map((section) => (
+                    <React.Fragment key={section.resourceType}>
+                      <TableRow>
+                        <TableCell colSpan={6} sx={{ backgroundColor: 'action.hover' }}>
+                          {renderResourceSectionHeader(section)}
+                        </TableCell>
+                      </TableRow>
+                      {section.upgrades.map(renderUpgradeRow)}
+                    </React.Fragment>
+                  ))
+                  : displayUpgrades.map(renderUpgradeRow)}
               </TableBody>
             </Table>
           </TableContainer>
         )
       ) : (
         <Typography variant="body1" color="text.secondary">
-          No viable upgrades found for this category with your current resources.
+          {holdingBeatsSpending
+            ? 'Build up your stash instead: every upgrade you can afford would cost more in Hoarding bonus than it would gain. Keep collecting and check back once your stash is bigger.'
+            : 'No viable upgrades found for this category with your current resources.'}
         </Typography>
       )}
     </Stack>
   );
 };
+
 
 export default GenericUpgradeOptimizer;

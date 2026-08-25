@@ -14,9 +14,10 @@ import { migrateConfig } from '@utility/migrations';
 import { IconSettingsFilled } from '@tabler/icons-react';
 import { getPrinterExclusions } from '@parsers/world-3/printer';
 import { getCrystalCountdownSkills } from '@parsers/talents';
+import { MINE_CURRENCY_UPGRADE_INDICES } from '@parsers/world-7/minehead';
 
 const baseTrackers = {
-  version: 59,
+  version: 69,
   account: {
     General: {
       tasks: {
@@ -63,6 +64,21 @@ const baseTrackers = {
             name: 'dailyCrystals',
             checked: true,
             helperText: 'Alert when daily guaranteed crystal kills remain'
+          },
+          {
+            name: 'arcanistDailyDrops',
+            checked: true,
+            helperText: 'Alert when Arcanist weapon or ring drops remain for today'
+          },
+          {
+            name: 'topOfTheMornin',
+            checked: true,
+            helperText: 'Alert when Top of the Mornin\' kills remain for today'
+          },
+          {
+            name: 'glimmerwickCandle',
+            checked: true,
+            helperText: 'Alert when you own a Glimmerwick Candle and haven\'t wished on it today'
           }
         ]
       }
@@ -70,7 +86,29 @@ const baseTrackers = {
     'World 1': {
       stamps: {
         checked: true,
-        options: [{ name: 'gildedStamps', checked: true }, { name: 'showGildedWhenNoAtomDiscount', checked: false }]
+        options: [
+          { name: 'gildedStamps', checked: true },
+          { name: 'showGildedWhenNoAtomDiscount', checked: false },
+          {
+            name: 'affordableStampLevels',
+            type: 'input',
+            checked: true,
+            helperText: 'Stamps you can level with your account coins',
+            props: {
+              label: 'Max coin spend',
+              value: 25,
+              minValue: 1,
+              maxValue: 100,
+              endAdornment: '%',
+              helperText: ''
+            }
+          },
+          {
+            name: 'exaltedStamps',
+            checked: true,
+            helperText: 'Alert when you have compass exalted stamps you haven\'t applied yet'
+          }
+        ]
       },
       owl: {
         checked: true,
@@ -97,6 +135,11 @@ const baseTrackers = {
           },
           { name: 'vials', category: 'vials', checked: true },
           { name: 'vialsAttempts', checked: true },
+          {
+            name: 'p2wUpgrades',
+            checked: true,
+            helperText: 'Cauldron and liquid p2w upgrades you can level with your account coins'
+          },
           { name: 'subtractGreenStacks', checked: true },
           { name: 'alternateParticles', checked: true }
         ]
@@ -111,7 +154,14 @@ const baseTrackers = {
             checked: true
           },
           { name: 'shimmerIsland', checked: true },
-          { name: 'garbageUpgrade', checked: true }
+          { name: 'garbageUpgrade', checked: true },
+          {
+            name: 'collectibleGarbage',
+            type: 'input',
+            props: { label: 'Threshold', value: 80, minValue: 1, maxValue: 100 },
+            checked: true,
+            helperText: 'A single collection is capped at 100 garbage, anything above it is lost'
+          }
         ]
       },
       postOffice: {
@@ -139,7 +189,21 @@ const baseTrackers = {
           }
         ]
       },
-      weeklyBosses: { checked: true, options: [] },
+      weeklyBosses: {
+        checked: true,
+        options: [
+          {
+            name: 'daily',
+            checked: true,
+            helperText: 'Alert when you haven\'t reset the W2 boss raid today (bonus class exp and damage)'
+          },
+          {
+            name: 'trophy',
+            checked: true,
+            helperText: 'Alert until you\'ve beaten 5 skulls this week, the point where trophies stop dropping'
+          }
+        ]
+      },
       killRoy: {
         checked: true,
         options: [
@@ -198,9 +262,29 @@ const baseTrackers = {
             category: 'Materials'
           },
           {
+            name: 'matsThreshold',
+            type: 'input',
+            props: { label: 'Materials lead time', value: 0, minValue: 0, endAdornment: 'h' },
+            checked: true,
+            helperText: 'Alert this many hours before a salt runs out of materials (0 alerts only once they are gone)'
+          },
+          {
             name: 'rankUp', type: 'array', props: { value: getRawRefinerySalts(), type: 'img' },
             checked: true,
             category: 'Refinery Rank up'
+          },
+          {
+            name: 'saltBalance', type: 'array', props: { value: getRawRefinerySalts(), type: 'img' },
+            checked: true,
+            category: 'Refinery salt balance'
+          },
+          {
+            name: 'saltBalanceDirection',
+            type: 'array',
+            category: 'Alert when a salt is',
+            props: { value: { 'At or past its limit': true, 'Below its limit': false } },
+            checked: true,
+            helperText: 'The limit is the highest rank the previous salt can keep fuelled'
           }
         ]
       },
@@ -212,7 +296,13 @@ const baseTrackers = {
         checked: true, options: [
           { name: 'bar', checked: true },
           { name: 'challenges', checked: true },
-          { name: 'foodLust', checked: true }
+          {
+            name: 'foodLust',
+            type: 'input',
+            props: { label: 'Stacks threshold', value: 14, minValue: 1, maxValue: 14 },
+            checked: true,
+            helperText: 'Alerts once you hold this many stacks, capped at your Food Lust level, so the default only alerts when Food Lust is maxed'
+          }
         ]
       },
       atomCollider: {
@@ -265,13 +355,24 @@ const baseTrackers = {
             checked: true
           },
           { name: 'meals', checked: true, category: 'meals' },
-          { name: 'alertOnlyCookedMeal', checked: false }
+          { name: 'alertOnlyCookedMeal', checked: false },
+          { name: 'cookingMastery', checked: true }
         ]
       },
       laboratory: {
         checked: true, options: [
           { name: 'chipsRotation', checked: true },
           { name: 'jewelsRotation', checked: true }
+        ]
+      },
+      tome: {
+        checked: true,
+        options: [
+          {
+            name: 'nametagClaim',
+            checked: true,
+            helperText: 'Alert when Tome ranking nametags are available to claim'
+          }
         ]
       }
     },
@@ -335,7 +436,19 @@ const baseTrackers = {
             props: { label: 'Jars threshold', value: 120, minValue: 1, maxValue: 120, helperText: 'Max of 120 jars' }
           },
           { name: 'studyLevelUp', checked: true },
-          { name: 'jarsFull', checked: true }
+          { name: 'jarsFull', checked: true },
+          {
+            name: 'lanterns',
+            checked: true,
+            type: 'input',
+            props: {
+              label: 'Remaining lanterns threshold',
+              value: 1,
+              minValue: 1,
+              maxValue: 12,
+              helperText: 'Daily cap is 12'
+            }
+          }
         ]
       }
     },
@@ -353,6 +466,14 @@ const baseTrackers = {
           { name: 'remainingSymbolRolls', checked: true }
         ]
       },
+      beanstalk: {
+        checked: true,
+        options: [{
+          name: 'readyToPlant',
+          checked: true,
+          helperText: 'Alert when you own enough of a golden food to rank it up on the beanstalk'
+        }]
+      },
       farming: {
         checked: true,
         options: [
@@ -361,6 +482,13 @@ const baseTrackers = {
             type: 'input',
             props: { label: 'OG Threshold', value: 0, minValue: 0, helperText: '1=x2, 2=x4, 3=x8, 4=x16' },
             checked: true
+          },
+          {
+            name: 'finishedPlots',
+            type: 'input',
+            checked: false,
+            helperText: 'How long you\'ll wait for a plot to double. Plots slower than this get flagged - collect them to start the doubling over',
+            props: { label: 'Days', value: 7, minValue: 1, maxValue: 365, helperText: '' }
           },
           {
             name: 'totalCrops',
@@ -397,7 +525,8 @@ const baseTrackers = {
             name: 'emperor',
             type: 'input',
             props: { label: 'Attempts', value: 20 },
-            checked: true
+            checked: true,
+            helperText: 'Alerts at this number, or at your attempt cap if it\'s lower'
           }
         ]
       }
@@ -431,7 +560,16 @@ const baseTrackers = {
       },
       zenithMarket: {
         checked: true,
-        options: [{ name: 'doubleCluster', checked: true }]
+        options: [
+          { name: 'doubleCluster', checked: true },
+          {
+            name: 'clusterFarming',
+            type: 'array',
+            category: 'Alert when Cluster Farming is',
+            props: { value: { Off: true, On: false } },
+            checked: true
+          }
+        ]
       },
       construction: {
         checked: true,
@@ -439,7 +577,19 @@ const baseTrackers = {
       },
       minehead: {
         checked: true,
-        options: [{ name: 'dailyTries', checked: true }]
+        options: [
+          { name: 'dailyTries', checked: true },
+          {
+            name: 'currencyUpgrades',
+            type: 'array',
+            category: 'Alert when you can afford these mine currency upgrades',
+            props: {
+              value: Object.fromEntries(MINE_CURRENCY_UPGRADE_INDICES.map((index) => [`MineUpg${index}`, true])),
+              type: 'img'
+            },
+            checked: true
+          }
+        ]
       },
       research: {
         checked: true,
@@ -465,6 +615,14 @@ const baseTrackers = {
           },
           { name: 'knowledgeLevelUp', checked: true },
         ]
+      },
+      clamWork: {
+        checked: true,
+        options: [{
+          name: 'promotionAffordable',
+          checked: true,
+          helperText: 'Pearls are spent even when the promotion fails, and a successful one resets your pearls and every clam upgrade'
+        }]
       },
       theButton: {
         checked: true,
@@ -502,6 +660,14 @@ const baseTrackers = {
     traps: {
       checked: true,
       options: [{ name: 'missingTraps', checked: true }, { name: 'trapsOverdue', checked: true }]
+    },
+    quests: {
+      checked: true,
+      options: [{
+        name: 'picnicDaily',
+        checked: true,
+        helperText: 'Alert when a character hasn\'t completed any of the Picnic Stowaway daily quests today'
+      }]
     },
     alchemy: { checked: true, options: [{ name: 'missingBubbles', checked: true }] },
     obols: { checked: true, options: [{ name: 'missingObols', checked: true }] },
@@ -555,9 +721,35 @@ const baseTrackers = {
       }, {
         name: 'superTalentLeftToSpend',
         checked: true
+      }, {
+        name: 'unmaxedTalents',
+        checked: true,
+        helperText: 'Alert when a class talent still has talent points left to spend before its max level'
+      }, {
+        name: 'libraryUpgradableTalents',
+        checked: false,
+        helperText: 'Alert when a maxed class talent could still be raised by a Talent Book Library book'
       }]
     },
-    equipment: { checked: true, options: [{ name: 'availableUpgradesSlots', checked: true }] },
+    equipment: {
+      checked: true,
+      options: [{ name: 'availableUpgradesSlots', checked: true }, {
+        name: 'emptyGearSlots',
+        type: 'array',
+        category: 'emptyGearSlots',
+        checked: true,
+        helperText: 'Alert when a gear slot is empty. Only the first equipment page is checked - tools, food and the second page are ignored',
+        props: { value: { weapon: true, armor: true, amulet: false, rings: false } }
+      }]
+    },
+    bags: {
+      checked: true,
+      options: [{
+        name: 'unmaxedBags',
+        checked: true,
+        helperText: 'Alert when a carry capacity bag isn\'t at its max tier'
+      }]
+    },
     classSpecific: {
       checked: true,
       options: [
@@ -583,6 +775,7 @@ const baseTrackers = {
     General: {
       daily: { checked: true, options: [] },
       weekly: { checked: true, options: [] },
+      serverWeekly: { checked: true, options: [] },
       companions: { checked: true, options: [] },
       syphonCharge: { checked: true, options: [] },
       closestFullWorship: { checked: true, options: [] },
@@ -606,8 +799,18 @@ const baseTrackers = {
     'World 3': {
       printer: { checked: true, options: [] },
       closestTrap: { checked: true, options: [] },
+      closestFlag: { checked: true, options: [] },
       closestBuilding: { checked: true, options: [] },
-      closestSalt: { checked: true, options: [] },
+      closestSalt: {
+        checked: true,
+        options: [{
+          name: 'salts',
+          type: 'array',
+          props: { value: getRawRefinerySalts(), type: 'img' },
+          checked: true,
+          helperText: 'Only the selected salts are considered when picking the closest one'
+        }]
+      },
       equinox: { checked: true, options: [] }
     },
     'World 5': {
@@ -626,9 +829,13 @@ const baseTrackers = {
       coinFill: { checked: true, options: [] },
       marbleFill: { checked: true, options: [] }
     },
+    'World 6': {
+      cropsReady: { checked: true, options: [] }
+    },
     'World 7': {
       researchLevelUp: { checked: true, options: [] },
-      sushiFuelFull: { checked: true, options: [] }
+      sushiFuelFull: { checked: true, options: [] },
+      observationInsight: { checked: true, options: [] }
     }
   }
 }

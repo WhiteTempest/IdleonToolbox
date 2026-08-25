@@ -1,15 +1,16 @@
 export const drawerWidth = 240;
 export const navBarHeight = 70;
+export const profileBannerHeight = 40;
+export const simulatedCompanionsKey = 'simulatedCompanions';
 export const navItems = ['dashboard', 'characters', 'account', 'tools', 'guilds', 'statistics', 'leaderboards'];
 export const drawerPages = ['characters', 'account', 'tools'];
-export const offlinePages = ['tools', 'guilds', 'statistics', 'leaderboards'];
 
 export const PAGES = {
   GENERAL: {
-    dashboard: {},
-    characters: {},
-    guilds: {},
-    leaderboards: {}
+    dashboard: { icon: 'data/GalleryBell' },
+    characters: { icon: 'etc/Character' },
+    guilds: { icon: 'etc/Guild' },
+    leaderboards: { icon: 'etc/Crown' }
   },
   ACCOUNT: {
     'misc': {
@@ -60,7 +61,8 @@ export const PAGES = {
           label: 'tesseract',
           icon: 'data/StatusArc0',
           tabs: ['Upgrades', 'Upgrade Optimizer', 'Maps']
-        }
+        },
+        { label: 'speedrun', icon: 'data/UISkillIcon45' }
       ]
     },
     'task board': {
@@ -206,12 +208,12 @@ export const PAGES = {
         {
           label: 'farming',
           icon: 'data/ClassIcons57',
-          tabs: ['Plot', 'Market', 'Exotic Market', 'Exotic Rotation', 'Rank database', 'Crop', 'Stickers']
+          tabs: ['Plot', 'Market', 'Exotic Market', 'Exotic Rotation', 'Rank database', 'Rank Optimizer', 'Crop', 'Stickers']
         },
         {
           label: 'sneaking',
           icon: 'data/ClassIcons58',
-          tabs: ['Inventory', 'Jade Emporium', 'Upgrades', 'Charms', 'Mastery']
+          tabs: ['Inventory', 'Jade Emporium', 'Upgrades', 'Charms', 'Mastery', 'Gemstones']
         },
         { label: 'summoning', icon: 'data/ClassIcons59', tabs: ['Upgrades', 'Winner Bonuses', 'Battles', 'Stones'] },
         { label: 'beanstalk', icon: 'etc/beanstalk1' },
@@ -239,7 +241,7 @@ export const PAGES = {
         { label: 'LegendTalents', icon: 'etc/Whallamus', tabs: [] },
         { label: 'coralReef', icon: 'data/ReefA1', tabs: ['Reef Upgrades', 'Dancing Coral'] },
         { label: 'zenithMarket', icon: 'etc/Cluster', tabs: [] },
-        { label: 'clamWork', icon: 'data/ClamPearl0', tabs: ['Upgrades', 'Compensations'] },
+        { label: 'clamWork', icon: 'data/ClamPearl0', tabs: ['Upgrades', 'Upgrade Optimizer', 'Compensations'] },
         { label: 'adviceFish', icon: 'data/W7_fish', tabs: [] },
         { label: 'minehead', icon: 'data/MineHead0', tabs: ['Upgrades', 'Opponents'] },
         { label: 'glimbo', icon: 'afk_targets/Glimbo', tabs: [] },
@@ -283,6 +285,9 @@ export const PAGES = {
     },
     'guaranteedDropCalculator': {
       icon: 'data/TreeInterior1b'
+    },
+    'boneJoeCalculator': {
+      icon: 'data/BoneJoePickle'
     }
   }
 }

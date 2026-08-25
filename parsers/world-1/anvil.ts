@@ -80,7 +80,10 @@ export const getAnvil = (char: any, character: any) => {
   const basePointsFromAcme = getTalentBonus(character?.flatTalents, 'ACME_ANVIL');
   let pointsFromAcme = 0;
   if (basePointsFromAcme) {
-    pointsFromAcme = char?.['SkillLevels']?.[281] + basePointsFromAcme * Math.floor(character?.skillsInfo?.smithing?.level / 10);
+    // A low-progress save's SkillLevels array stops short of 281, and a brand new character has no
+    // smithing level yet. Both are additive point sources, so the identity is 0.
+    pointsFromAcme = (char?.['SkillLevels']?.[281] ?? 0)
+      + basePointsFromAcme * Math.floor((character?.skillsInfo?.smithing?.level ?? 0) / 10);
   }
   const [availablePoints,
     pointsFromCoins,
@@ -186,7 +189,7 @@ export const getPlayerAnvil = (character: any, characters: any, account: any) =>
     .map((item: any) => anvilProducts[item]);
 
   return {
-    guild: account?.guild?.guildBonuses?.length > 0,
+    guild: account?.guild?.unlocked === true,
     stats,
     production,
     selected: selectedProducts
@@ -242,6 +245,12 @@ export const getTimeTillCap = ({
 
   return (stats?.anvilCapacity - futureProduction) / productionRate;
 };
+export const getAnvilProductCatalog = () => Object.values(anvilProducts as Record<string, any>)
+  .map((product: any) => ({
+    ...product,
+    displayName: items?.[product?.rawName]?.displayName ?? product?.rawName
+  }));
+
 export const calcTotals = (account: any, characters: any) => {
   return account?.anvil?.reduce((result: any, anvil: any, index: any) => {
     const { stats, production } = getPlayerAnvil(characters?.[index], characters, account);

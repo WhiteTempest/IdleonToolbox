@@ -2,14 +2,547 @@
 // Do not edit manually
 
 declare module '@website-data' {
-  export const zenithMarket: {
+  export const abominations: {
       name: string;
       x1: number;
       x2: number;
       x3: number;
       x4: number;
       x5: number;
+      x6: number;
+      x7: number;
+      x8: number;
+      x9: number;
+      x10: number;
+      x11: number;
+      x12: number;
+    }[];
+  export const achievements: {
+      name: string;
+      rawName: string;
+      quantity: number;
+      desc: string;
+      rewards: string[];
+      misc: string;
+      visualIndex: number;
+      steamExclusive: boolean;
+      secretAchievement: boolean;
+      steamIndex?: number;
+    }[];
+  export const anvilProducts: Record<string, {
+      rawName: string;
+      requiredAmount: number;
+      levelReq: number;
+      exp: number;
+    }>;
+  export const anvilUpgradeCost: {
+      costThreshold: number;
+      rawName: string;
+      displayName: string;
+    }[];
+  export const arcadeShop: {
+      effect: string;
+      x1: number;
+      x2: number;
+      func: string;
+      bonusName: string;
+    }[];
+  export const arenaBonuses: {
+      bonus: string;
+      wave: number;
+    }[];
+  export const artifacts: {
+      name: string;
+      x1: string;
+      baseFindChance: number;
       description: string;
+      baseBonus: number;
+      ancientFormDescription: string;
+      ancientMultiplier: number;
+      eldritchFormDescription: string;
+      eldritchMultiplier: number;
+      sovereignFormDescription: string;
+      sovereignMultiplier: number;
+      omnipotentFormDescription: string;
+      omnipotentMultiplier: number;
+      transcendentFormDescription: string;
+      transcendentMultiplier: number;
+    }[];
+  export const atomsInfo: {
+      name: string;
+      desc: string;
+      baseBonus: number;
+      x1: number;
+      x2: number;
+      x3: number;
+    }[];
+  export const ballsBonuses: (number[])[];
+  export const bonuses: {
+    etcBonuses: Record<string, string>;
+    cardBonuses: Record<string, string>;
+    cardSetBonuses: Record<string, string>;
+  };
+  export const bribes: {
+      name: string;
+      desc: string;
+      npc: string;
+      price: number;
+      effectName: string;
+      value: number;
+    }[];
+  export const bubbaUpgrades: {
+      name: string;
+      description: string;
+      x1: number;
+      x2: number;
+      x3: number;
+      x4: number;
+      x5: number;
+      x6: number;
+    }[];
+  export const bundles: Record<string, {
+      message: string;
+      price: number | null;
+    }>;
+  export const ButtonBonusNames: string[];
+  export const ButtonBonusPerPress: number[];
+  export const ButtonTasks: (string[])[];
+  export const captainsBonuses: {
+      min: number;
+      max: number;
+      bonus: string;
+    }[];
+  export const cardBonuses: Record<string, string>;
+  export const cards: Record<string, {
+      rawName: string;
+      displayName: string;
+      cardIndex: string;
+      visualIndex: number;
+      effect: string;
+      bonus: number;
+      perTier: number;
+      category: string;
+    }>;
+  export const cardSets: {
+    '{%_EXP_if_below_Lv_50': {
+      name: string;
+      effect: string;
+      bonus: number;
+      rawName: string;
+    };
+    '{%_All_Food_Effect': {
+      name: string;
+      effect: string;
+      bonus: number;
+      rawName: string;
+    };
+    '{%_Skill_Efficiency': {
+      name: string;
+      effect: string;
+      bonus: number;
+      rawName: string;
+    };
+    '{%_Skill_EXP_Gain': {
+      name: string;
+      effect: string;
+      bonus: number;
+      rawName: string;
+    };
+    '{%_DEF_and_ACC': {
+      name: string;
+      effect: string;
+      bonus: number;
+      rawName: string;
+    };
+    '{%_Skill_AFK_Gain_Rate': {
+      name: string;
+      effect: string;
+      bonus: number;
+      rawName: string;
+    };
+    '{%_Crit_Chance': {
+      name: string;
+      effect: string;
+      bonus: number;
+      rawName: string;
+    };
+    '{%_Fight_AFK_Gain_Rate': {
+      name: string;
+      effect: string;
+      bonus: number;
+      rawName: string;
+    };
+    '{%_Multikill_Per_Tier': {
+      name: string;
+      effect: string;
+      bonus: number;
+      rawName: string;
+    };
+    '{%_Class_Exp_(Multi)': {
+      name: string;
+      effect: string;
+      bonus: number;
+      rawName: string;
+    };
+    '{%_more_Dungeon_Credits': {
+      name: string;
+      effect: string;
+      bonus: number;
+      rawName: string;
+    };
+    '{%_Dmg,_Drop,_and_EXP': {
+      name: string;
+      effect: string;
+      bonus: number;
+      rawName: string;
+    };
+    '{%_Drop_Rate': {
+      name: string;
+      effect: string;
+      bonus: number;
+      rawName: string;
+    };
+  };
+  export const carryBags: {
+    Mining: Record<string, {
+        displayName: string;
+        sellPrice: number;
+        typeGen: string;
+        ID: number;
+        Type: string;
+        lvReqToCraft: number;
+        lvReqToEquip: number;
+        Class: string;
+        Speed: number;
+        Reach: number;
+        Weapon_Power: number;
+        STR: number;
+        AGI: number;
+        WIS: number;
+        LUK: number;
+        Defence: number;
+        UQ1txt: number;
+        UQ1val: number;
+        UQ2txt: number;
+        UQ2val: number;
+        Upgrade_Slots_Left: number;
+        itemType: string;
+        capacity: number;
+        rawName: string;
+      }>;
+    Chopping: Record<string, {
+        displayName: string;
+        sellPrice: number;
+        typeGen: string;
+        ID: number;
+        Type: string;
+        lvReqToCraft: number;
+        lvReqToEquip: number;
+        Class: string;
+        Speed: number;
+        Reach: number;
+        Weapon_Power: number;
+        STR: number;
+        AGI: number;
+        WIS: number;
+        LUK: number;
+        Defence: number;
+        UQ1txt: number;
+        UQ1val: number;
+        UQ2txt: number;
+        UQ2val: number;
+        Upgrade_Slots_Left: number;
+        itemType: string;
+        capacity: number;
+        rawName: string;
+      }>;
+    Foods: Record<string, {
+        displayName: string;
+        sellPrice: number;
+        typeGen: string;
+        ID: number;
+        Type: string;
+        lvReqToCraft: number;
+        lvReqToEquip: number;
+        Class: string;
+        Speed: number;
+        Reach: number;
+        Weapon_Power: number;
+        STR: number;
+        AGI: number;
+        WIS: number;
+        LUK: number;
+        Defence: number;
+        UQ1txt: number;
+        UQ1val: number;
+        UQ2txt: number;
+        UQ2val: number;
+        Upgrade_Slots_Left: number;
+        itemType: string;
+        capacity: number;
+        rawName: string;
+      }>;
+    bCraft: Record<string, {
+        displayName: string;
+        sellPrice: number;
+        typeGen: string;
+        ID: number;
+        Type: string;
+        lvReqToCraft: number;
+        lvReqToEquip: number;
+        Class: string;
+        Speed: number;
+        Reach: number;
+        Weapon_Power: number;
+        STR: number;
+        AGI: number;
+        WIS: number;
+        LUK: number;
+        Defence: number;
+        UQ1txt: number;
+        UQ1val: number;
+        UQ2txt: number;
+        UQ2val: number;
+        Upgrade_Slots_Left: number;
+        itemType: string;
+        capacity: number;
+        rawName: string;
+      }>;
+    Fishing: Record<string, {
+        displayName: string;
+        sellPrice: number;
+        typeGen: string;
+        ID: number;
+        Type: string;
+        lvReqToCraft: number;
+        lvReqToEquip: number;
+        Class: string;
+        Speed: number;
+        Reach: number;
+        Weapon_Power: number;
+        STR: number;
+        AGI: number;
+        WIS: number;
+        LUK: number;
+        Defence: number;
+        UQ1txt: number;
+        UQ1val: number;
+        UQ2txt: number;
+        UQ2val: number;
+        Upgrade_Slots_Left: number;
+        itemType: string;
+        capacity: number;
+        rawName: string;
+      }>;
+    Bugs: Record<string, {
+        displayName: string;
+        sellPrice: number;
+        typeGen: string;
+        ID: number;
+        Type: string;
+        lvReqToCraft: number;
+        lvReqToEquip: number;
+        Class: string;
+        Speed: number;
+        Reach: number;
+        Weapon_Power: number;
+        STR: number;
+        AGI: number;
+        WIS: number;
+        LUK: number;
+        Defence: number;
+        UQ1txt: number;
+        UQ1val: number;
+        UQ2txt: number;
+        UQ2val: number;
+        Upgrade_Slots_Left: number;
+        itemType: string;
+        capacity: number;
+        rawName: string;
+      }>;
+    Critters: Record<string, {
+        displayName: string;
+        sellPrice: number;
+        typeGen: string;
+        ID: number;
+        Type: string;
+        lvReqToCraft: number;
+        lvReqToEquip: number;
+        Class: string;
+        Speed: number;
+        Reach: number;
+        Weapon_Power: number;
+        STR: number;
+        AGI: number;
+        WIS: number;
+        LUK: number;
+        Defence: number;
+        UQ1txt: number;
+        UQ1val: number;
+        UQ2txt: number;
+        UQ2val: number;
+        Upgrade_Slots_Left: number;
+        itemType: string;
+        capacity: number;
+        rawName: string;
+      }>;
+    Souls: Record<string, {
+        displayName: string;
+        sellPrice: number;
+        typeGen: string;
+        ID: number;
+        Type: string;
+        lvReqToCraft: number;
+        lvReqToEquip: number;
+        Class: string;
+        Speed: number;
+        Reach: number;
+        Weapon_Power: number;
+        STR: number;
+        AGI: number;
+        WIS: number;
+        LUK: number;
+        Defence: number;
+        UQ1txt: number;
+        UQ1val: number;
+        UQ2txt: number;
+        UQ2val: number;
+        Upgrade_Slots_Left: number;
+        itemType: string;
+        capacity: number;
+        rawName: string;
+      }>;
+  };
+  export const cauldrons: {
+    power: {
+        bubbleIndex: string;
+        bubbleName: string;
+        x1: number;
+        x2: number;
+        func: string;
+        desc: string;
+        stat: string;
+        cauldron: string;
+        itemReq: Record<string, any>[];
+      }[];
+    quicc: {
+        bubbleIndex: string;
+        bubbleName: string;
+        x1: number;
+        x2: number;
+        func: string;
+        desc: string;
+        stat: string;
+        cauldron: string;
+        itemReq: Record<string, any>[];
+      }[];
+    'high-iq': {
+        bubbleIndex: string;
+        bubbleName: string;
+        x1: number;
+        x2: number;
+        func: string;
+        desc: string;
+        stat: string;
+        cauldron: string;
+        itemReq: Record<string, any>[];
+      }[];
+    kazam: {
+        bubbleIndex: string;
+        bubbleName: string;
+        x1: number;
+        x2: number;
+        func: string;
+        desc: string;
+        stat: string;
+        cauldron: string;
+        itemReq: Record<string, any>[];
+      }[];
+  };
+  export const chips: {
+      index: number;
+      name: string;
+      bonus: string;
+      bool1: string;
+      stat: string;
+      baseVal: number;
+      requirements: {
+          rawName: string;
+          name: string;
+          amount: number;
+        }[];
+      description: string;
+      extraDescription: string;
+      rawName: string;
+    }[];
+  export const classes: string[];
+  export const classFamilyBonuses: {
+      name: string;
+      func: string;
+      x1: number;
+      x2: number;
+      x3: number;
+      order: number | null;
+    }[];
+  export const cogKeyMap: {
+    a: string;
+    b: string;
+    c: string;
+    d: string;
+    e: string;
+    f: string;
+    g: string;
+    h: string;
+    i: string;
+    j: string;
+    k: string;
+  };
+  export const companionGroups: {
+      name: string;
+      indices: number[];
+    }[];
+  export const companions: {
+      name: string;
+      rawName: string;
+      effect: string;
+      bonus: number;
+      x: string;
+      y: string;
+      z: string;
+      filler: string;
+      tourPower: number;
+    }[];
+  export const compass: {
+      name: string;
+      x1: number;
+      x2: number;
+      x3: number;
+      x4: number;
+      x5: number;
+      x6: number;
+      x7: number;
+      x8: number;
+      x9: number;
+      x10: number;
+      description: string;
+      baseIconIndex: number;
+    }[];
+  export const constellations: {
+      rawIndex: number;
+      mapIndex: number;
+      requiredPlayers: number;
+      points: number;
+      name: string;
+      requirement: string;
+    }[];
+  export const cookingMenu: {
+      name: string;
+      cookReq: number;
+      rawName: string;
+      baseStat: number;
+      effect: string;
+      description: string;
+      stat: string;
     }[];
   export const coralReef: {
       name: string;
@@ -26,111 +559,114 @@ declare module '@website-data' {
       x11: number;
       x12: number;
     }[];
-  export const researchGridSquares: {
+  export const cosmoUpgrades: ({
+        x0: number;
+        x1: number;
+        name: string;
+        description: string;
+      }[])[];
+  export const crafts: Record<string, {
+      rawName: string;
+      type: string;
+      subType: string;
+      itemName: string;
+      itemQuantity: number;
+      materials: {
+          itemName: string;
+          type: string;
+          subType: string;
+          rawName: string;
+          itemQuantity: number;
+        }[] | {
+          itemName: string;
+          type: string;
+          subType: string;
+          rawName: string;
+          itemQuantity: number;
+          materials?: Record<string, any>[];
+        }[] | {
+          itemName: string;
+          type: string;
+          subType: string;
+          rawName: string;
+          itemQuantity: number;
+          materials: Record<string, any>[];
+        }[];
+    }>;
+  export const deathNote: {
+      rawName: string;
       name: string;
-      maxLv: number;
-      baseBonus: number;
-      x4: number;
-      x5: number;
+      world: number;
+    }[];
+  export const divStyles: {
+      name: string;
       description: string;
     }[];
-  export const researchOccurrences: {
+  export const dungeonCreditShop: {
       name: string;
-      researchLvReq: number;
-      mapId: number;
-      x: number;
-      y: number;
-      index: number;
-      threshold: number;
-      description: string;
-    }[];
-  export const research: (string[])[];
-  export const researchShapes: {
-      vertices: string;
-      center: string;
-    }[];
-  export const mineheadUpgrades: {
-      name: string;
-      baseCost: number;
-      exponent: number;
-      levelReq: number;
-      x4: number;
-      description: string;
-    }[];
-  export const tournyStuff: {
-    divisionNames: string[];
-    divisionScales: number[];
-    divisionPointReqs: number[];
-  };
-  export const sushiUpgrades: (string[])[];
-  export const ButtonTasks: (string[])[];
-  export const ButtonBonusPerPress: number[];
-  export const ButtonBonusNames: string[];
-  export const gamingPalette: {
-      x0: number;
-      x1: number;
-      x2: number;
-      name: string;
-      x4: number;
-      x5: number;
-      x6: number;
-      x7: number;
-      x8: number;
-      x9: number;
-      description: string;
-    }[];
-  export const legendTalents: {
-      name: string;
-      x1: number;
-      x2: number;
       bonus: string;
-      description: string;
+      increment: number;
+      rarity: string;
+      desc: string;
+      levelText: string;
+      baseValue: number;
+      maxLevel: number;
     }[];
-  export const spelunkingUpgrades: {
-      name: string;
-      description: string;
+  export const dungeonFlurboStats: {
+      effect: string;
       x1: number;
       x2: number;
-      x3: number;
-      x4: number;
-      x5: number;
-      x6: number;
-      x7: number;
-      x8: number;
-      x9: number;
-      x10: string;
-      x11: string;
+      func: string;
+      bonusName: string;
+      type: string;
     }[];
-  export const spelunkingRocks: ({
-        name: string;
-        x1: number;
-        x2: number;
-        x3: number;
-        x4: number;
-        x5: number;
-        x6: number;
-        x7: number;
-      }[])[];
-  export const spelunkingChapters: ({
-        name: string;
-        x1: number;
-        x2: number;
-        func: string;
-        x4: number;
-        x5: number;
-        x6: number;
-        x7: number;
-      }[])[];
-  export const generalSpelunky: (string[])[];
-  export const bubbaUpgrades: {
-      name: string;
-      description: string;
+  export const dungeonStats: {
+      effect: string;
       x1: number;
       x2: number;
-      x3: number;
-      x4: number;
+      func: string;
+      bonusName: string;
+      type: string;
+    }[];
+  export const dungeonTraits: {
+      section: string;
+      levelReq: number;
+      bonuses: string[];
+    }[];
+  export const emperorBonuses: {
+      name: string;
+      value: number;
+      index: number;
+    }[];
+  export const equinoxChallenges: {
+      label: string;
+      goal: number;
+      reward: string;
+    }[];
+  export const equinoxUpgrades: {
+      name: string;
+      description: string;
+      maxLevel: number;
+      bonus: number;
+    }[];
+  export const equipmentSets: {
+      setName: string;
+      armors: string[];
+      tools: string[] | any[];
+      weapons: any[] | string[];
+      requiredTools: number;
+      requiredWeapon: number;
+      bonusValue: number;
+      description: string;
+      description2: string;
+    }[];
+  export const exoticMarketInfo: {
+      name: string;
+      bonus: string;
+      x2: number;
+      baseValue: number;
+      type: number;
       x5: number;
-      x6: number;
     }[];
   export const fishingKits: {
     fishingBaits: {
@@ -154,18 +690,883 @@ declare module '@website-data' {
         pow: number;
       }[];
   };
-  export const tesseract: {
+  export const flagsReqs: number[];
+  export const gamingImports: {
+      boxName: string;
+      boxDescription: string;
       name: string;
+      majorBonus: string;
+      minorBonus: string;
+      description: string;
       x1: number;
       x2: number;
-      x3: number;
+    }[];
+  export const gamingPalette: {
+      x0: number;
+      x1: number;
+      x2: number;
+      name: string;
       x4: number;
       x5: number;
       x6: number;
       x7: number;
       x8: number;
+      x9: number;
       description: string;
     }[];
+  export const gamingUpgrades: {
+      name: string;
+      description: string;
+    }[];
+  export const gemShop: {
+      name: string;
+      sections: any;
+    }[];
+  export const generalSpelunky: (string[])[];
+  export const gods: {
+      name: string;
+      majorBonus: string;
+      minorBonus: string;
+      blessing: string;
+      minorBonusMultiplier: number;
+      godIndex: string;
+      blessingMultiplier: number;
+      x4: number;
+      x5: number;
+      x7: number;
+      x8: number;
+      x9: number;
+      x10: number;
+      x11: number;
+      x12: number;
+    }[];
+  export const grimoire: {
+      name: string;
+      x1: number;
+      x2: number;
+      boneType: number;
+      x4: number;
+      x5: number;
+      unlockLevel: number;
+      x7: number;
+      x8: number;
+      description: string;
+    }[];
+  export const guildBonuses: {
+      name: string;
+      xPos: number;
+      yPos: number;
+      bonus: string;
+      x1: number;
+      x2: number;
+      func: string;
+      maxLevel: number;
+      reqIndex: number;
+      reqLevel: number;
+      gpBaseCost: number;
+      gpIncrease: number;
+    }[];
+  export const guildTasks: {
+      task: string;
+      requirement: number;
+      gp: number;
+    }[];
+  export const holeFountUpg: ({
+        name: string;
+        prereqIndex: number;
+        position: string;
+        currencyType: number;
+        baseCost: number;
+        costMulti: number;
+        bonusPerLevel: number;
+        description: string;
+      }[])[];
+  export const holesBuildings: {
+      name: string;
+      x1: number;
+      x2: number;
+      x3: number;
+      x4: number | string;
+      description: string;
+    }[];
+  export const holesInfo: (string[])[];
+  export const invBags: {
+    InvBag1: {
+      displayName: string;
+      sellPrice: number;
+      typeGen: string;
+      ID: number;
+      Type: string;
+      lvReqToCraft: number;
+      lvReqToEquip: number;
+      Class: string;
+      Speed: number;
+      Reach: number;
+      Weapon_Power: number;
+      STR: number;
+      AGI: number;
+      WIS: number;
+      LUK: number;
+      Defence: number;
+      UQ1txt: number;
+      UQ1val: number;
+      UQ2txt: number;
+      UQ2val: number;
+      Upgrade_Slots_Left: number;
+      itemType: string;
+      capacity: number;
+    };
+    InvBag2: {
+      displayName: string;
+      sellPrice: number;
+      typeGen: string;
+      ID: number;
+      Type: string;
+      lvReqToCraft: number;
+      lvReqToEquip: number;
+      Class: string;
+      Speed: number;
+      Reach: number;
+      Weapon_Power: number;
+      STR: number;
+      AGI: number;
+      WIS: number;
+      LUK: number;
+      Defence: number;
+      UQ1txt: number;
+      UQ1val: number;
+      UQ2txt: number;
+      UQ2val: number;
+      Upgrade_Slots_Left: number;
+      itemType: string;
+      capacity: number;
+    };
+    InvBag3: {
+      displayName: string;
+      sellPrice: number;
+      typeGen: string;
+      ID: number;
+      Type: string;
+      lvReqToCraft: number;
+      lvReqToEquip: number;
+      Class: string;
+      Speed: number;
+      Reach: number;
+      Weapon_Power: number;
+      STR: number;
+      AGI: number;
+      WIS: number;
+      LUK: number;
+      Defence: number;
+      UQ1txt: number;
+      UQ1val: number;
+      UQ2txt: number;
+      UQ2val: number;
+      Upgrade_Slots_Left: number;
+      itemType: string;
+      capacity: number;
+    };
+    InvBag4: {
+      displayName: string;
+      sellPrice: number;
+      typeGen: string;
+      ID: number;
+      Type: string;
+      lvReqToCraft: number;
+      lvReqToEquip: number;
+      Class: string;
+      Speed: number;
+      Reach: number;
+      Weapon_Power: number;
+      STR: number;
+      AGI: number;
+      WIS: number;
+      LUK: number;
+      Defence: number;
+      UQ1txt: number;
+      UQ1val: number;
+      UQ2txt: number;
+      UQ2val: number;
+      Upgrade_Slots_Left: number;
+      itemType: string;
+      capacity: number;
+    };
+    InvBag5: {
+      displayName: string;
+      sellPrice: number;
+      typeGen: string;
+      ID: number;
+      Type: string;
+      lvReqToCraft: number;
+      lvReqToEquip: number;
+      Class: string;
+      Speed: number;
+      Reach: number;
+      Weapon_Power: number;
+      STR: number;
+      AGI: number;
+      WIS: number;
+      LUK: number;
+      Defence: number;
+      UQ1txt: number;
+      UQ1val: number;
+      UQ2txt: number;
+      UQ2val: number;
+      Upgrade_Slots_Left: number;
+      itemType: string;
+      capacity: number;
+    };
+    InvBag6: {
+      displayName: string;
+      sellPrice: number;
+      typeGen: string;
+      ID: number;
+      Type: string;
+      lvReqToCraft: number;
+      lvReqToEquip: number;
+      Class: string;
+      Speed: number;
+      Reach: number;
+      Weapon_Power: number;
+      STR: number;
+      AGI: number;
+      WIS: number;
+      LUK: number;
+      Defence: number;
+      UQ1txt: number;
+      UQ1val: number;
+      UQ2txt: number;
+      UQ2val: number;
+      Upgrade_Slots_Left: number;
+      itemType: string;
+      capacity: number;
+    };
+    InvBag7: {
+      displayName: string;
+      sellPrice: number;
+      typeGen: string;
+      ID: number;
+      Type: string;
+      lvReqToCraft: number;
+      lvReqToEquip: number;
+      Class: string;
+      Speed: number;
+      Reach: number;
+      Weapon_Power: number;
+      STR: number;
+      AGI: number;
+      WIS: number;
+      LUK: number;
+      Defence: number;
+      UQ1txt: number;
+      UQ1val: number;
+      UQ2txt: number;
+      UQ2val: number;
+      Upgrade_Slots_Left: number;
+      itemType: string;
+      capacity: number;
+    };
+    InvBag8: {
+      displayName: string;
+      sellPrice: number;
+      typeGen: string;
+      ID: number;
+      Type: string;
+      lvReqToCraft: number;
+      lvReqToEquip: number;
+      Class: string;
+      Speed: number;
+      Reach: number;
+      Weapon_Power: number;
+      STR: number;
+      AGI: number;
+      WIS: number;
+      LUK: number;
+      Defence: number;
+      UQ1txt: number;
+      UQ1val: number;
+      UQ2txt: number;
+      UQ2val: number;
+      Upgrade_Slots_Left: number;
+      itemType: string;
+      capacity: number;
+    };
+    InvBag9: {
+      displayName: string;
+      sellPrice: number;
+      typeGen: string;
+      ID: number;
+      Type: string;
+      lvReqToCraft: number;
+      lvReqToEquip: number;
+      Class: string;
+      Speed: number;
+      Reach: number;
+      Weapon_Power: number;
+      STR: number;
+      AGI: number;
+      WIS: number;
+      LUK: number;
+      Defence: number;
+      UQ1txt: number;
+      UQ1val: number;
+      UQ2txt: number;
+      UQ2val: number;
+      Upgrade_Slots_Left: number;
+      itemType: string;
+      capacity: number;
+    };
+    InvBag21: {
+      displayName: string;
+      sellPrice: number;
+      typeGen: string;
+      ID: number;
+      Type: string;
+      lvReqToCraft: number;
+      lvReqToEquip: number;
+      Class: string;
+      Speed: number;
+      Reach: number;
+      Weapon_Power: number;
+      STR: number;
+      AGI: number;
+      WIS: number;
+      LUK: number;
+      Defence: number;
+      UQ1txt: number;
+      UQ1val: number;
+      UQ2txt: number;
+      UQ2val: number;
+      Upgrade_Slots_Left: number;
+      itemType: string;
+      capacity: number;
+    };
+    InvBag22: {
+      displayName: string;
+      sellPrice: number;
+      typeGen: string;
+      ID: number;
+      Type: string;
+      lvReqToCraft: number;
+      lvReqToEquip: number;
+      Class: string;
+      Speed: number;
+      Reach: number;
+      Weapon_Power: number;
+      STR: number;
+      AGI: number;
+      WIS: number;
+      LUK: number;
+      Defence: number;
+      UQ1txt: number;
+      UQ1val: number;
+      UQ2txt: number;
+      UQ2val: number;
+      Upgrade_Slots_Left: number;
+      itemType: string;
+      capacity: number;
+    };
+    InvBag23: {
+      displayName: string;
+      sellPrice: number;
+      typeGen: string;
+      ID: number;
+      Type: string;
+      lvReqToCraft: number;
+      lvReqToEquip: number;
+      Class: string;
+      Speed: number;
+      Reach: number;
+      Weapon_Power: number;
+      STR: number;
+      AGI: number;
+      WIS: number;
+      LUK: number;
+      Defence: number;
+      UQ1txt: number;
+      UQ1val: number;
+      UQ2txt: number;
+      UQ2val: number;
+      Upgrade_Slots_Left: number;
+      itemType: string;
+      capacity: number;
+    };
+    InvBag24: {
+      displayName: string;
+      sellPrice: number;
+      typeGen: string;
+      ID: number;
+      Type: string;
+      lvReqToCraft: number;
+      lvReqToEquip: number;
+      Class: string;
+      Speed: number;
+      Reach: number;
+      Weapon_Power: number;
+      STR: number;
+      AGI: number;
+      WIS: number;
+      LUK: number;
+      Defence: number;
+      UQ1txt: number;
+      UQ1val: number;
+      UQ2txt: number;
+      UQ2val: number;
+      Upgrade_Slots_Left: number;
+      itemType: string;
+      capacity: number;
+    };
+    InvBag25: {
+      displayName: string;
+      sellPrice: number;
+      typeGen: string;
+      ID: number;
+      Type: string;
+      lvReqToCraft: number;
+      lvReqToEquip: number;
+      Class: string;
+      Speed: number;
+      Reach: number;
+      Weapon_Power: number;
+      STR: number;
+      AGI: number;
+      WIS: number;
+      LUK: number;
+      Defence: number;
+      UQ1txt: number;
+      UQ1val: number;
+      UQ2txt: number;
+      UQ2val: number;
+      Upgrade_Slots_Left: number;
+      itemType: string;
+      capacity: number;
+    };
+    InvBag26: {
+      displayName: string;
+      sellPrice: number;
+      typeGen: string;
+      ID: number;
+      Type: string;
+      lvReqToCraft: number;
+      lvReqToEquip: number;
+      Class: string;
+      Speed: number;
+      Reach: number;
+      Weapon_Power: number;
+      STR: number;
+      AGI: number;
+      WIS: number;
+      LUK: number;
+      Defence: number;
+      UQ1txt: number;
+      UQ1val: number;
+      UQ2txt: number;
+      UQ2val: number;
+      Upgrade_Slots_Left: number;
+      itemType: string;
+      capacity: number;
+    };
+    InvBag100: {
+      displayName: string;
+      sellPrice: number;
+      typeGen: string;
+      ID: number;
+      Type: string;
+      lvReqToCraft: number;
+      lvReqToEquip: number;
+      Class: string;
+      Speed: number;
+      Reach: number;
+      Weapon_Power: number;
+      STR: number;
+      AGI: number;
+      WIS: number;
+      LUK: number;
+      Defence: number;
+      UQ1txt: number;
+      UQ1val: number;
+      UQ2txt: number;
+      UQ2val: number;
+      Upgrade_Slots_Left: number;
+      itemType: string;
+      capacity: number;
+    };
+    InvBag101: {
+      displayName: string;
+      sellPrice: number;
+      typeGen: string;
+      ID: number;
+      Type: string;
+      lvReqToCraft: number;
+      lvReqToEquip: number;
+      Class: string;
+      Speed: number;
+      Reach: number;
+      Weapon_Power: number;
+      STR: number;
+      AGI: number;
+      WIS: number;
+      LUK: number;
+      Defence: number;
+      UQ1txt: number;
+      UQ1val: number;
+      UQ2txt: number;
+      UQ2val: number;
+      Upgrade_Slots_Left: number;
+      itemType: string;
+      capacity: number;
+    };
+    InvBag102: {
+      displayName: string;
+      sellPrice: number;
+      typeGen: string;
+      ID: number;
+      Type: string;
+      lvReqToCraft: number;
+      lvReqToEquip: number;
+      Class: string;
+      Speed: number;
+      Reach: number;
+      Weapon_Power: number;
+      STR: number;
+      AGI: number;
+      WIS: number;
+      LUK: number;
+      Defence: number;
+      UQ1txt: number;
+      UQ1val: number;
+      UQ2txt: number;
+      UQ2val: number;
+      Upgrade_Slots_Left: number;
+      itemType: string;
+      capacity: number;
+    };
+    InvBag103: {
+      displayName: string;
+      sellPrice: number;
+      typeGen: string;
+      ID: number;
+      Type: string;
+      lvReqToCraft: number;
+      lvReqToEquip: number;
+      Class: string;
+      Speed: number;
+      Reach: number;
+      Weapon_Power: number;
+      STR: number;
+      AGI: number;
+      WIS: number;
+      LUK: number;
+      Defence: number;
+      UQ1txt: number;
+      UQ1val: number;
+      UQ2txt: number;
+      UQ2val: number;
+      Upgrade_Slots_Left: number;
+      itemType: string;
+      capacity: number;
+    };
+    InvBag104: {
+      displayName: string;
+      sellPrice: number;
+      typeGen: string;
+      ID: number;
+      Type: string;
+      lvReqToCraft: number;
+      lvReqToEquip: number;
+      Class: string;
+      Speed: number;
+      Reach: number;
+      Weapon_Power: number;
+      STR: number;
+      AGI: number;
+      WIS: number;
+      LUK: number;
+      Defence: number;
+      UQ1txt: number;
+      UQ1val: number;
+      UQ2txt: number;
+      UQ2val: number;
+      Upgrade_Slots_Left: number;
+      itemType: string;
+      capacity: number;
+    };
+    InvBag105: {
+      displayName: string;
+      sellPrice: number;
+      typeGen: string;
+      ID: number;
+      Type: string;
+      lvReqToCraft: number;
+      lvReqToEquip: number;
+      Class: string;
+      Speed: number;
+      Reach: number;
+      Weapon_Power: number;
+      STR: number;
+      AGI: number;
+      WIS: number;
+      LUK: number;
+      Defence: number;
+      UQ1txt: number;
+      UQ1val: number;
+      UQ2txt: number;
+      UQ2val: number;
+      Upgrade_Slots_Left: number;
+      itemType: string;
+      capacity: number;
+    };
+    InvBag106: {
+      displayName: string;
+      sellPrice: number;
+      typeGen: string;
+      ID: number;
+      Type: string;
+      lvReqToCraft: number;
+      lvReqToEquip: number;
+      Class: string;
+      Speed: number;
+      Reach: number;
+      Weapon_Power: number;
+      STR: number;
+      AGI: number;
+      WIS: number;
+      LUK: number;
+      Defence: number;
+      UQ1txt: number;
+      UQ1val: number;
+      UQ2txt: number;
+      UQ2val: number;
+      Upgrade_Slots_Left: number;
+      itemType: string;
+      capacity: number;
+    };
+    InvBag107: {
+      displayName: string;
+      sellPrice: number;
+      typeGen: string;
+      ID: number;
+      Type: string;
+      lvReqToCraft: number;
+      lvReqToEquip: number;
+      Class: string;
+      Speed: number;
+      Reach: number;
+      Weapon_Power: number;
+      STR: number;
+      AGI: number;
+      WIS: number;
+      LUK: number;
+      Defence: number;
+      UQ1txt: number;
+      UQ1val: number;
+      UQ2txt: number;
+      UQ2val: number;
+      Upgrade_Slots_Left: number;
+      itemType: string;
+      capacity: number;
+    };
+    InvBag108: {
+      displayName: string;
+      sellPrice: number;
+      typeGen: string;
+      ID: number;
+      Type: string;
+      lvReqToCraft: number;
+      lvReqToEquip: number;
+      Class: string;
+      Speed: number;
+      Reach: number;
+      Weapon_Power: number;
+      STR: number;
+      AGI: number;
+      WIS: number;
+      LUK: number;
+      Defence: number;
+      UQ1txt: number;
+      UQ1val: number;
+      UQ2txt: number;
+      UQ2val: number;
+      Upgrade_Slots_Left: number;
+      itemType: string;
+      capacity: number;
+    };
+    InvBag109: {
+      displayName: string;
+      sellPrice: number;
+      typeGen: string;
+      ID: number;
+      Type: string;
+      lvReqToCraft: number;
+      lvReqToEquip: number;
+      Class: string;
+      Speed: number;
+      Reach: number;
+      Weapon_Power: number;
+      STR: number;
+      AGI: number;
+      WIS: number;
+      LUK: number;
+      Defence: number;
+      UQ1txt: number;
+      UQ1val: number;
+      UQ2txt: number;
+      UQ2val: number;
+      Upgrade_Slots_Left: number;
+      itemType: string;
+      capacity: number;
+    };
+    InvBag110: {
+      displayName: string;
+      sellPrice: number;
+      typeGen: string;
+      ID: number;
+      Type: string;
+      lvReqToCraft: number;
+      lvReqToEquip: number;
+      Class: string;
+      Speed: number;
+      Reach: number;
+      Weapon_Power: number;
+      STR: number;
+      AGI: number;
+      WIS: number;
+      LUK: number;
+      Defence: number;
+      UQ1txt: number;
+      UQ1val: number;
+      UQ2txt: number;
+      UQ2val: number;
+      Upgrade_Slots_Left: number;
+      itemType: string;
+      capacity: number;
+    };
+    InvBag111: {
+      displayName: string;
+      sellPrice: number;
+      typeGen: string;
+      ID: number;
+      Type: string;
+      lvReqToCraft: number;
+      lvReqToEquip: number;
+      Class: string;
+      Speed: number;
+      Reach: number;
+      Weapon_Power: number;
+      STR: number;
+      AGI: number;
+      WIS: number;
+      LUK: number;
+      Defence: number;
+      UQ1txt: number;
+      UQ1val: number;
+      UQ2txt: number;
+      UQ2val: number;
+      Upgrade_Slots_Left: number;
+      itemType: string;
+      capacity: number;
+    };
+    InvBag112: {
+      displayName: string;
+      sellPrice: number;
+      typeGen: string;
+      ID: number;
+      Type: string;
+      lvReqToCraft: number;
+      lvReqToEquip: number;
+      Class: string;
+      Speed: number;
+      Reach: number;
+      Weapon_Power: number;
+      STR: number;
+      AGI: number;
+      WIS: number;
+      LUK: number;
+      Defence: number;
+      UQ1txt: number;
+      UQ1val: number;
+      UQ2txt: number;
+      UQ2val: number;
+      Upgrade_Slots_Left: number;
+      itemType: string;
+      capacity: number;
+    };
+    InvBag113: {
+      displayName: string;
+      sellPrice: number;
+      typeGen: string;
+      ID: number;
+      Type: string;
+      lvReqToCraft: number;
+      lvReqToEquip: number;
+      Class: string;
+      Speed: number;
+      Reach: number;
+      Weapon_Power: number;
+      STR: number;
+      AGI: number;
+      WIS: number;
+      LUK: number;
+      Defence: number;
+      UQ1txt: number;
+      UQ1val: number;
+      UQ2txt: number;
+      UQ2val: number;
+      Upgrade_Slots_Left: number;
+      itemType: string;
+      capacity: number;
+    };
+    InvBag114: {
+      displayName: string;
+      sellPrice: number;
+      typeGen: string;
+      ID: number;
+      Type: string;
+      lvReqToCraft: number;
+      lvReqToEquip: number;
+      Class: string;
+      Speed: number;
+      Reach: number;
+      Weapon_Power: number;
+      STR: number;
+      AGI: number;
+      WIS: number;
+      LUK: number;
+      Defence: number;
+      UQ1txt: number;
+      UQ1val: number;
+      UQ2txt: number;
+      UQ2val: number;
+      Upgrade_Slots_Left: number;
+      itemType: string;
+      capacity: number;
+    };
+    InvBag115: {
+      displayName: string;
+      sellPrice: number;
+      typeGen: string;
+      ID: number;
+      Type: string;
+      lvReqToCraft: number;
+      lvReqToEquip: number;
+      Class: string;
+      Speed: number;
+      Reach: number;
+      Weapon_Power: number;
+      STR: number;
+      AGI: number;
+      WIS: number;
+      LUK: number;
+      Defence: number;
+      UQ1txt: number;
+      UQ1val: number;
+      UQ2txt: number;
+      UQ2val: number;
+      Upgrade_Slots_Left: number;
+      itemType: string;
+      capacity: number;
+    };
+  };
   export const invStorage: {
     InvStorage1: {
       displayName: string;
@@ -1418,410 +2819,6 @@ declare module '@website-data' {
       capacity: number;
     };
   };
-  export const emperorBonuses: {
-      name: string;
-      value: number;
-      index: number;
-    }[];
-  export const equipmentSets: {
-      setName: string;
-      armors: string[];
-      tools: string[] | any[];
-      weapons: any[] | string[];
-      requiredTools: number;
-      requiredWeapon: number;
-      bonusValue: number;
-      description: string;
-      description2: string;
-    }[];
-  export const upgradeVault: {
-      name: string;
-      x1: number;
-      x2: number;
-      x3: number;
-      maxLevel: number;
-      x5: number;
-      unlockLevel: number;
-      x7: number;
-      x8: number;
-      description: string;
-    }[];
-  export const grimoire: {
-      name: string;
-      x1: number;
-      x2: number;
-      boneType: number;
-      x4: number;
-      x5: number;
-      unlockLevel: number;
-      x7: number;
-      x8: number;
-      description: string;
-    }[];
-  export const compass: {
-      name: string;
-      x1: number;
-      x2: number;
-      x3: number;
-      x4: number;
-      x5: number;
-      x6: number;
-      x7: number;
-      x8: number;
-      x9: number;
-      x10: number;
-      description: string;
-      baseIconIndex: number;
-    }[];
-  export const abominations: {
-      name: string;
-      x1: number;
-      x2: number;
-      x3: number;
-      x4: number;
-      x5: number;
-      x6: number;
-      x7: number;
-      x8: number;
-      x9: number;
-      x10: number;
-      x11: number;
-      x12: number;
-    }[];
-  export const holesInfo: (string[])[];
-  export const lampWishes: {
-      name: string;
-      x1: number;
-      x2: number;
-      x3: number;
-      description: string;
-    }[];
-  export const cosmoUpgrades: ({
-        x0: number;
-        x1: number;
-        name: string;
-        description: string;
-      }[])[];
-  export const holesBuildings: {
-      name: string;
-      x1: number;
-      x2: number;
-      x3: number;
-      x4: number | string;
-      description: string;
-    }[];
-  export const holeFountUpg: ({
-        name: string;
-        prereqIndex: number;
-        position: string;
-        currencyType: number;
-        baseCost: number;
-        costMulti: number;
-        bonusPerLevel: number;
-        description: string;
-      }[])[];
-  export const killRoySkullShop: {
-      description: string;
-      x1: number;
-      x2: number;
-      x3: number;
-      bonusName: string;
-    }[];
-  export const owlData: {
-      name: string;
-      desc: string;
-      bonus: string;
-      x1: number;
-      x2: number;
-      x3: number;
-    }[];
-  export const poppyBonuses: {
-      name: string;
-      desc: string;
-      bonus: string;
-      x1: number;
-      x2: number;
-      x3: number;
-      x6: number;
-    }[];
-  export const poppyTarBonuses: {
-      name: string;
-      desc: string;
-      bonus: string;
-      _: string;
-      x1: number;
-      x2: number;
-      x6: number;
-    }[];
-  export const tomeData: {
-      name: string;
-      info: string;
-      x1: number;
-      x2: number;
-      x3: number;
-      x4: number;
-    }[];
-  export const marketInfo: {
-      name: string;
-      bonus: string;
-      cropId: number;
-      cropIdIncrement: number;
-      cost: number;
-      costExponent: number;
-      cropReq: number;
-      maxLvl: number;
-      bonusPerLvl: number;
-    }[];
-  export const exoticMarketInfo: {
-      name: string;
-      bonus: string;
-      x2: number;
-      baseValue: number;
-      type: number;
-      x5: number;
-    }[];
-  export const summoningEnemies: {
-      enemyId: string;
-      xOff: number;
-      yOff: number;
-      width: number;
-      territoryName: string;
-      bonusId: number;
-      bonus: {
-        bonusId: number;
-        bonus: string;
-      };
-      bonusQty: number;
-      difficulty: number;
-    }[];
-  export const summoningBonuses: {
-      bonusId: number;
-      bonus: string;
-    }[];
-  export const summoningUnits: {
-      height: number;
-      speed: number;
-      colRadius: number;
-      qtyText: number;
-      minQty: number;
-      maxQty: number;
-      baseCost: number;
-      baseHp: number;
-      baseDamage: number;
-    }[];
-  export const summoningUpgrades: {
-      screenX: number;
-      screenY: number;
-      colour: number;
-      name: string;
-      cost: number;
-      costExponent: number;
-      bonusQty: number;
-      summonLvlReq: number;
-      maxLvl: number;
-      idReq: number;
-      filler: string;
-      bonus: string;
-    }[];
-  export const summoningEndless: {
-    bonusIds: string[];
-    bonusQuantities: string[];
-    difficulties: string[];
-    difficultiesText: string[];
-  };
-  export const seedInfo: {
-      name: string;
-      seedId: number;
-      cropIdMin: number;
-      cropIdMax: number;
-      lvlReq: number;
-      nextCropChance: number;
-      nextCropDecay: number;
-    }[];
-  export const jadeUpgrades: {
-      name: string;
-      x1: number;
-      x2: number;
-      x3: number;
-      filler1: string;
-      filler2: string;
-      description: string;
-    }[];
-  export const ninjaUpgrades: {
-      x0: number;
-      x1: number;
-      x2: number;
-      x3: number;
-      name: string;
-      modifier: number;
-      description: string;
-      x7: number;
-      x8: number;
-      x9: number;
-      x10: number;
-      x11: number;
-    }[];
-  export const pristineCharms: {
-      x1: number;
-      x2: number;
-      name: string;
-      x3: number;
-      description: string;
-      bonus: string;
-    }[];
-  export const ninjaEquipment: Record<string, {
-      rawName: string;
-      type: number;
-      subType: number;
-      name: string;
-      description: string;
-      filler?: string;
-      x3?: number;
-      x5?: number;
-    }>;
-  export const ninjaExtraInfo: (string[])[];
-  export const cardBonuses: Record<string, string>;
-  export const territory: {
-      territoryName: string;
-      background: string;
-      powerReq: number;
-      fightPower: number;
-      enemyAttack: number;
-      battleName: string;
-      f1: string;
-      f2: string;
-      f3: string;
-      enemies: {
-          name: string;
-          health: number | null;
-          color: number | null;
-          size: number | null;
-        }[] | {
-          name: string;
-          health: number;
-          color: number;
-          size: number;
-        }[];
-    }[];
-  export const weeklyBosses: {
-      bossName: string;
-      x1: number;
-      x2: number;
-      x3: number;
-      x4: number;
-      x5: number;
-      x6: number;
-      x7: number;
-      x8: number;
-    }[];
-  export const weeklyBossesTasks: {
-      description: string;
-      x1: number;
-      statText: string;
-      rawName: string;
-    }[];
-  export const weeklyBossesActions: {
-      description: string;
-      x1: number;
-      x2: number;
-      x3: string;
-      x4: number;
-    }[];
-  export const weeklyBossesShop: ({
-        name: string;
-        rawName: string;
-        description: string;
-        x1: number;
-        x2: number;
-      }[])[];
-  export const totems: {
-      monsterRawName: string;
-      monsterName: string;
-      minEfficiency: number;
-      skillReq: number;
-      chargeReq: number;
-    }[];
-  export const equinoxUpgrades: {
-      name: string;
-      description: string;
-      maxLevel: number;
-      bonus: number;
-    }[];
-  export const equinoxChallenges: {
-      label: string;
-      goal: number;
-      reward: string;
-    }[];
-  export const mapEnemiesArray: string[];
-  export const companions: {
-      name: string;
-      rawName: string;
-      effect: string;
-      bonus: number;
-      x: string;
-      y: string;
-      z: string;
-      filler: string;
-      tourPower: number;
-    }[];
-  export const companionGroups: {
-      name: string;
-      indices: number[];
-    }[];
-  export const superbitsUpgrades: {
-      description: string;
-      index: number;
-      x1: number;
-      x2: number;
-      name: string;
-    }[];
-  export const mapDetails: ((number[])[])[];
-  export const liquidsShop: {
-      name: string;
-      x1: number;
-      x2: number;
-      index: number;
-    }[];
-  export const petGenes: {
-      name: string;
-      abilityType: number;
-      combatAbility: string;
-      bonusAbility: string;
-      index: number;
-    }[];
-  export const petStats: ({
-        monsterName: string;
-        monsterRawName: string;
-        passiveIndex: string;
-        passive: string;
-        icon: string;
-        baseValue: number;
-        gene: {
-          name: string;
-          abilityType: number;
-          combatAbility: string;
-          bonusAbility: string;
-          index: number;
-        };
-      }[])[];
-  export const riftInfo: {
-      monsterName: string;
-      task: string;
-      icon: string;
-      riftBonus?: string;
-      riftBonusIcon?: string;
-      riftDescription?: string;
-    }[];
-  export const ballsBonuses: (number[])[];
-  export const slab: string[];
-  export const atomsInfo: {
-      name: string;
-      desc: string;
-      baseBonus: number;
-      x1: number;
-      x2: number;
-      x3: number;
-    }[];
   export const islands: {
       name: string;
       distance: number;
@@ -1831,498 +2828,6 @@ declare module '@website-data' {
       expPerTrip: number;
       numberOfArtifacts: number;
     }[];
-  export const captainsBonuses: {
-      min: number;
-      max: number;
-      bonus: string;
-    }[];
-  export const divStyles: {
-      name: string;
-      description: string;
-    }[];
-  export const gamingUpgrades: {
-      name: string;
-      description: string;
-    }[];
-  export const gamingImports: {
-      boxName: string;
-      boxDescription: string;
-      name: string;
-      majorBonus: string;
-      minorBonus: string;
-      description: string;
-      x1: number;
-      x2: number;
-    }[];
-  export const gods: {
-      name: string;
-      majorBonus: string;
-      minorBonus: string;
-      blessing: string;
-      minorBonusMultiplier: number;
-      godIndex: string;
-      blessingMultiplier: number;
-      x4: number;
-      x5: number;
-      x7: number;
-      x8: number;
-      x9: number;
-      x10: number;
-      x11: number;
-      x12: number;
-    }[];
-  export const artifacts: {
-      name: string;
-      x1: string;
-      baseFindChance: number;
-      description: string;
-      baseBonus: number;
-      ancientFormDescription: string;
-      ancientMultiplier: number;
-      eldritchFormDescription: string;
-      eldritchMultiplier: number;
-      sovereignFormDescription: string;
-      sovereignMultiplier: number;
-      omnipotentFormDescription: string;
-      omnipotentMultiplier: number;
-      transcendentFormDescription: string;
-      transcendentMultiplier: number;
-    }[];
-  export const traps: ({
-        trapTime: number;
-        quantity: number;
-        exp: number;
-        trapType: number;
-      }[])[];
-  export const tasks: ({
-        name: string;
-        description: string;
-        filler1: string;
-        x: string;
-        filler2: string;
-        breakpoints: string[];
-      }[])[];
-  export const taskUnlocks: (({
-          displayName: string;
-          sellPrice: number;
-          typeGen: string;
-          ID: number;
-          Type: string;
-          lvReqToCraft: number;
-          lvReqToEquip: number;
-          Class: string;
-          Speed: number;
-          Reach: number;
-          Weapon_Power: number;
-          STR: number;
-          AGI: number;
-          WIS: number;
-          LUK: number;
-          Defence: number;
-          UQ1txt: number;
-          UQ1val: number;
-          UQ2txt: number;
-          UQ2val: number;
-          Upgrade_Slots_Left: number;
-          itemType: string;
-          rawName: string;
-          amount: string;
-        }[])[])[];
-  export const merits: ({
-        descLine1: string;
-        descLine2: string;
-        num1: number;
-        num2: number;
-        num3: number;
-        totalLevels: number;
-        meritCost: number;
-        text1: string;
-        text2: string;
-        extraStr: string;
-        icon: string;
-        bonusPerLevel: number;
-      }[])[];
-  export const sigils: {
-      name: string;
-      unlockCost: number;
-      boostCost: number;
-      jadeCost: number;
-      unlockBonus: number;
-      boostBonus: number;
-      jadeBonus: number;
-      etherealCost: number;
-      etherealBonus: number;
-      eclecticCost: number;
-      eclecticBonus: number;
-      filler: string;
-      effect: string;
-    }[];
-  export const dungeonCreditShop: {
-      name: string;
-      bonus: string;
-      increment: number;
-      rarity: string;
-      desc: string;
-      levelText: string;
-      baseValue: number;
-      maxLevel: number;
-    }[];
-  export const dungeonTraits: {
-      section: string;
-      levelReq: number;
-      bonuses: string[];
-    }[];
-  export const monsterDrops: Record<string, any>;
-  export const arenaBonuses: {
-      bonus: string;
-      wave: number;
-    }[];
-  export const labBonuses: {
-      index: number;
-      x: number;
-      y: number;
-      range: number;
-      bonusOn: number;
-      bonusOff: number;
-      name: string;
-      description: string;
-    }[];
-  export const chips: {
-      index: number;
-      name: string;
-      bonus: string;
-      bool1: string;
-      stat: string;
-      baseVal: number;
-      requirements: {
-          rawName: string;
-          name: string;
-          amount: number;
-        }[];
-      description: string;
-      extraDescription: string;
-      rawName: string;
-    }[];
-  export const jewels: {
-      index: number;
-      name: string;
-      bonus: number;
-      x: number;
-      y: number;
-      range: number;
-      requirements: {
-          rawName: string;
-          name: string;
-          amount: number;
-        }[] | {
-          rawName: string;
-          name: string | null;
-          amount: number;
-        }[];
-      effect: string;
-      description: string;
-    }[];
-  export const petUpgrades: {
-      name: string;
-      filler: string;
-      material: string;
-      foodIndex: number;
-      baseMatCost: number;
-      costMatScale: number;
-      baseCost: number;
-      costScale: number;
-      maxLevel: number;
-      description: string;
-      boostEffect: string;
-      bonusQuantity: number;
-      upgradeIndex: number;
-    }[];
-  export const crafts: Record<string, {
-      rawName: string;
-      type: string;
-      subType: string;
-      itemName: string;
-      itemQuantity: number;
-      materials: {
-          itemName: string;
-          type: string;
-          subType: string;
-          rawName: string;
-          itemQuantity: number;
-        }[] | {
-          itemName: string;
-          type: string;
-          subType: string;
-          rawName: string;
-          itemQuantity: number;
-          materials?: Record<string, any>[];
-        }[] | {
-          itemName: string;
-          type: string;
-          subType: string;
-          rawName: string;
-          itemQuantity: number;
-          materials: Record<string, any>[];
-        }[];
-    }>;
-  export const cookingMenu: {
-      name: string;
-      cookReq: number;
-      rawName: string;
-      baseStat: number;
-      effect: string;
-      description: string;
-      stat: string;
-    }[];
-  export const itemsArray: {
-      displayName: string;
-      sellPrice: number;
-      typeGen: string;
-      ID: number;
-      Type: string;
-      lvReqToCraft: number;
-      desc_line1?: string;
-      desc_line2?: string;
-      desc_line3?: string;
-      desc_line4?: string;
-      desc_line5?: string;
-      desc_line6?: string;
-      desc_line7?: string;
-      desc_line8?: string;
-      Effect?: string;
-      Amount?: number;
-      Trigger?: number;
-      Cooldown?: number;
-      rawName: string;
-      itemType: string;
-      lvReqToEquip?: number;
-      Class?: string;
-      Speed?: number;
-      Reach?: number;
-      Weapon_Power?: number;
-      STR?: number;
-      AGI?: number;
-      WIS?: number;
-      LUK?: number;
-      Defence?: number;
-      UQ1txt?: number;
-      UQ1val?: number;
-      UQ2txt?: number;
-      UQ2val?: number;
-      Upgrade_Slots_Left?: number;
-    }[];
-  export const cards: Record<string, {
-      rawName: string;
-      displayName: string;
-      cardIndex: string;
-      visualIndex: number;
-      effect: string;
-      bonus: number;
-      perTier: number;
-      category: string;
-    }>;
-  export const cardSets: {
-    '{%_EXP_if_below_Lv_50': {
-      name: string;
-      effect: string;
-      bonus: number;
-      rawName: string;
-    };
-    '{%_All_Food_Effect': {
-      name: string;
-      effect: string;
-      bonus: number;
-      rawName: string;
-    };
-    '{%_Skill_Efficiency': {
-      name: string;
-      effect: string;
-      bonus: number;
-      rawName: string;
-    };
-    '{%_Skill_EXP_Gain': {
-      name: string;
-      effect: string;
-      bonus: number;
-      rawName: string;
-    };
-    '{%_DEF_and_ACC': {
-      name: string;
-      effect: string;
-      bonus: number;
-      rawName: string;
-    };
-    '{%_Skill_AFK_Gain_Rate': {
-      name: string;
-      effect: string;
-      bonus: number;
-      rawName: string;
-    };
-    '{%_Crit_Chance': {
-      name: string;
-      effect: string;
-      bonus: number;
-      rawName: string;
-    };
-    '{%_Fight_AFK_Gain_Rate': {
-      name: string;
-      effect: string;
-      bonus: number;
-      rawName: string;
-    };
-    '{%_Multikill_Per_Tier': {
-      name: string;
-      effect: string;
-      bonus: number;
-      rawName: string;
-    };
-    '{%_Class_Exp_(Multi)': {
-      name: string;
-      effect: string;
-      bonus: number;
-      rawName: string;
-    };
-    '{%_more_Dungeon_Credits': {
-      name: string;
-      effect: string;
-      bonus: number;
-      rawName: string;
-    };
-    '{%_Dmg,_Drop,_and_EXP': {
-      name: string;
-      effect: string;
-      bonus: number;
-      rawName: string;
-    };
-    '{%_Drop_Rate': {
-      name: string;
-      effect: string;
-      bonus: number;
-      rawName: string;
-    };
-  };
-  export const dungeonStats: {
-      effect: string;
-      x1: number;
-      x2: number;
-      func: string;
-      bonusName: string;
-      type: string;
-    }[];
-  export const dungeonFlurboStats: {
-      effect: string;
-      x1: number;
-      x2: number;
-      func: string;
-      bonusName: string;
-      type: string;
-    }[];
-  export const bonuses: {
-    etcBonuses: Record<string, string>;
-    cardBonuses: Record<string, string>;
-    cardSetBonuses: Record<string, string>;
-  };
-  export const flagsReqs: number[];
-  export const cogKeyMap: {
-    a: string;
-    b: string;
-    c: string;
-    d: string;
-    e: string;
-    f: string;
-    g: string;
-    h: string;
-    i: string;
-    j: string;
-    k: string;
-  };
-  export const classFamilyBonuses: {
-      name: string;
-      func: string;
-      x1: number;
-      x2: number;
-      x3: number;
-      order: number | null;
-    }[];
-  export const anvilProducts: Record<string, {
-      rawName: string;
-      requiredAmount: number;
-      levelReq: number;
-      exp: number;
-    }>;
-  export const anvilUpgradeCost: {
-      costThreshold: number;
-      rawName: string;
-      displayName: string;
-    }[];
-  export const guildBonuses: {
-      name: string;
-      xPos: number;
-      yPos: number;
-      bonus: string;
-      x1: number;
-      x2: number;
-      func: string;
-      maxLevel: number;
-      reqIndex: number;
-      reqLevel: number;
-      gpBaseCost: number;
-      gpIncrease: number;
-    }[];
-  export const guildTasks: {
-      task: string;
-      requirement: number;
-      gp: number;
-    }[];
-  export const stats: Record<string, string>;
-  export const obols: {
-    character: Record<string, {
-        shape: string;
-        levelReq: number;
-      }>;
-    family: Record<string, {
-        shape: string;
-        levelReq: number;
-      }>;
-  };
-  export const deathNote: {
-      rawName: string;
-      name: string;
-      world: number;
-    }[];
-  export const statues: {
-      index: number;
-      name: string;
-      effect: string;
-      dk: number;
-      bonus: number;
-    }[];
-  export const monsters: Record<string, {
-      Name: string;
-      AFKtype: string;
-      MonsterFace: number;
-      MonsterOffsetX: number;
-      MonsterOffsetY: number;
-      HeightOfMonster: number;
-      MonsterMoving: number;
-      MovingFrame: number;
-      DeathFrame: number;
-      RespawnTime: number;
-      MonsterHPTotal: number;
-      Type: string;
-      SpecialType: string;
-      ExpGiven: number;
-      ExpType: number;
-      Defence: number;
-      MoveSPEED: number;
-      Damages: number[];
-      mapIndex: null | number;
-      sprite?: string;
-      spriteAcross?: number;
-      spriteDown?: number;
-      spriteNumFrames?: number;
-      worldIndex?: number;
-    }>;
   export const items: Record<string, {
       displayName: string;
       sellPrice: number;
@@ -2360,1069 +2865,275 @@ declare module '@website-data' {
       UQ2val?: number;
       Upgrade_Slots_Left?: number;
     }>;
-  export const stamps: {
-    combat: Record<string, {
-        displayName: string;
-        rawName: string;
-        func: string;
-        x1: number;
-        x2: number;
-        reqItemMultiplicationLevel: number;
-        baseMatCost: number;
-        baseCoinCost: number;
-        powCoinBase: number;
-        powMatBase: number;
-        skillIndex: number;
-        effect: string;
-        placeholderEffect: string;
-        stat: string;
-        itemReq: Record<string, any>[];
+  export const itemsArray: {
+      displayName: string;
+      sellPrice: number;
+      typeGen: string;
+      ID: number;
+      Type: string;
+      lvReqToCraft: number;
+      desc_line1?: string;
+      desc_line2?: string;
+      desc_line3?: string;
+      desc_line4?: string;
+      desc_line5?: string;
+      desc_line6?: string;
+      desc_line7?: string;
+      desc_line8?: string;
+      Effect?: string;
+      Amount?: number;
+      Trigger?: number;
+      Cooldown?: number;
+      rawName: string;
+      itemType: string;
+      lvReqToEquip?: number;
+      Class?: string;
+      Speed?: number;
+      Reach?: number;
+      Weapon_Power?: number;
+      STR?: number;
+      AGI?: number;
+      WIS?: number;
+      LUK?: number;
+      Defence?: number;
+      UQ1txt?: number;
+      UQ1val?: number;
+      UQ2txt?: number;
+      UQ2val?: number;
+      Upgrade_Slots_Left?: number;
+    }[];
+  export const jadeUpgrades: {
+      name: string;
+      x1: number;
+      x2: number;
+      x3: number;
+      filler1: string;
+      filler2: string;
+      description: string;
+    }[];
+  export const jewels: {
+      index: number;
+      name: string;
+      bonus: number;
+      x: number;
+      y: number;
+      range: number;
+      requirements: {
+          rawName: string;
+          name: string;
+          amount: number;
+        }[] | {
+          rawName: string;
+          name: string | null;
+          amount: number;
+        }[];
+      effect: string;
+      description: string;
+    }[];
+  export const killRoySkullShop: {
+      description: string;
+      x1: number;
+      x2: number;
+      x3: number;
+      bonusName: string;
+    }[];
+  export const labBonuses: {
+      index: number;
+      x: number;
+      y: number;
+      range: number;
+      bonusOn: number;
+      bonusOff: number;
+      name: string;
+      description: string;
+    }[];
+  export const lampWishes: {
+      name: string;
+      x1: number;
+      x2: number;
+      x3: number;
+      description: string;
+    }[];
+  export const legendTalents: {
+      name: string;
+      x1: number;
+      x2: number;
+      bonus: string;
+      description: string;
+    }[];
+  export const liquidsShop: {
+      name: string;
+      x1: number;
+      x2: number;
+      index: number;
+    }[];
+  export const mapDetails: ((number[])[])[];
+  export const mapEnemies: Record<string, number>;
+  export const mapEnemiesArray: string[];
+  export const mapMonsterCounts: Record<string, number>;
+  export const mapNames: Record<string, string>;
+  export const mapPortalDestinations: Record<string, any>;
+  export const mapPortals: Record<string, any>;
+  export const marketInfo: {
+      name: string;
+      bonus: string;
+      cropId: number;
+      cropIdIncrement: number;
+      cost: number;
+      costExponent: number;
+      cropReq: number;
+      maxLvl: number;
+      bonusPerLvl: number;
+    }[];
+  export const merits: ({
+        descLine1: string;
+        descLine2: string;
+        num1: number;
+        num2: number;
+        num3: number;
+        totalLevels: number;
+        meritCost: number;
+        text1: string;
+        text2: string;
+        extraStr: string;
+        icon: string;
+        bonusPerLevel: number;
+      }[])[];
+  export const mineheadUpgrades: {
+      name: string;
+      baseCost: number;
+      exponent: number;
+      levelReq: number;
+      x4: number;
+      description: string;
+    }[];
+  export const monsterCoinQuantity: Record<string, number>;
+  export const monsterDrops: Record<string, any>;
+  export const monsters: Record<string, {
+      Name: string;
+      AFKtype: string;
+      MonsterFace: number;
+      MonsterOffsetX: number;
+      MonsterOffsetY: number;
+      HeightOfMonster: number;
+      MonsterMoving: number;
+      MovingFrame: number;
+      DeathFrame: number;
+      RespawnTime: number;
+      MonsterHPTotal: number;
+      Type: string;
+      SpecialType: string;
+      ExpGiven: number;
+      ExpType: number;
+      Defence: number;
+      MoveSPEED: number;
+      Damages: number[];
+      mapIndex: null | number;
+      sprite?: string;
+      spriteAcross?: number;
+      spriteDown?: number;
+      spriteNumFrames?: number;
+      worldIndex?: number;
+    }>;
+  export const ninjaEquipment: Record<string, {
+      rawName: string;
+      type: number;
+      subType: number;
+      name: string;
+      description: string;
+      filler?: string;
+      x3?: number;
+      x5?: number;
+    }>;
+  export const ninjaExtraInfo: (string[])[];
+  export const ninjaUpgrades: {
+      x0: number;
+      x1: number;
+      x2: number;
+      x3: number;
+      name: string;
+      modifier: number;
+      description: string;
+      x7: number;
+      x8: number;
+      x9: number;
+      x10: number;
+      x11: number;
+    }[];
+  export const obols: {
+    character: Record<string, {
+        shape: string;
+        levelReq: number;
       }>;
-    skills: Record<string, {
-        displayName: string;
-        rawName: string;
-        func: string;
-        x1: number;
-        x2: number;
-        reqItemMultiplicationLevel: number;
-        baseMatCost: number;
-        baseCoinCost: number;
-        powCoinBase: number;
-        powMatBase: number;
-        skillIndex: number;
-        effect: string;
-        placeholderEffect: string;
-        stat: string;
-        itemReq: Record<string, any>[];
-      }>;
-    misc: Record<string, {
-        displayName: string;
-        rawName: string;
-        func: string;
-        x1: number;
-        x2: number;
-        reqItemMultiplicationLevel: number;
-        baseMatCost: number;
-        baseCoinCost: number;
-        powCoinBase: number;
-        powMatBase: number;
-        skillIndex: number;
-        effect: string;
-        placeholderEffect: string;
-        stat: string;
-        itemReq: Record<string, any>[];
-      }>;
-  };
-  export const carryBags: {
-    Mining: Record<string, {
-        displayName: string;
-        sellPrice: number;
-        typeGen: string;
-        ID: number;
-        Type: string;
-        lvReqToCraft: number;
-        lvReqToEquip: number;
-        Class: string;
-        Speed: number;
-        Reach: number;
-        Weapon_Power: number;
-        STR: number;
-        AGI: number;
-        WIS: number;
-        LUK: number;
-        Defence: number;
-        UQ1txt: number;
-        UQ1val: number;
-        UQ2txt: number;
-        UQ2val: number;
-        Upgrade_Slots_Left: number;
-        itemType: string;
-        capacity: number;
-        rawName: string;
-      }>;
-    Chopping: Record<string, {
-        displayName: string;
-        sellPrice: number;
-        typeGen: string;
-        ID: number;
-        Type: string;
-        lvReqToCraft: number;
-        lvReqToEquip: number;
-        Class: string;
-        Speed: number;
-        Reach: number;
-        Weapon_Power: number;
-        STR: number;
-        AGI: number;
-        WIS: number;
-        LUK: number;
-        Defence: number;
-        UQ1txt: number;
-        UQ1val: number;
-        UQ2txt: number;
-        UQ2val: number;
-        Upgrade_Slots_Left: number;
-        itemType: string;
-        capacity: number;
-        rawName: string;
-      }>;
-    Foods: Record<string, {
-        displayName: string;
-        sellPrice: number;
-        typeGen: string;
-        ID: number;
-        Type: string;
-        lvReqToCraft: number;
-        lvReqToEquip: number;
-        Class: string;
-        Speed: number;
-        Reach: number;
-        Weapon_Power: number;
-        STR: number;
-        AGI: number;
-        WIS: number;
-        LUK: number;
-        Defence: number;
-        UQ1txt: number;
-        UQ1val: number;
-        UQ2txt: number;
-        UQ2val: number;
-        Upgrade_Slots_Left: number;
-        itemType: string;
-        capacity: number;
-        rawName: string;
-      }>;
-    bCraft: Record<string, {
-        displayName: string;
-        sellPrice: number;
-        typeGen: string;
-        ID: number;
-        Type: string;
-        lvReqToCraft: number;
-        lvReqToEquip: number;
-        Class: string;
-        Speed: number;
-        Reach: number;
-        Weapon_Power: number;
-        STR: number;
-        AGI: number;
-        WIS: number;
-        LUK: number;
-        Defence: number;
-        UQ1txt: number;
-        UQ1val: number;
-        UQ2txt: number;
-        UQ2val: number;
-        Upgrade_Slots_Left: number;
-        itemType: string;
-        capacity: number;
-        rawName: string;
-      }>;
-    Fishing: Record<string, {
-        displayName: string;
-        sellPrice: number;
-        typeGen: string;
-        ID: number;
-        Type: string;
-        lvReqToCraft: number;
-        lvReqToEquip: number;
-        Class: string;
-        Speed: number;
-        Reach: number;
-        Weapon_Power: number;
-        STR: number;
-        AGI: number;
-        WIS: number;
-        LUK: number;
-        Defence: number;
-        UQ1txt: number;
-        UQ1val: number;
-        UQ2txt: number;
-        UQ2val: number;
-        Upgrade_Slots_Left: number;
-        itemType: string;
-        capacity: number;
-        rawName: string;
-      }>;
-    Bugs: Record<string, {
-        displayName: string;
-        sellPrice: number;
-        typeGen: string;
-        ID: number;
-        Type: string;
-        lvReqToCraft: number;
-        lvReqToEquip: number;
-        Class: string;
-        Speed: number;
-        Reach: number;
-        Weapon_Power: number;
-        STR: number;
-        AGI: number;
-        WIS: number;
-        LUK: number;
-        Defence: number;
-        UQ1txt: number;
-        UQ1val: number;
-        UQ2txt: number;
-        UQ2val: number;
-        Upgrade_Slots_Left: number;
-        itemType: string;
-        capacity: number;
-        rawName: string;
-      }>;
-    Critters: Record<string, {
-        displayName: string;
-        sellPrice: number;
-        typeGen: string;
-        ID: number;
-        Type: string;
-        lvReqToCraft: number;
-        lvReqToEquip: number;
-        Class: string;
-        Speed: number;
-        Reach: number;
-        Weapon_Power: number;
-        STR: number;
-        AGI: number;
-        WIS: number;
-        LUK: number;
-        Defence: number;
-        UQ1txt: number;
-        UQ1val: number;
-        UQ2txt: number;
-        UQ2val: number;
-        Upgrade_Slots_Left: number;
-        itemType: string;
-        capacity: number;
-        rawName: string;
-      }>;
-    Souls: Record<string, {
-        displayName: string;
-        sellPrice: number;
-        typeGen: string;
-        ID: number;
-        Type: string;
-        lvReqToCraft: number;
-        lvReqToEquip: number;
-        Class: string;
-        Speed: number;
-        Reach: number;
-        Weapon_Power: number;
-        STR: number;
-        AGI: number;
-        WIS: number;
-        LUK: number;
-        Defence: number;
-        UQ1txt: number;
-        UQ1val: number;
-        UQ2txt: number;
-        UQ2val: number;
-        Upgrade_Slots_Left: number;
-        itemType: string;
-        capacity: number;
-        rawName: string;
+    family: Record<string, {
+        shape: string;
+        levelReq: number;
       }>;
   };
-  export const invBags: {
-    InvBag1: {
-      displayName: string;
-      sellPrice: number;
-      typeGen: string;
-      ID: number;
-      Type: string;
-      lvReqToCraft: number;
-      lvReqToEquip: number;
-      Class: string;
-      Speed: number;
-      Reach: number;
-      Weapon_Power: number;
-      STR: number;
-      AGI: number;
-      WIS: number;
-      LUK: number;
-      Defence: number;
-      UQ1txt: number;
-      UQ1val: number;
-      UQ2txt: number;
-      UQ2val: number;
-      Upgrade_Slots_Left: number;
-      itemType: string;
-      capacity: number;
-    };
-    InvBag2: {
-      displayName: string;
-      sellPrice: number;
-      typeGen: string;
-      ID: number;
-      Type: string;
-      lvReqToCraft: number;
-      lvReqToEquip: number;
-      Class: string;
-      Speed: number;
-      Reach: number;
-      Weapon_Power: number;
-      STR: number;
-      AGI: number;
-      WIS: number;
-      LUK: number;
-      Defence: number;
-      UQ1txt: number;
-      UQ1val: number;
-      UQ2txt: number;
-      UQ2val: number;
-      Upgrade_Slots_Left: number;
-      itemType: string;
-      capacity: number;
-    };
-    InvBag3: {
-      displayName: string;
-      sellPrice: number;
-      typeGen: string;
-      ID: number;
-      Type: string;
-      lvReqToCraft: number;
-      lvReqToEquip: number;
-      Class: string;
-      Speed: number;
-      Reach: number;
-      Weapon_Power: number;
-      STR: number;
-      AGI: number;
-      WIS: number;
-      LUK: number;
-      Defence: number;
-      UQ1txt: number;
-      UQ1val: number;
-      UQ2txt: number;
-      UQ2val: number;
-      Upgrade_Slots_Left: number;
-      itemType: string;
-      capacity: number;
-    };
-    InvBag4: {
-      displayName: string;
-      sellPrice: number;
-      typeGen: string;
-      ID: number;
-      Type: string;
-      lvReqToCraft: number;
-      lvReqToEquip: number;
-      Class: string;
-      Speed: number;
-      Reach: number;
-      Weapon_Power: number;
-      STR: number;
-      AGI: number;
-      WIS: number;
-      LUK: number;
-      Defence: number;
-      UQ1txt: number;
-      UQ1val: number;
-      UQ2txt: number;
-      UQ2val: number;
-      Upgrade_Slots_Left: number;
-      itemType: string;
-      capacity: number;
-    };
-    InvBag5: {
-      displayName: string;
-      sellPrice: number;
-      typeGen: string;
-      ID: number;
-      Type: string;
-      lvReqToCraft: number;
-      lvReqToEquip: number;
-      Class: string;
-      Speed: number;
-      Reach: number;
-      Weapon_Power: number;
-      STR: number;
-      AGI: number;
-      WIS: number;
-      LUK: number;
-      Defence: number;
-      UQ1txt: number;
-      UQ1val: number;
-      UQ2txt: number;
-      UQ2val: number;
-      Upgrade_Slots_Left: number;
-      itemType: string;
-      capacity: number;
-    };
-    InvBag6: {
-      displayName: string;
-      sellPrice: number;
-      typeGen: string;
-      ID: number;
-      Type: string;
-      lvReqToCraft: number;
-      lvReqToEquip: number;
-      Class: string;
-      Speed: number;
-      Reach: number;
-      Weapon_Power: number;
-      STR: number;
-      AGI: number;
-      WIS: number;
-      LUK: number;
-      Defence: number;
-      UQ1txt: number;
-      UQ1val: number;
-      UQ2txt: number;
-      UQ2val: number;
-      Upgrade_Slots_Left: number;
-      itemType: string;
-      capacity: number;
-    };
-    InvBag7: {
-      displayName: string;
-      sellPrice: number;
-      typeGen: string;
-      ID: number;
-      Type: string;
-      lvReqToCraft: number;
-      lvReqToEquip: number;
-      Class: string;
-      Speed: number;
-      Reach: number;
-      Weapon_Power: number;
-      STR: number;
-      AGI: number;
-      WIS: number;
-      LUK: number;
-      Defence: number;
-      UQ1txt: number;
-      UQ1val: number;
-      UQ2txt: number;
-      UQ2val: number;
-      Upgrade_Slots_Left: number;
-      itemType: string;
-      capacity: number;
-    };
-    InvBag8: {
-      displayName: string;
-      sellPrice: number;
-      typeGen: string;
-      ID: number;
-      Type: string;
-      lvReqToCraft: number;
-      lvReqToEquip: number;
-      Class: string;
-      Speed: number;
-      Reach: number;
-      Weapon_Power: number;
-      STR: number;
-      AGI: number;
-      WIS: number;
-      LUK: number;
-      Defence: number;
-      UQ1txt: number;
-      UQ1val: number;
-      UQ2txt: number;
-      UQ2val: number;
-      Upgrade_Slots_Left: number;
-      itemType: string;
-      capacity: number;
-    };
-    InvBag9: {
-      displayName: string;
-      sellPrice: number;
-      typeGen: string;
-      ID: number;
-      Type: string;
-      lvReqToCraft: number;
-      lvReqToEquip: number;
-      Class: string;
-      Speed: number;
-      Reach: number;
-      Weapon_Power: number;
-      STR: number;
-      AGI: number;
-      WIS: number;
-      LUK: number;
-      Defence: number;
-      UQ1txt: number;
-      UQ1val: number;
-      UQ2txt: number;
-      UQ2val: number;
-      Upgrade_Slots_Left: number;
-      itemType: string;
-      capacity: number;
-    };
-    InvBag21: {
-      displayName: string;
-      sellPrice: number;
-      typeGen: string;
-      ID: number;
-      Type: string;
-      lvReqToCraft: number;
-      lvReqToEquip: number;
-      Class: string;
-      Speed: number;
-      Reach: number;
-      Weapon_Power: number;
-      STR: number;
-      AGI: number;
-      WIS: number;
-      LUK: number;
-      Defence: number;
-      UQ1txt: number;
-      UQ1val: number;
-      UQ2txt: number;
-      UQ2val: number;
-      Upgrade_Slots_Left: number;
-      itemType: string;
-      capacity: number;
-    };
-    InvBag22: {
-      displayName: string;
-      sellPrice: number;
-      typeGen: string;
-      ID: number;
-      Type: string;
-      lvReqToCraft: number;
-      lvReqToEquip: number;
-      Class: string;
-      Speed: number;
-      Reach: number;
-      Weapon_Power: number;
-      STR: number;
-      AGI: number;
-      WIS: number;
-      LUK: number;
-      Defence: number;
-      UQ1txt: number;
-      UQ1val: number;
-      UQ2txt: number;
-      UQ2val: number;
-      Upgrade_Slots_Left: number;
-      itemType: string;
-      capacity: number;
-    };
-    InvBag23: {
-      displayName: string;
-      sellPrice: number;
-      typeGen: string;
-      ID: number;
-      Type: string;
-      lvReqToCraft: number;
-      lvReqToEquip: number;
-      Class: string;
-      Speed: number;
-      Reach: number;
-      Weapon_Power: number;
-      STR: number;
-      AGI: number;
-      WIS: number;
-      LUK: number;
-      Defence: number;
-      UQ1txt: number;
-      UQ1val: number;
-      UQ2txt: number;
-      UQ2val: number;
-      Upgrade_Slots_Left: number;
-      itemType: string;
-      capacity: number;
-    };
-    InvBag24: {
-      displayName: string;
-      sellPrice: number;
-      typeGen: string;
-      ID: number;
-      Type: string;
-      lvReqToCraft: number;
-      lvReqToEquip: number;
-      Class: string;
-      Speed: number;
-      Reach: number;
-      Weapon_Power: number;
-      STR: number;
-      AGI: number;
-      WIS: number;
-      LUK: number;
-      Defence: number;
-      UQ1txt: number;
-      UQ1val: number;
-      UQ2txt: number;
-      UQ2val: number;
-      Upgrade_Slots_Left: number;
-      itemType: string;
-      capacity: number;
-    };
-    InvBag25: {
-      displayName: string;
-      sellPrice: number;
-      typeGen: string;
-      ID: number;
-      Type: string;
-      lvReqToCraft: number;
-      lvReqToEquip: number;
-      Class: string;
-      Speed: number;
-      Reach: number;
-      Weapon_Power: number;
-      STR: number;
-      AGI: number;
-      WIS: number;
-      LUK: number;
-      Defence: number;
-      UQ1txt: number;
-      UQ1val: number;
-      UQ2txt: number;
-      UQ2val: number;
-      Upgrade_Slots_Left: number;
-      itemType: string;
-      capacity: number;
-    };
-    InvBag26: {
-      displayName: string;
-      sellPrice: number;
-      typeGen: string;
-      ID: number;
-      Type: string;
-      lvReqToCraft: number;
-      lvReqToEquip: number;
-      Class: string;
-      Speed: number;
-      Reach: number;
-      Weapon_Power: number;
-      STR: number;
-      AGI: number;
-      WIS: number;
-      LUK: number;
-      Defence: number;
-      UQ1txt: number;
-      UQ1val: number;
-      UQ2txt: number;
-      UQ2val: number;
-      Upgrade_Slots_Left: number;
-      itemType: string;
-      capacity: number;
-    };
-    InvBag100: {
-      displayName: string;
-      sellPrice: number;
-      typeGen: string;
-      ID: number;
-      Type: string;
-      lvReqToCraft: number;
-      lvReqToEquip: number;
-      Class: string;
-      Speed: number;
-      Reach: number;
-      Weapon_Power: number;
-      STR: number;
-      AGI: number;
-      WIS: number;
-      LUK: number;
-      Defence: number;
-      UQ1txt: number;
-      UQ1val: number;
-      UQ2txt: number;
-      UQ2val: number;
-      Upgrade_Slots_Left: number;
-      itemType: string;
-      capacity: number;
-    };
-    InvBag101: {
-      displayName: string;
-      sellPrice: number;
-      typeGen: string;
-      ID: number;
-      Type: string;
-      lvReqToCraft: number;
-      lvReqToEquip: number;
-      Class: string;
-      Speed: number;
-      Reach: number;
-      Weapon_Power: number;
-      STR: number;
-      AGI: number;
-      WIS: number;
-      LUK: number;
-      Defence: number;
-      UQ1txt: number;
-      UQ1val: number;
-      UQ2txt: number;
-      UQ2val: number;
-      Upgrade_Slots_Left: number;
-      itemType: string;
-      capacity: number;
-    };
-    InvBag102: {
-      displayName: string;
-      sellPrice: number;
-      typeGen: string;
-      ID: number;
-      Type: string;
-      lvReqToCraft: number;
-      lvReqToEquip: number;
-      Class: string;
-      Speed: number;
-      Reach: number;
-      Weapon_Power: number;
-      STR: number;
-      AGI: number;
-      WIS: number;
-      LUK: number;
-      Defence: number;
-      UQ1txt: number;
-      UQ1val: number;
-      UQ2txt: number;
-      UQ2val: number;
-      Upgrade_Slots_Left: number;
-      itemType: string;
-      capacity: number;
-    };
-    InvBag103: {
-      displayName: string;
-      sellPrice: number;
-      typeGen: string;
-      ID: number;
-      Type: string;
-      lvReqToCraft: number;
-      lvReqToEquip: number;
-      Class: string;
-      Speed: number;
-      Reach: number;
-      Weapon_Power: number;
-      STR: number;
-      AGI: number;
-      WIS: number;
-      LUK: number;
-      Defence: number;
-      UQ1txt: number;
-      UQ1val: number;
-      UQ2txt: number;
-      UQ2val: number;
-      Upgrade_Slots_Left: number;
-      itemType: string;
-      capacity: number;
-    };
-    InvBag104: {
-      displayName: string;
-      sellPrice: number;
-      typeGen: string;
-      ID: number;
-      Type: string;
-      lvReqToCraft: number;
-      lvReqToEquip: number;
-      Class: string;
-      Speed: number;
-      Reach: number;
-      Weapon_Power: number;
-      STR: number;
-      AGI: number;
-      WIS: number;
-      LUK: number;
-      Defence: number;
-      UQ1txt: number;
-      UQ1val: number;
-      UQ2txt: number;
-      UQ2val: number;
-      Upgrade_Slots_Left: number;
-      itemType: string;
-      capacity: number;
-    };
-    InvBag105: {
-      displayName: string;
-      sellPrice: number;
-      typeGen: string;
-      ID: number;
-      Type: string;
-      lvReqToCraft: number;
-      lvReqToEquip: number;
-      Class: string;
-      Speed: number;
-      Reach: number;
-      Weapon_Power: number;
-      STR: number;
-      AGI: number;
-      WIS: number;
-      LUK: number;
-      Defence: number;
-      UQ1txt: number;
-      UQ1val: number;
-      UQ2txt: number;
-      UQ2val: number;
-      Upgrade_Slots_Left: number;
-      itemType: string;
-      capacity: number;
-    };
-    InvBag106: {
-      displayName: string;
-      sellPrice: number;
-      typeGen: string;
-      ID: number;
-      Type: string;
-      lvReqToCraft: number;
-      lvReqToEquip: number;
-      Class: string;
-      Speed: number;
-      Reach: number;
-      Weapon_Power: number;
-      STR: number;
-      AGI: number;
-      WIS: number;
-      LUK: number;
-      Defence: number;
-      UQ1txt: number;
-      UQ1val: number;
-      UQ2txt: number;
-      UQ2val: number;
-      Upgrade_Slots_Left: number;
-      itemType: string;
-      capacity: number;
-    };
-    InvBag107: {
-      displayName: string;
-      sellPrice: number;
-      typeGen: string;
-      ID: number;
-      Type: string;
-      lvReqToCraft: number;
-      lvReqToEquip: number;
-      Class: string;
-      Speed: number;
-      Reach: number;
-      Weapon_Power: number;
-      STR: number;
-      AGI: number;
-      WIS: number;
-      LUK: number;
-      Defence: number;
-      UQ1txt: number;
-      UQ1val: number;
-      UQ2txt: number;
-      UQ2val: number;
-      Upgrade_Slots_Left: number;
-      itemType: string;
-      capacity: number;
-    };
-    InvBag108: {
-      displayName: string;
-      sellPrice: number;
-      typeGen: string;
-      ID: number;
-      Type: string;
-      lvReqToCraft: number;
-      lvReqToEquip: number;
-      Class: string;
-      Speed: number;
-      Reach: number;
-      Weapon_Power: number;
-      STR: number;
-      AGI: number;
-      WIS: number;
-      LUK: number;
-      Defence: number;
-      UQ1txt: number;
-      UQ1val: number;
-      UQ2txt: number;
-      UQ2val: number;
-      Upgrade_Slots_Left: number;
-      itemType: string;
-      capacity: number;
-    };
-    InvBag109: {
-      displayName: string;
-      sellPrice: number;
-      typeGen: string;
-      ID: number;
-      Type: string;
-      lvReqToCraft: number;
-      lvReqToEquip: number;
-      Class: string;
-      Speed: number;
-      Reach: number;
-      Weapon_Power: number;
-      STR: number;
-      AGI: number;
-      WIS: number;
-      LUK: number;
-      Defence: number;
-      UQ1txt: number;
-      UQ1val: number;
-      UQ2txt: number;
-      UQ2val: number;
-      Upgrade_Slots_Left: number;
-      itemType: string;
-      capacity: number;
-    };
-    InvBag110: {
-      displayName: string;
-      sellPrice: number;
-      typeGen: string;
-      ID: number;
-      Type: string;
-      lvReqToCraft: number;
-      lvReqToEquip: number;
-      Class: string;
-      Speed: number;
-      Reach: number;
-      Weapon_Power: number;
-      STR: number;
-      AGI: number;
-      WIS: number;
-      LUK: number;
-      Defence: number;
-      UQ1txt: number;
-      UQ1val: number;
-      UQ2txt: number;
-      UQ2val: number;
-      Upgrade_Slots_Left: number;
-      itemType: string;
-      capacity: number;
-    };
-    InvBag111: {
-      displayName: string;
-      sellPrice: number;
-      typeGen: string;
-      ID: number;
-      Type: string;
-      lvReqToCraft: number;
-      lvReqToEquip: number;
-      Class: string;
-      Speed: number;
-      Reach: number;
-      Weapon_Power: number;
-      STR: number;
-      AGI: number;
-      WIS: number;
-      LUK: number;
-      Defence: number;
-      UQ1txt: number;
-      UQ1val: number;
-      UQ2txt: number;
-      UQ2val: number;
-      Upgrade_Slots_Left: number;
-      itemType: string;
-      capacity: number;
-    };
-    InvBag112: {
-      displayName: string;
-      sellPrice: number;
-      typeGen: string;
-      ID: number;
-      Type: string;
-      lvReqToCraft: number;
-      lvReqToEquip: number;
-      Class: string;
-      Speed: number;
-      Reach: number;
-      Weapon_Power: number;
-      STR: number;
-      AGI: number;
-      WIS: number;
-      LUK: number;
-      Defence: number;
-      UQ1txt: number;
-      UQ1val: number;
-      UQ2txt: number;
-      UQ2val: number;
-      Upgrade_Slots_Left: number;
-      itemType: string;
-      capacity: number;
-    };
-    InvBag113: {
-      displayName: string;
-      sellPrice: number;
-      typeGen: string;
-      ID: number;
-      Type: string;
-      lvReqToCraft: number;
-      lvReqToEquip: number;
-      Class: string;
-      Speed: number;
-      Reach: number;
-      Weapon_Power: number;
-      STR: number;
-      AGI: number;
-      WIS: number;
-      LUK: number;
-      Defence: number;
-      UQ1txt: number;
-      UQ1val: number;
-      UQ2txt: number;
-      UQ2val: number;
-      Upgrade_Slots_Left: number;
-      itemType: string;
-      capacity: number;
-    };
-    InvBag114: {
-      displayName: string;
-      sellPrice: number;
-      typeGen: string;
-      ID: number;
-      Type: string;
-      lvReqToCraft: number;
-      lvReqToEquip: number;
-      Class: string;
-      Speed: number;
-      Reach: number;
-      Weapon_Power: number;
-      STR: number;
-      AGI: number;
-      WIS: number;
-      LUK: number;
-      Defence: number;
-      UQ1txt: number;
-      UQ1val: number;
-      UQ2txt: number;
-      UQ2val: number;
-      Upgrade_Slots_Left: number;
-      itemType: string;
-      capacity: number;
-    };
-    InvBag115: {
-      displayName: string;
-      sellPrice: number;
-      typeGen: string;
-      ID: number;
-      Type: string;
-      lvReqToCraft: number;
-      lvReqToEquip: number;
-      Class: string;
-      Speed: number;
-      Reach: number;
-      Weapon_Power: number;
-      STR: number;
-      AGI: number;
-      WIS: number;
-      LUK: number;
-      Defence: number;
-      UQ1txt: number;
-      UQ1val: number;
-      UQ2txt: number;
-      UQ2val: number;
-      Upgrade_Slots_Left: number;
-      itemType: string;
-      capacity: number;
-    };
-  };
-  export const bribes: {
+  export const owlData: {
       name: string;
       desc: string;
-      npc: string;
-      price: number;
-      effectName: string;
-      value: number;
+      bonus: string;
+      x1: number;
+      x2: number;
+      x3: number;
     }[];
-  export const gemShop: {
+  export const p2w: (((number | string)[])[])[];
+  export const petGenes: {
       name: string;
-      sections: any;
+      abilityType: number;
+      combatAbility: string;
+      bonusAbility: string;
+      index: number;
     }[];
-  export const bundles: Record<string, {
-      message: string;
-      price: number | null;
-    }>;
-  export const shops: Record<string, {
-      name: string | null;
-      items: {
+  export const petStats: ({
+        monsterName: string;
+        monsterRawName: string;
+        passiveIndex: string;
+        passive: string;
+        icon: string;
+        baseValue: number;
+        gene: {
           name: string;
-          rawName: string;
-        }[];
-    }>;
+          abilityType: number;
+          combatAbility: string;
+          bonusAbility: string;
+          index: number;
+        };
+      }[])[];
+  export const petUpgrades: {
+      name: string;
+      filler: string;
+      material: string;
+      foodIndex: number;
+      baseMatCost: number;
+      costMatScale: number;
+      baseCost: number;
+      costScale: number;
+      maxLevel: number;
+      description: string;
+      boostEffect: string;
+      bonusQuantity: number;
+      upgradeIndex: number;
+    }[];
+  export const poppyBonuses: {
+      name: string;
+      desc: string;
+      bonus: string;
+      x1: number;
+      x2: number;
+      x3: number;
+      x6: number;
+    }[];
+  export const poppyTarBonuses: {
+      name: string;
+      desc: string;
+      bonus: string;
+      _: string;
+      x1: number;
+      x2: number;
+      x6: number;
+    }[];
   export const postOffice: {
       name: string;
       upgradeLevels: number[];
@@ -3435,160 +3146,28 @@ declare module '@website-data' {
         }[];
       maxLevel: number;
     }[];
-  export const refinery: {
-    Refinery1: {
-      cost: {
-          rawName: string;
-          name: string;
-          quantity: number;
-        }[];
-      saltName: string;
-    };
-    Refinery2: {
-      cost: {
-          rawName: string;
-          name: string;
-          quantity: number;
-        }[];
-      saltName: string;
-    };
-    Refinery3: {
-      cost: {
-          rawName: string;
-          name: string;
-          quantity: number;
-        }[];
-      saltName: string;
-    };
-    Refinery4: {
-      cost: {
-          rawName: string;
-          name: string;
-          quantity: number;
-        }[];
-      saltName: string;
-    };
-    Refinery5: {
-      cost: {
-          rawName: string;
-          name: string;
-          quantity: number;
-        }[];
-      saltName: string;
-    };
-    Refinery6: {
-      cost: {
-          rawName: string;
-          name: string;
-          quantity: number;
-        }[];
-      saltName: string;
-    };
-    Refinery7: {
-      cost: {
-          rawName: string;
-          name: string;
-          quantity: number;
-        }[];
-      saltName: string;
-    };
-    Refinery8: {
-      cost: {
-          rawName: string;
-          name: string;
-          quantity: number;
-        }[];
-      saltName: string;
-    };
-    Refinery9: {
-      cost: {
-          rawName: string;
-          name: string;
-          quantity: number;
-        }[];
-      saltName: string;
-    };
-  };
-  export const saltLicks: {
+  export const prayers: {
       name: string;
-      rawName: string;
-      desc: string;
-      baseCost: number;
-      increment: number;
-      baseBonus: number;
-      maxLevel: number;
-    }[];
-  export const vials: Record<string, {
-      name: string;
-      mainItem: string;
-      desc: string;
-      func: string;
-      stat: string;
+      effect: string;
+      curse: string;
+      id: number;
       x1: number;
       x2: number;
-      itemReq: {
-          rawName: string;
-          name: string | null;
-        }[];
-    }>;
-  export const cauldrons: {
-    power: {
-        bubbleIndex: string;
-        bubbleName: string;
-        x1: number;
-        x2: number;
-        func: string;
-        desc: string;
-        stat: string;
-        cauldron: string;
-        itemReq: Record<string, any>[];
-      }[];
-    quicc: {
-        bubbleIndex: string;
-        bubbleName: string;
-        x1: number;
-        x2: number;
-        func: string;
-        desc: string;
-        stat: string;
-        cauldron: string;
-        itemReq: Record<string, any>[];
-      }[];
-    'high-iq': {
-        bubbleIndex: string;
-        bubbleName: string;
-        x1: number;
-        x2: number;
-        func: string;
-        desc: string;
-        stat: string;
-        cauldron: string;
-        itemReq: Record<string, any>[];
-      }[];
-    kazam: {
-        bubbleIndex: string;
-        bubbleName: string;
-        x1: number;
-        x2: number;
-        func: string;
-        desc: string;
-        stat: string;
-        cauldron: string;
-        itemReq: Record<string, any>[];
-      }[];
-  };
-  export const p2w: (((number | string)[])[])[];
-  export const achievements: {
-      name: string;
+      prayerIndex: number;
+      soul: string;
+      maxLevel: number;
+      unlockZone: string;
+      costMulti: number;
+      unlockWave: number;
+    }[];
+  export const pristineCharms: {
       rawName: string;
-      quantity: number;
-      desc: string;
-      rewards: string[];
-      misc: string;
-      visualIndex: number;
-      steamExclusive: boolean;
-      secretAchievement: boolean;
-      steamIndex?: number;
+      x1: number;
+      x2: number;
+      name: string;
+      x3: number;
+      description: string;
+      bonus: string;
     }[];
   export const quests: Record<string, {
       '1': {
@@ -3805,361 +3384,249 @@ declare module '@website-data' {
       spriteDown: number;
       spriteNumFrames: number;
     }>;
+  export const randomList: (string[])[];
+  export const randomList2: (string[])[];
   export const rawMapNames: string[];
-  export const mapNames: Record<string, string>;
-  export const mapPortals: Record<string, any>;
-  export const mapEnemies: Record<string, number>;
-  export const towers: {
-    '3D_Printer': {
-      index: number;
-      desc: string;
-      itemReq: {
+  export const refinery: {
+    Refinery1: {
+      cost: {
           rawName: string;
           name: string;
-          amount: number;
+          quantity: number;
         }[];
-      maxLevel: number;
-      bonusInc: number;
-      costInc: number[];
+      saltName: string;
     };
-    Talent_Book_Library: {
-      index: number;
-      desc: string;
-      itemReq: {
+    Refinery2: {
+      cost: {
           rawName: string;
           name: string;
-          amount: number;
+          quantity: number;
         }[];
-      maxLevel: number;
-      bonusInc: number;
-      costInc: number[];
+      saltName: string;
     };
-    Death_Note: {
-      index: number;
-      desc: string;
-      itemReq: {
+    Refinery3: {
+      cost: {
           rawName: string;
           name: string;
-          amount: number;
+          quantity: number;
         }[];
-      maxLevel: number;
-      bonusInc: number;
-      costInc: number[];
+      saltName: string;
     };
-    Salt_Lick: {
-      index: number;
-      desc: string;
-      itemReq: {
+    Refinery4: {
+      cost: {
           rawName: string;
           name: string;
-          amount: number;
+          quantity: number;
         }[];
-      maxLevel: number;
-      bonusInc: number;
-      costInc: number[];
+      saltName: string;
     };
-    Chest_Space: {
-      index: number;
-      desc: string;
-      itemReq: {
+    Refinery5: {
+      cost: {
           rawName: string;
           name: string;
-          amount: number;
+          quantity: number;
         }[];
-      maxLevel: number;
-      bonusInc: number;
-      costInc: number[];
+      saltName: string;
     };
-    Cost_Cruncher: {
-      index: number;
-      desc: string;
-      itemReq: {
+    Refinery6: {
+      cost: {
           rawName: string;
           name: string;
-          amount: number;
+          quantity: number;
         }[];
-      maxLevel: number;
-      bonusInc: number;
-      costInc: number[];
+      saltName: string;
     };
-    Trapper_Drone: {
-      index: number;
-      desc: string;
-      itemReq: {
+    Refinery7: {
+      cost: {
           rawName: string;
           name: string;
-          amount: number;
+          quantity: number;
         }[];
-      maxLevel: number;
-      bonusInc: number;
-      costInc: number[];
+      saltName: string;
     };
-    Automation_Arm: {
-      index: number;
-      desc: string;
-      itemReq: {
+    Refinery8: {
+      cost: {
           rawName: string;
           name: string;
-          amount: number;
+          quantity: number;
         }[];
-      maxLevel: number;
-      bonusInc: number;
-      costInc: number[];
+      saltName: string;
     };
-    Atom_Collider: {
-      index: number;
-      desc: string;
-      itemReq: {
+    Refinery9: {
+      cost: {
           rawName: string;
           name: string;
-          amount: number;
+          quantity: number;
         }[];
-      maxLevel: number;
-      bonusInc: number;
-      costInc: number[];
-    };
-    Pulse_Mage: {
-      index: number;
-      desc: string;
-      itemReq: {
-          rawName: string;
-          name: string;
-          amount: number;
-        }[];
-      maxLevel: number;
-      bonusInc: number;
-      costInc: number[];
-    };
-    Fireball_Lobber: {
-      index: number;
-      desc: string;
-      itemReq: {
-          rawName: string;
-          name: string;
-          amount: number;
-        }[];
-      maxLevel: number;
-      bonusInc: number;
-      costInc: number[];
-    };
-    Boulder_Roller: {
-      index: number;
-      desc: string;
-      itemReq: {
-          rawName: string;
-          name: string;
-          amount: number;
-        }[];
-      maxLevel: number;
-      bonusInc: number;
-      costInc: number[];
-    };
-    Frozone_Malone: {
-      index: number;
-      desc: string;
-      itemReq: {
-          rawName: string;
-          name: string;
-          amount: number;
-        }[];
-      maxLevel: number;
-      bonusInc: number;
-      costInc: number[];
-    };
-    Stormcaller: {
-      index: number;
-      desc: string;
-      itemReq: {
-          rawName: string;
-          name: string;
-          amount: number;
-        }[];
-      maxLevel: number;
-      bonusInc: number;
-      costInc: number[];
-    };
-    Party_Starter: {
-      index: number;
-      desc: string;
-      itemReq: {
-          rawName: string;
-          name: string;
-          amount: number;
-        }[];
-      maxLevel: number;
-      bonusInc: number;
-      costInc: number[];
-    };
-    Kraken_Cosplayer: {
-      index: number;
-      desc: string;
-      itemReq: {
-          rawName: string;
-          name: string;
-          amount: number;
-        }[];
-      maxLevel: number;
-      bonusInc: number;
-      costInc: number[];
-    };
-    Poisonic_Elder: {
-      index: number;
-      desc: string;
-      itemReq: {
-          rawName: string;
-          name: string;
-          amount: number;
-        }[];
-      maxLevel: number;
-      bonusInc: number;
-      costInc: number[];
-    };
-    Voidinator: {
-      index: number;
-      desc: string;
-      itemReq: {
-          rawName: string;
-          name: string;
-          amount: number;
-        }[];
-      maxLevel: number;
-      bonusInc: number;
-      costInc: number[];
-    };
-    Woodular_Shrine: {
-      index: number;
-      desc: string;
-      itemReq: {
-          rawName: string;
-          name: string;
-          amount: number;
-        }[];
-      maxLevel: number;
-      bonusInc: number;
-      costInc: number[];
-    };
-    Isaccian_Shrine: {
-      index: number;
-      desc: string;
-      itemReq: {
-          rawName: string;
-          name: string;
-          amount: number;
-        }[];
-      maxLevel: number;
-      bonusInc: number;
-      costInc: number[];
-    };
-    Crystal_Shrine: {
-      index: number;
-      desc: string;
-      itemReq: {
-          rawName: string;
-          name: string;
-          amount: number;
-        }[];
-      maxLevel: number;
-      bonusInc: number;
-      costInc: number[];
-    };
-    Pantheon_Shrine: {
-      index: number;
-      desc: string;
-      itemReq: {
-          rawName: string;
-          name: string;
-          amount: number;
-        }[];
-      maxLevel: number;
-      bonusInc: number;
-      costInc: number[];
-    };
-    Clover_Shrine: {
-      index: number;
-      desc: string;
-      itemReq: {
-          rawName: string;
-          name: string;
-          amount: number;
-        }[];
-      maxLevel: number;
-      bonusInc: number;
-      costInc: number[];
-    };
-    Summereading_Shrine: {
-      index: number;
-      desc: string;
-      itemReq: {
-          rawName: string;
-          name: string;
-          amount: number;
-        }[];
-      maxLevel: number;
-      bonusInc: number;
-      costInc: number[];
-    };
-    Crescent_Shrine: {
-      index: number;
-      desc: string;
-      itemReq: {
-          rawName: string;
-          name: string;
-          amount: number;
-        }[];
-      maxLevel: number;
-      bonusInc: number;
-      costInc: number[];
-    };
-    Undead_Shrine: {
-      index: number;
-      desc: string;
-      itemReq: {
-          rawName: string;
-          name: string;
-          amount: number;
-        }[];
-      maxLevel: number;
-      bonusInc: number;
-      costInc: number[];
-    };
-    Primordial_Shrine: {
-      index: number;
-      desc: string;
-      itemReq: {
-          rawName: string;
-          name: string;
-          amount: number;
-        }[];
-      maxLevel: number;
-      bonusInc: number;
-      costInc: number[];
+      saltName: string;
     };
   };
+  export const research: (string[])[];
+  export const researchGridSquares: {
+      name: string;
+      maxLv: number;
+      baseBonus: number;
+      x4: number;
+      x5: number;
+      description: string;
+    }[];
+  export const researchOccurrences: {
+      name: string;
+      researchLvReq: number;
+      mapId: number;
+      x: number;
+      y: number;
+      index: number;
+      threshold: number;
+      description: string;
+    }[];
+  export const researchShapes: {
+      vertices: string;
+      center: string;
+    }[];
+  export const riftInfo: {
+      monsterName: string;
+      task: string;
+      icon: string;
+      riftBonus?: string;
+      riftBonusIcon?: string;
+      riftDescription?: string;
+    }[];
+  export const saltLicks: {
+      name: string;
+      rawName: string;
+      desc: string;
+      baseCost: number;
+      increment: number;
+      baseBonus: number;
+      maxLevel: number;
+    }[];
+  export const seedInfo: {
+      name: string;
+      seedId: number;
+      cropIdMin: number;
+      cropIdMax: number;
+      lvlReq: number;
+      nextCropChance: number;
+      nextCropDecay: number;
+    }[];
+  export const shops: Record<string, {
+      name: string | null;
+      items: {
+          name: string;
+          rawName: string;
+        }[];
+    }>;
   export const shrines: Record<string, {
       desc: string;
       shrineName: string;
       baseBonus: number;
       bonusPerLevel: number;
     }>;
-  export const constellations: {
-      rawIndex: number;
-      mapIndex: number;
-      requiredPlayers: number;
-      points: number;
+  export const sigils: {
       name: string;
-      requirement: string;
+      unlockCost: number;
+      boostCost: number;
+      jadeCost: number;
+      unlockBonus: number;
+      boostBonus: number;
+      jadeBonus: number;
+      etherealCost: number;
+      etherealBonus: number;
+      eclecticCost: number;
+      eclecticBonus: number;
+      filler: string;
+      effect: string;
     }[];
-  export const starSigns: {
-      starName: string;
-      cost: number;
-      bonuses: {
-          bonus: number;
-          effect: string;
-          rawName: string;
-        }[] | null;
-      description: null | string;
-      tree: string;
+  export const slab: string[];
+  export const spelunkingChapters: ({
+        name: string;
+        x1: number;
+        x2: number;
+        func: string;
+        x4: number;
+        x5: number;
+        x6: number;
+        x7: number;
+      }[])[];
+  export const spelunkingRocks: ({
+        name: string;
+        x1: number;
+        x2: number;
+        x3: number;
+        x4: number;
+        x5: number;
+        x6: number;
+        x7: number;
+      }[])[];
+  export const spelunkingUpgrades: {
+      name: string;
+      description: string;
+      x1: number;
+      x2: number;
+      x3: number;
+      x4: number;
+      x5: number;
+      x6: number;
+      x7: number;
+      x8: number;
+      x9: number;
+      x10: string;
+      x11: string;
     }[];
+  export const stamps: {
+    combat: Record<string, {
+        displayName: string;
+        rawName: string;
+        func: string;
+        x1: number;
+        x2: number;
+        reqItemMultiplicationLevel: number;
+        baseMatCost: number;
+        baseCoinCost: number;
+        powCoinBase: number;
+        powMatBase: number;
+        skillIndex: number;
+        effect: string;
+        placeholderEffect: string;
+        stat: string;
+        itemReq: Record<string, any>[];
+      }>;
+    skills: Record<string, {
+        displayName: string;
+        rawName: string;
+        func: string;
+        x1: number;
+        x2: number;
+        reqItemMultiplicationLevel: number;
+        baseMatCost: number;
+        baseCoinCost: number;
+        powCoinBase: number;
+        powMatBase: number;
+        skillIndex: number;
+        effect: string;
+        placeholderEffect: string;
+        stat: string;
+        itemReq: Record<string, any>[];
+      }>;
+    misc: Record<string, {
+        displayName: string;
+        rawName: string;
+        func: string;
+        x1: number;
+        x2: number;
+        reqItemMultiplicationLevel: number;
+        baseMatCost: number;
+        baseCoinCost: number;
+        powCoinBase: number;
+        powMatBase: number;
+        skillIndex: number;
+        effect: string;
+        placeholderEffect: string;
+        stat: string;
+        itemReq: Record<string, any>[];
+      }>;
+  };
   export const starSignByIndexMap: Record<string, {
       starName: string;
       cost: number;
@@ -4171,7 +3638,82 @@ declare module '@website-data' {
       description: null | string;
       tree: string;
     }>;
-  export const classes: string[];
+  export const starSigns: {
+      starName: string;
+      cost: number;
+      bonuses: {
+          bonus: number;
+          effect: string;
+          rawName: string;
+        }[] | null;
+      description: null | string;
+      tree: string;
+    }[];
+  export const stats: Record<string, string>;
+  export const statues: {
+      index: number;
+      name: string;
+      effect: string;
+      dk: number;
+      bonus: number;
+    }[];
+  export const summoningBonuses: {
+      bonusId: number;
+      bonus: string;
+    }[];
+  export const summoningEndless: {
+    bonusIds: string[];
+    bonusQuantities: string[];
+    difficulties: string[];
+    difficultiesText: string[];
+  };
+  export const summoningEnemies: {
+      enemyId: string;
+      xOff: number;
+      yOff: number;
+      width: number;
+      territoryName: string;
+      bonusId: number;
+      bonus: {
+        bonusId: number;
+        bonus: string;
+      };
+      bonusQty: number;
+      difficulty: number;
+    }[];
+  export const summoningUnits: {
+      height: number;
+      speed: number;
+      colRadius: number;
+      qtyText: number;
+      minQty: number;
+      maxQty: number;
+      baseCost: number;
+      baseHp: number;
+      baseDamage: number;
+    }[];
+  export const summoningUpgrades: {
+      screenX: number;
+      screenY: number;
+      colour: number;
+      name: string;
+      cost: number;
+      costExponent: number;
+      bonusQty: number;
+      summonLvlReq: number;
+      maxLvl: number;
+      idReq: number;
+      filler: string;
+      bonus: string;
+    }[];
+  export const superbitsUpgrades: {
+      description: string;
+      index: number;
+      x1: number;
+      x2: number;
+      name: string;
+    }[];
+  export const sushiUpgrades: (string[])[];
   export const talents: {
     Beginner: {
       HEALTH_BOOSTER: {
@@ -10118,27 +9660,497 @@ declare module '@website-data' {
       };
     };
   };
-  export const arcadeShop: {
-      effect: string;
-      x1: number;
-      x2: number;
-      func: string;
-      bonusName: string;
+  export const tasks: ({
+        name: string;
+        description: string;
+        filler1: string;
+        x: string;
+        filler2: string;
+        breakpoints: string[];
+      }[])[];
+  export const taskUnlocks: (({
+          displayName: string;
+          sellPrice: number;
+          typeGen: string;
+          ID: number;
+          Type: string;
+          lvReqToCraft: number;
+          lvReqToEquip: number;
+          Class: string;
+          Speed: number;
+          Reach: number;
+          Weapon_Power: number;
+          STR: number;
+          AGI: number;
+          WIS: number;
+          LUK: number;
+          Defence: number;
+          UQ1txt: number;
+          UQ1val: number;
+          UQ2txt: number;
+          UQ2val: number;
+          Upgrade_Slots_Left: number;
+          itemType: string;
+          rawName: string;
+          amount: string;
+        }[])[])[];
+  export const territory: {
+      territoryName: string;
+      background: string;
+      powerReq: number;
+      fightPower: number;
+      enemyAttack: number;
+      battleName: string;
+      f1: string;
+      f2: string;
+      f3: string;
+      enemies: {
+          name: string;
+          health: number | null;
+          color: number | null;
+          size: number | null;
+        }[] | {
+          name: string;
+          health: number;
+          color: number;
+          size: number;
+        }[];
     }[];
-  export const prayers: {
+  export const tesseract: {
       name: string;
-      effect: string;
-      curse: string;
-      id: number;
       x1: number;
       x2: number;
-      prayerIndex: number;
-      soul: string;
-      maxLevel: number;
-      unlockZone: string;
-      costMulti: number;
-      unlockWave: number;
+      x3: number;
+      x4: number;
+      x5: number;
+      x6: number;
+      x7: number;
+      x8: number;
+      description: string;
     }[];
-  export const randomList: (string[])[];
-  export const randomList2: (string[])[];
+  export const tomeData: {
+      name: string;
+      info: string;
+      x1: number;
+      x2: number;
+      x3: number;
+      x4: number;
+    }[];
+  export const totems: {
+      monsterRawName: string;
+      monsterName: string;
+      minEfficiency: number;
+      skillReq: number;
+      chargeReq: number;
+    }[];
+  export const tournyStuff: {
+    divisionNames: string[];
+    divisionScales: number[];
+    divisionPointReqs: number[];
+  };
+  export const towers: {
+    '3D_Printer': {
+      index: number;
+      desc: string;
+      itemReq: {
+          rawName: string;
+          name: string;
+          amount: number;
+        }[];
+      maxLevel: number;
+      bonusInc: number;
+      costInc: number[];
+    };
+    Talent_Book_Library: {
+      index: number;
+      desc: string;
+      itemReq: {
+          rawName: string;
+          name: string;
+          amount: number;
+        }[];
+      maxLevel: number;
+      bonusInc: number;
+      costInc: number[];
+    };
+    Death_Note: {
+      index: number;
+      desc: string;
+      itemReq: {
+          rawName: string;
+          name: string;
+          amount: number;
+        }[];
+      maxLevel: number;
+      bonusInc: number;
+      costInc: number[];
+    };
+    Salt_Lick: {
+      index: number;
+      desc: string;
+      itemReq: {
+          rawName: string;
+          name: string;
+          amount: number;
+        }[];
+      maxLevel: number;
+      bonusInc: number;
+      costInc: number[];
+    };
+    Chest_Space: {
+      index: number;
+      desc: string;
+      itemReq: {
+          rawName: string;
+          name: string;
+          amount: number;
+        }[];
+      maxLevel: number;
+      bonusInc: number;
+      costInc: number[];
+    };
+    Cost_Cruncher: {
+      index: number;
+      desc: string;
+      itemReq: {
+          rawName: string;
+          name: string;
+          amount: number;
+        }[];
+      maxLevel: number;
+      bonusInc: number;
+      costInc: number[];
+    };
+    Trapper_Drone: {
+      index: number;
+      desc: string;
+      itemReq: {
+          rawName: string;
+          name: string;
+          amount: number;
+        }[];
+      maxLevel: number;
+      bonusInc: number;
+      costInc: number[];
+    };
+    Automation_Arm: {
+      index: number;
+      desc: string;
+      itemReq: {
+          rawName: string;
+          name: string;
+          amount: number;
+        }[];
+      maxLevel: number;
+      bonusInc: number;
+      costInc: number[];
+    };
+    Atom_Collider: {
+      index: number;
+      desc: string;
+      itemReq: {
+          rawName: string;
+          name: string;
+          amount: number;
+        }[];
+      maxLevel: number;
+      bonusInc: number;
+      costInc: number[];
+    };
+    Pulse_Mage: {
+      index: number;
+      desc: string;
+      itemReq: {
+          rawName: string;
+          name: string;
+          amount: number;
+        }[];
+      maxLevel: number;
+      bonusInc: number;
+      costInc: number[];
+    };
+    Fireball_Lobber: {
+      index: number;
+      desc: string;
+      itemReq: {
+          rawName: string;
+          name: string;
+          amount: number;
+        }[];
+      maxLevel: number;
+      bonusInc: number;
+      costInc: number[];
+    };
+    Boulder_Roller: {
+      index: number;
+      desc: string;
+      itemReq: {
+          rawName: string;
+          name: string;
+          amount: number;
+        }[];
+      maxLevel: number;
+      bonusInc: number;
+      costInc: number[];
+    };
+    Frozone_Malone: {
+      index: number;
+      desc: string;
+      itemReq: {
+          rawName: string;
+          name: string;
+          amount: number;
+        }[];
+      maxLevel: number;
+      bonusInc: number;
+      costInc: number[];
+    };
+    Stormcaller: {
+      index: number;
+      desc: string;
+      itemReq: {
+          rawName: string;
+          name: string;
+          amount: number;
+        }[];
+      maxLevel: number;
+      bonusInc: number;
+      costInc: number[];
+    };
+    Party_Starter: {
+      index: number;
+      desc: string;
+      itemReq: {
+          rawName: string;
+          name: string;
+          amount: number;
+        }[];
+      maxLevel: number;
+      bonusInc: number;
+      costInc: number[];
+    };
+    Kraken_Cosplayer: {
+      index: number;
+      desc: string;
+      itemReq: {
+          rawName: string;
+          name: string;
+          amount: number;
+        }[];
+      maxLevel: number;
+      bonusInc: number;
+      costInc: number[];
+    };
+    Poisonic_Elder: {
+      index: number;
+      desc: string;
+      itemReq: {
+          rawName: string;
+          name: string;
+          amount: number;
+        }[];
+      maxLevel: number;
+      bonusInc: number;
+      costInc: number[];
+    };
+    Voidinator: {
+      index: number;
+      desc: string;
+      itemReq: {
+          rawName: string;
+          name: string;
+          amount: number;
+        }[];
+      maxLevel: number;
+      bonusInc: number;
+      costInc: number[];
+    };
+    Woodular_Shrine: {
+      index: number;
+      desc: string;
+      itemReq: {
+          rawName: string;
+          name: string;
+          amount: number;
+        }[];
+      maxLevel: number;
+      bonusInc: number;
+      costInc: number[];
+    };
+    Isaccian_Shrine: {
+      index: number;
+      desc: string;
+      itemReq: {
+          rawName: string;
+          name: string;
+          amount: number;
+        }[];
+      maxLevel: number;
+      bonusInc: number;
+      costInc: number[];
+    };
+    Crystal_Shrine: {
+      index: number;
+      desc: string;
+      itemReq: {
+          rawName: string;
+          name: string;
+          amount: number;
+        }[];
+      maxLevel: number;
+      bonusInc: number;
+      costInc: number[];
+    };
+    Pantheon_Shrine: {
+      index: number;
+      desc: string;
+      itemReq: {
+          rawName: string;
+          name: string;
+          amount: number;
+        }[];
+      maxLevel: number;
+      bonusInc: number;
+      costInc: number[];
+    };
+    Clover_Shrine: {
+      index: number;
+      desc: string;
+      itemReq: {
+          rawName: string;
+          name: string;
+          amount: number;
+        }[];
+      maxLevel: number;
+      bonusInc: number;
+      costInc: number[];
+    };
+    Summereading_Shrine: {
+      index: number;
+      desc: string;
+      itemReq: {
+          rawName: string;
+          name: string;
+          amount: number;
+        }[];
+      maxLevel: number;
+      bonusInc: number;
+      costInc: number[];
+    };
+    Crescent_Shrine: {
+      index: number;
+      desc: string;
+      itemReq: {
+          rawName: string;
+          name: string;
+          amount: number;
+        }[];
+      maxLevel: number;
+      bonusInc: number;
+      costInc: number[];
+    };
+    Undead_Shrine: {
+      index: number;
+      desc: string;
+      itemReq: {
+          rawName: string;
+          name: string;
+          amount: number;
+        }[];
+      maxLevel: number;
+      bonusInc: number;
+      costInc: number[];
+    };
+    Primordial_Shrine: {
+      index: number;
+      desc: string;
+      itemReq: {
+          rawName: string;
+          name: string;
+          amount: number;
+        }[];
+      maxLevel: number;
+      bonusInc: number;
+      costInc: number[];
+    };
+  };
+  export const trappingInfo: {
+      mapId: number;
+      node: number;
+      critterName: string;
+      efficiencyReq: number;
+      exp: number;
+      shinyChance: number;
+    }[];
+  export const traps: ({
+        trapTime: number;
+        quantity: number;
+        exp: number;
+        trapType: number;
+      }[])[];
+  export const upgradeVault: {
+      name: string;
+      x1: number;
+      x2: number;
+      x3: number;
+      maxLevel: number;
+      x5: number;
+      unlockLevel: number;
+      x7: number;
+      x8: number;
+      description: string;
+    }[];
+  export const vials: Record<string, {
+      name: string;
+      mainItem: string;
+      desc: string;
+      func: string;
+      stat: string;
+      x1: number;
+      x2: number;
+      itemReq: {
+          rawName: string;
+          name: string | null;
+        }[];
+    }>;
+  export const weeklyBosses: {
+      bossName: string;
+      x1: number;
+      x2: number;
+      x3: number;
+      x4: number;
+      x5: number;
+      x6: number;
+      x7: number;
+      x8: number;
+    }[];
+  export const weeklyBossesActions: {
+      description: string;
+      x1: number;
+      x2: number;
+      x3: string;
+      x4: number;
+    }[];
+  export const weeklyBossesShop: ({
+        name: string;
+        rawName: string;
+        description: string;
+        x1: number;
+        x2: number;
+      }[])[];
+  export const weeklyBossesTasks: {
+      description: string;
+      x1: number;
+      statText: string;
+      rawName: string;
+    }[];
+  export const zenithMarket: {
+      name: string;
+      x1: number;
+      x2: number;
+      x3: number;
+      x4: number;
+      x5: number;
+      description: string;
+    }[];
 }

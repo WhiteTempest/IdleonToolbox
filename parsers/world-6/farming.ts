@@ -8,7 +8,7 @@ import { getWinnerBonus } from '@parsers/world-6/summoning';
 import { getAchievementStatus } from '@parsers/achievements';
 import { getVoteBonus } from '@parsers/world-2/voteBallot';
 import { getGrimoireBonus } from '@parsers/class-specific/grimoire';
-import { CLASSES, getHighestTalentByClass, getTalentBonus } from '@parsers/talents';
+import { getTalentBonus, getBestActiveCharacter, getHighestTalentAcrossCharacters } from '@parsers/talents';
 import { getEventShopBonus, getHighestCharacterSkill, getKillroyBonus, isMasteryBonusUnlocked } from '@parsers/misc';
 import { getLampBonus } from '@parsers/world-5/caverns/the-lamp';
 import { getMealsBonusByEffectOrStat } from '@parsers/world-4/cooking';
@@ -23,6 +23,7 @@ import { getUpgradeVaultBonus } from '@parsers/misc/upgradeVault';
 import { getSushiBonus } from '@parsers/world-7/sushiStation';
 import { getButtonBonus } from '@parsers/world-7/button';
 import { getCardBonusByEffect } from '@parsers/cards';
+import { getLegendTalentBonus } from '@parsers/world-7/legendTalents';
 import LavaRand from '../../utility/lavaRand';
 
 /** Level needed to reach the given percent of cap for exotic capped formula: value = baseValue * level / (1000 + level). */
@@ -40,10 +41,10 @@ export const getFarming = (idleonData: any, accountData: any, charactersData: an
 }
 
 const parseFarming = (rawFarmingUpgrades: any, rawFarmingPlot: any, rawFarmingCrop: any, rawFarmingRanks: any, account: any, charactersData: any) => {
-  const gemVineBonus = account?.gemShopPurchases?.find((value: any, index: any) => index === 139);
+  const gemVineBonus = account?.gemShopPurchases?.find((value: any, index: any) => index === 139) ?? 0;
   const marketLevels = rawFarmingUpgrades?.slice(2, marketInfo.length + 2);
-  const beans = rawFarmingUpgrades?.[1];
-  const instaGrow = rawFarmingUpgrades?.[19];
+  const beans = rawFarmingUpgrades?.[1] ?? 0;
+  const instaGrow = rawFarmingUpgrades?.[19] ?? 0;
   const researchBonus171 = getResearchGridBonus(account, 171, 0);
   const cheaperDayMarket = Math.max(0.1, 1 - (getExoticMarketBonus(account, 34) ?? 0) / 100)
     * Math.max(0.1, 1 - (getExoticMarketBonus(account, 35) ?? 0) / 100);
@@ -151,14 +152,19 @@ const parseFarming = (rawFarmingUpgrades: any, rawFarmingPlot: any, rawFarmingCr
   const unlocks = ninjaExtraInfo?.[37];
   const names = ninjaExtraInfo?.[34];
   const bases = ninjaExtraInfo?.[36]?.map((base: any) => parseFloat(base));
-  const apocalypseWow = getHighestTalentByClass(charactersData, CLASSES.Death_Bringer, 'DANK_RANKS') ?? 0;
+  const apocalypseWow = getHighestTalentAcrossCharacters(charactersData, 'DANK_RANKS', getBestActiveCharacter(charactersData)) ?? 0;
   const exoticBonus14 = getExoticMarketBonus(account, 14) ?? 0;
   const exoticMulti = 1 + exoticBonus14 / 100;
+  // Only the 5th column upgrades (4/9/14/19) have a level cap, and it grows with grimoire/exotic/legend.
+  const fifthColumnMaxLevel = Math.round(1 + (getGrimoireBonus(account?.grimoire?.upgrades, 9)
+    + Math.ceil(getExoticMarketBonus(account, 15)))
+    + (getLegendTalentBonus(account, 3) ?? 0));
+  const rankMulti = Math.max(1, apocalypseWow) * exoticMulti;
   const ranks = ninjaExtraInfo?.[35]?.map((description: any, index: any) => {
     const name = names?.[index];
     const base = bases?.[index];
     const upgradeLevel = upgradesLevels?.[index];
-    const unlockAt = unlocks?.[index];
+    const unlockAt = parseFloat(unlocks?.[index]);
     const bonus = calcRankBonus(index, apocalypseWow, exoticMulti, base, upgradeLevel);
 
     return {
@@ -168,17 +174,22 @@ const parseFarming = (rawFarmingUpgrades: any, rawFarmingPlot: any, rawFarmingCr
       base,
       upgradeLevel,
       unlockAt,
-      exoticMulti
+      exoticMulti,
+      maxLevel: isFifthColumnRank(index) ? fifthColumnMaxLevel : null
     }
   });
 
-  const plot = rawFarmingPlot?.map(([seedType, progress, cropType, isLocked, cropQuantity, currentOG, cropProgress]: any, cropIndex: any) => {
+  const MAX_PLOTS = 36;
+  const plotSource = rawFarmingPlot ?? Array.from({ length: MAX_PLOTS }, () => [0, 0, 0, 1, 0, 0, 0]);
+
+  const plot = plotSource?.map(([seedType, progress, cropType, isLocked, cropQuantity, currentOG, cropProgress]: any, cropIndex: any) => {
     const seed = seedInfo?.[seedType];
-    const type = Math.round(seed?.cropIdMin + cropType);
+    const type = Math.round((seed?.cropIdMin ?? 0) + cropType);
     const growthReq = 14400 * Math.pow(1.5, seedType);
     const rank = farmingRanks?.[cropIndex];
     const rankProgress = ranksProgress?.[cropIndex];
-    const rankRequirement = (7 * rank + 25 * Math.floor(rank / 5) + 10) * Math.pow(1.11, rank);
+    const rankForMath = rank ?? 0;
+    const rankRequirement = (7 * rankForMath + 25 * Math.floor(rankForMath / 5) + 10) * Math.pow(1.11, rankForMath);
     return {
       seed,
       index: cropIndex,
@@ -234,6 +245,9 @@ const parseFarming = (rawFarmingUpgrades: any, rawFarmingPlot: any, rawFarmingCr
     ranks,
     totalPoints,
     usedPoints,
+    availablePoints: Math.max(0, (totalPoints ?? 0) - (usedPoints ?? 0)),
+    fifthColumnMaxLevel,
+    rankMulti,
     hasLandRank,
     totalRanks: farmingRanks?.reduce((sum: any, rank: any) => sum + rank, 0),
     exoticMarkeMaxPurchases: Math.round(4 + (getMineheadBonusQTY(account, 8) + 8 * getEventShopBonus(account, 43)
@@ -333,6 +347,24 @@ export const getRanksTotalBonus = (ranks: any, index: any) => {
       : 2 === index ? ranks?.[6]?.bonus + ranks?.[13]?.bonus
         : 3 === index ? ranks?.[7]?.bonus + (ranks?.[11]?.bonus + ranks?.[18]?.bonus)
           : 4 === index ? ranks?.[5]?.bonus + (ranks?.[12]?.bonus + ranks?.[16]?.bonus) : 1;
+}
+
+/**
+ * The game rolls for an OG once per growth cycle (N.js growth tick), so the wait until the next
+ * one is geometric and its average is one cycle divided by the chance. Returns that average in
+ * seconds - a readable stand-in for a per-cycle percentage that means nothing on its own.
+ *
+ * The average, not a high percentile: a 95% figure is 3x longer than the typical wait, which
+ * reads as "how long until it doubles" while actually describing the pessimistic tail.
+ *
+ * Null when the plot isn't rolling at all: the game only rolls once a crop is on the vine
+ * (cropQuantity > 0), so an empty or still-growing plot has no meaningful wait.
+ */
+export const getNextOGEta = (crop: any, nextOGChance: number, maxTimeLeft: number): number | null => {
+  if (crop?.seedType === -1 || !(crop?.cropQuantity > 0)) return null;
+  const chance = Math.min(1, nextOGChance);
+  if (!(chance > 0) || !(maxTimeLeft > 0)) return null;
+  return maxTimeLeft / chance;
 }
 
 const getCropsWithStockEqualOrGreaterThan = (cropDepot: any, stockLimit: any) => {
@@ -496,6 +528,7 @@ export const updateFarming = (characters: any, account: any) => {
     return {
       ...crop,
       nextOGChance,
+      nextOGEta: getNextOGEta(crop, nextOGChance, maxTimeLeft),
       growthRate,
       ogMulti,
       timeLeft,
@@ -538,7 +571,7 @@ export const updateFarming = (characters: any, account: any) => {
 }
 
 const getLandRankExpBreakdown = (account: any, characters: any) => {
-  const talentBonus = getHighestTalentByClass(characters, CLASSES.Death_Bringer, 'AGRICULTURAL_\'PRECIATION') ?? 0;
+  const talentBonus = getHighestTalentAcrossCharacters(characters, 'AGRICULTURAL_\'PRECIATION', getBestActiveCharacter(characters)) ?? 0;
   const marketBonus = getMarketBonus(account?.farming?.market, 'RANK_BOOST');
   const exotic9 = getExoticMarketBonus(account, 9);
   const exotic10 = getExoticMarketBonus(account, 10);
@@ -603,7 +636,7 @@ const getCropValueBreakdown = (account: any, market: any) => {
   const exotic24 = getExoticMarketBonus(account, 24);
   const exotic25 = getExoticMarketBonus(account, 25);
   const voteBonus = getVoteBonus(account, 29);
-  const avgRank = account?.farming?.plot?.reduce((sum: any, p: any) => sum + (p?.rank ?? 0), 0)
+  const avgRank = (account?.farming?.plot?.reduce((sum: any, p: any) => sum + (p?.rank ?? 0), 0) ?? 0)
     / (account?.farming?.plot?.length || 1);
 
   const cap = 10000 * (1 + (exotic23 + exotic24 + exotic25) / 100);
@@ -702,6 +735,20 @@ const getNextUpgradesReq = ({
                               emperorCostCalc,
                               marketCostReduction = 1
                             }: any) => {
+  // Night market (index >= 8) pays magic beans for every level - N.js only resolves a crop type for
+  // the day and exotic markets. Grouping its levels by crop type collapses several levels onto one
+  // key and sums their costs, so preview the next individual levels instead.
+  if (index >= 8) {
+    const upgrades = [];
+    for (let nextLevel = level + 1; upgrades.length < 4 && nextLevel < maxLvl; nextLevel++) {
+      upgrades.push({
+        type: getCropType({ index, cropId, cropIdIncrement, level: nextLevel }),
+        cost: emperorCostCalc * cost * Math.pow(costExponent, nextLevel) * marketCostReduction
+      });
+    }
+    return upgrades;
+  }
+
   const upgradeMap = new Map();
 
   let extraLv = 0;
@@ -803,17 +850,20 @@ export const getExoticMarketBonus = (account: any, index: any) => {
 }
 
 const calcRankBonus = (index: any, apocalypseWow: any, exoticMulti: any, base: any, upgradeLevel: any) => {
+  const level = upgradeLevel ?? 0;
   return 4 === index || 9 === index || 14 === index || 19 === index
-    ? Math.max(1, apocalypseWow) * exoticMulti * base * upgradeLevel
-    : Math.max(1, apocalypseWow) * exoticMulti * ((1.7 * base * upgradeLevel) / (upgradeLevel + 80));
+    ? Math.max(1, apocalypseWow) * exoticMulti * base * level
+    : Math.max(1, apocalypseWow) * exoticMulti * ((1.7 * base * level) / (level + 80));
 }
+
+/** The 5th column of the land rank grid (4/9/14/19) scales linearly and is the only capped column. */
+export const isFifthColumnRank = (index: any) => 0 === (index + 1) % 5;
 
 export const getLandRank = (ranks: any, index: any, characters?: any, activeCharacter?: any) => {
   const rank = ranks?.[index];
   if (!rank || !characters || !activeCharacter) return rank?.bonus;
   const { base, upgradeLevel, exoticMulti } = rank;
-  const apocalypseWow = getHighestTalentByClass(characters, CLASSES.Death_Bringer, 'DANK_RANKS',
-    false, false, false, false, activeCharacter) ?? 0;
+  const apocalypseWow = getHighestTalentAcrossCharacters(characters, 'DANK_RANKS', activeCharacter) ?? 0;
   return calcRankBonus(index, apocalypseWow, exoticMulti, base, upgradeLevel);
 }
 
@@ -833,6 +883,194 @@ export const getLandRankTotalBonus = (account: any, index: any) => {
               getLandRank(account?.farming?.ranks, 16)) : 1;
 }
 
+/**
+ * Land rank upgrades all cost exactly 1 rank point (N.js LankRankPTSleft is just
+ * sum(plot ranks) - sum(upgrade levels)), and every non-5th-column upgrade is concave
+ * (1.7 * base * lv / (lv + 80)), so allocating points greedily by marginal gain is optimal.
+ * Goals group the upgrades by what they actually boost - comparing +1% total damage against
+ * +1% rank EXP would be meaningless.
+ */
+export const LAND_RANK_GOALS: any = {
+  evolution: { name: 'Crop Evolution', upgrades: [0, 3, 10, 15] },
+  cropValue: { name: 'Crop Value', upgrades: [1, 8, 17] },
+  rankExp: { name: 'Rank EXP', upgrades: [2, 6, 13] },
+  overgrowth: { name: 'Overgrowth', upgrades: [7, 11, 18] },
+  farmingExp: { name: 'Farming EXP', upgrades: [5, 12, 16] },
+  character: { name: 'Character Stats', upgrades: [4, 9, 14, 19] }
+};
+
+const getLandRankGoalOfUpgrade = (index: any) => Object.keys(LAND_RANK_GOALS)
+  .find((goal) => LAND_RANK_GOALS[goal].upgrades.includes(index));
+
+/**
+ * Score of a goal, in log space. Bonuses that multiply into the same stat are multiplied, ones
+ * that stack additively are summed, mirroring getLandRankTotalBonus / getRanksTotalBonus. The
+ * upgrades that scale with a plot's own rank (0/1/2) are summed over the plots rather than applied
+ * to an average one, so the game's per-plot caps land on the right plots. The character goal
+ * covers four unrelated stats, so it sums their logs instead.
+ */
+const getLandRankGoalScore = (goal: any, bonusAt: any, context: any) => {
+  const { plotRanks, plotPrevRanks, voteBonus, cropValueConstant, cropValueCap } = context;
+  const b = (index: any) => bonusAt(index);
+  if ('evolution' === goal) {
+    // A plot already sitting at 100% evolution chance is capped for the crop it currently grows,
+    // not for good: pushing the bonus higher is what carries it onto a deeper crop, where the
+    // decay has eaten the chance back down. Scoring this against the 100% cap would call the whole
+    // evolution branch worthless the moment it starts working.
+    const shared = (1 + b(3) / 100) * (1 + b(10) / 100) * (1 + b(15) / 100);
+    return Math.log(plotRanks.reduce((sum: any, rank: any) =>
+      sum + shared * (1 + (b(0) * rank + voteBonus) / 100), 0));
+  }
+  if ('cropValue' === goal) {
+    // getTotalCrop caps each plot's multiplier, and unlike the evolution cap this one doesn't move
+    // with the crop being grown - past it, more crop value bonus does nothing at all, ever. Scoring
+    // the capped value is what stops the plan recommending points that buy zero.
+    const shared = cropValueConstant * (1 + (b(8) + b(17)) / 100);
+    return Math.log(plotRanks.reduce((sum: any, rank: any) =>
+      sum + Math.min(cropValueCap, shared * (1 + (b(1) * rank + voteBonus) / 100)), 0));
+  }
+  if ('rankExp' === goal) {
+    // Upgrade 2 reads the rank of the *previous* land, so each plot is scored against its
+    // physically adjacent neighbour, empty plots included.
+    const shared = 1 + (b(6) + b(13)) / 100;
+    return Math.log(plotRanks.reduce((sum: any, _: any, index: any) =>
+      sum + shared * (1 + (b(2) * (plotPrevRanks?.[index] ?? 0)) / 100), 0));
+  }
+  if ('overgrowth' === goal) {
+    return Math.log(1 + (b(7) + b(11) + b(18)) / 100);
+  }
+  if ('farmingExp' === goal) {
+    return Math.log(1 + (b(5) + b(12) + b(16)) / 100);
+  }
+  if ('character' === goal) {
+    return LAND_RANK_GOALS.character.upgrades.reduce((sum: any, index: any) => sum + Math.log(1 + b(index) / 100), 0);
+  }
+  return 0;
+};
+
+/**
+ * True when every plot's crop multiplier already sits at the game cap. The crop value land ranks
+ * feed that multiplier and nothing else, so past this point they buy nothing at all and the plan
+ * correctly comes back empty - which reads as "something is locked" unless the page says otherwise.
+ */
+export const isCropValueCapped = (account: any) => {
+  const farming = account?.farming;
+  const plots = (farming?.plot ?? []).filter(({ seedType }: any) => seedType !== -1);
+  if (!plots.length) return false;
+  const parts = getPlotCropMultiParts(account, farming?.market, farming?.ranks);
+  return plots.every(({ rank }: any) => getPlotCropMulti(parts, rank) >= parts.cap);
+};
+
+/**
+ * The per-plot crop multiplier (N.js CropsBonusValue), split in two: the constant factors
+ * (product doubler, VALUE GMO, vote, cap) and the land-rank-driven ones (ranksMulti,
+ * productionBoost), so the land-rank optimizer can re-derive the rank-driven part from candidate
+ * levels while getTotalCrop and isCropValueCapped take the whole thing.
+ */
+const getPlotCropMultiParts = (account: any, market: any, ranks: any) => ({
+  constantMulti: Math.max(1, Math.floor(1 + (getProductDoubler(market)?.productDoubler ?? 0) / 100))
+    * Math.max(1, getMarketBonus(market, 'VALUE_GMO', 'value')),
+  ranksMulti: 1 + getRanksTotalBonus(ranks, 1) / 100,
+  productionBoost: getLandRank(ranks, 1),
+  voteBonus: getVoteBonus(account, 29),
+  cap: getCropValueMultiCap(account)
+});
+
+const getPlotCropMulti = ({ constantMulti, ranksMulti, productionBoost, voteBonus, cap }: any, rank: any) =>
+  Math.min(cap, Math.round(constantMulti * ranksMulti * (1 + (productionBoost * (rank ?? 0) + voteBonus) / 100)));
+
+export const getOptimizedLandRankUpgrades = (account: any, maxUpgrades = 10, options: any = {}) => {
+  const { goal = 'evolution', onlyAffordable = false } = options;
+  const farming = account?.farming;
+  const ranks = farming?.ranks;
+  if (!ranks?.length) return [];
+
+  const rankMulti = farming?.rankMulti ?? 1;
+  const totalRanks = farming?.totalPoints ?? 0;
+  const fifthColumnMaxLevel = farming?.fifthColumnMaxLevel ?? Infinity;
+  const availablePoints = farming?.availablePoints ?? 0;
+  // Mirrors getTotalCrop / getCropEvolution: the same plots, the same vote bonus, and the same
+  // constant factors around the part the land ranks actually move.
+  const allPlots = farming?.plot ?? [];
+  const plotRanks = allPlots
+    .filter(({ seedType }: any) => seedType !== -1)
+    .map(({ rank }: any) => rank ?? 0);
+  // Upgrade 2 reads the rank of the physically previous land, so pair each growing plot with its
+  // neighbour before the empty-plot filter shifts the indices.
+  const plotPrevRanks = allPlots
+    .map((plot: any, index: number) => ({ seedType: plot?.seedType, prevRank: allPlots[index - 1]?.rank ?? 0 }))
+    .filter(({ seedType }: any) => seedType !== -1)
+    .map(({ prevRank }: any) => prevRank);
+  const cropMultiParts = getPlotCropMultiParts(account, farming?.market, ranks);
+  const context = {
+    plotRanks,
+    plotPrevRanks,
+    voteBonus: cropMultiParts.voteBonus,
+    cropValueConstant: cropMultiParts.constantMulti,
+    cropValueCap: cropMultiParts.cap
+  };
+
+  const levels = ranks.map(({ upgradeLevel }: any) => upgradeLevel ?? 0);
+  const bonusOf = (index: any, level: any) => rankMulti * (isFifthColumnRank(index)
+    ? ranks[index]?.base * level
+    : (1.7 * ranks[index]?.base * level) / (level + 80));
+
+  const goals = 'all' === goal ? Object.keys(LAND_RANK_GOALS) : [goal];
+  const scoreOf = (currentLevels: any) => {
+    const bonusAt = (index: any) => bonusOf(index, currentLevels[index]);
+    return goals.reduce((sum: any, key: any) => sum + getLandRankGoalScore(key, bonusAt, context), 0);
+  };
+
+  const candidates = 'all' === goal
+    ? ranks.map((_: any, index: any) => index)
+    : (LAND_RANK_GOALS[goal]?.upgrades ?? []);
+
+  const limit = onlyAffordable ? Math.min(maxUpgrades, availablePoints) : maxUpgrades;
+  const upgrades = [];
+  let currentScore = scoreOf(levels);
+
+  for (let step = 0; step < limit; step++) {
+    let best = null;
+    for (const index of candidates) {
+      if (totalRanks < (ranks[index]?.unlockAt ?? 0)) continue;
+      if (isFifthColumnRank(index) && levels[index] >= fifthColumnMaxLevel) continue;
+      levels[index] += 1;
+      const score = scoreOf(levels);
+      levels[index] -= 1;
+      if (!best || score > best.score) {
+        best = { index, score };
+      }
+    }
+    if (!best || best.score <= currentScore) break;
+
+    const { index } = best;
+    const level = levels[index];
+    const bonusBefore = bonusOf(index, level);
+    const bonusAfter = bonusOf(index, level + 1);
+    upgrades.push({
+      index,
+      name: ranks[index]?.name,
+      description: ranks[index]?.description,
+      goal: getLandRankGoalOfUpgrade(index),
+      level,
+      newLevel: level + 1,
+      maxLevel: isFifthColumnRank(index) ? fifthColumnMaxLevel : null,
+      bonusBefore,
+      bonusAfter,
+      bonusChange: bonusAfter - bonusBefore,
+      // Composite gain across the whole goal, not just this upgrade's own bonus.
+      percentChange: 100 * (Math.exp(best.score - currentScore) - 1),
+      cost: 1,
+      cumulativeCost: step + 1,
+      pointsLeft: availablePoints - (step + 1)
+    });
+    levels[index] += 1;
+    currentScore = best.score;
+  }
+
+  return upgrades;
+};
+
 const calcCostToMax = ({ level, maxLvl, cost, costExponent, emperorCostCalc, marketCostReduction = 1 }: any) => {
   let costToMax = 0;
   for (let i = level; i < maxLvl; i++) {
@@ -841,18 +1079,24 @@ const calcCostToMax = ({ level, maxLvl, cost, costExponent, emperorCostCalc, mar
   return costToMax ?? 0;
 }
 
+/** The game clamps each plot's crop multiplier here (N.js CropsBonusValue), before exotics. */
+const CROP_VALUE_MULTI_BASE_CAP = 1e4;
+
+/**
+ * Exotic market 23/24/25 scale the crop multiplier cap, so it isn't a flat 1e4 (N.js
+ * CropsBonusValue: Math.min(1e4 * (1 + (Exotic23 + Exotic24 + Exotic25) / 100), ...)).
+ */
+const getCropValueMultiCap = (account: any) => CROP_VALUE_MULTI_BASE_CAP
+  * (1 + (getExoticMarketBonus(account, 23)
+    + getExoticMarketBonus(account, 24)
+    + getExoticMarketBonus(account, 25)) / 100);
+
 export const getTotalCrop = (plot: any, market: any, ranks: any, account: any) => {
+  // Everything except the plot's own rank is account-wide, so it is computed once, not per plot.
+  const parts = getPlotCropMultiParts(account, market, ranks);
   return plot?.reduce((total: any, { seedType, cropQuantity, cropRawName, ogMulti, rank }: any) => {
     if (seedType === -1) return total;
-    const { productDoubler } = getProductDoubler(market);
-    const productionBoost = getLandRank(ranks, 1);
-    const voteBonus = getVoteBonus(account, 29);
-    const speedGMO = getMarketBonus(account?.farming?.market, 'VALUE_GMO', 'value');
-    const finalMulti = Math.min(1e4, Math.round(Math.max(1, Math.floor(1 + (productDoubler / 100)))
-      * (1 + getRanksTotalBonus(ranks, 1) / 100)
-      * Math.max(1, speedGMO)
-      * (1 + (productionBoost * (rank ?? 0)
-        + voteBonus) / 100)));
+    const finalMulti = getPlotCropMulti(parts, rank);
     return {
       ...total,
       [cropRawName]: (total?.[cropRawName] || 0) + (cropQuantity * ogMulti * finalMulti)
@@ -908,8 +1152,13 @@ export const getCropEvolution = (account: any, character: any, crop: any, forceS
     + Math.max(0, farmingLevel - 250) * exotic8;
 
   const achievementBonus = getAchievementStatus(account?.achievements, 355);
-  const summoningMealBonus = mealBonus2 * Math.ceil((character?.skillsInfo?.summoning?.level + 1) / 50);
+  const summoningLevel = character?.skillsInfo?.summoning?.level ?? 0;
+  const summoningMealBonus = mealBonus2 * Math.ceil((summoningLevel + 1) / 50);
   const landRankPerPlot = getLandRank(account?.farming?.ranks, 0) * (account?.farming?.plot?.[crop?.index]?.rank ?? 0) + voteBonus;
+
+  const nextCropChance = crop?.seed?.nextCropChance ?? 0;
+  const nextCropDecay = crop?.seed?.nextCropDecay ?? 0;
+  const baseCropType = crop?.baseCropType ?? 0;
 
   let value = (1 + marketBonus1 / 100)
     * (1 + winBonus / 100)
@@ -940,8 +1189,8 @@ export const getCropEvolution = (account: any, character: any, crop: any, forceS
     * (1 + exotic3 / 100)
     * (1 + scalingExotics / 100)
     * (1 + sushiBonus / 100)
-    * crop?.seed?.nextCropChance
-    * Math.pow(crop?.seed?.nextCropDecay, crop?.baseCropType);
+    * nextCropChance
+    * Math.pow(nextCropDecay, baseCropType);
 
   value = Math.min(100, 100 * value);
   value = Math.round(10 * value) / 10;
@@ -950,8 +1199,8 @@ export const getCropEvolution = (account: any, character: any, crop: any, forceS
     value,
     breakdown: [
       { title: 'Additive' },
-      { name: 'Base Chance', value: crop?.seed?.nextCropChance.toExponential(3) },
-      { name: 'Decay Rate', value: Math.pow(crop?.seed?.nextCropDecay, crop?.baseCropType).toExponential(3) },
+      { name: 'Base Chance', value: nextCropChance.toExponential(3) },
+      { name: 'Decay Rate', value: Math.pow(nextCropDecay, baseCropType).toExponential(3) },
       { name: 'Market', value: Number(((1 + marketBonus1 / 100) * Math.max(1, marketBonus2)).toFixed(3)) },
       { name: 'Summoning', value: Number((1 + winBonus / 100).toFixed(3)) },
       { name: 'Lamp', value: Number((1 + lampBonus / 100).toFixed(3)) },

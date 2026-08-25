@@ -4,7 +4,14 @@ import {
   Checkbox,
   Divider,
   FormControlLabel,
+  Paper,
   Stack,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
   Typography,
   useMediaQuery
 } from '@mui/material';
@@ -24,7 +31,8 @@ import {
   calcResourceToRankUp,
   calcTimeToRankUp,
   getPowerPerCycle,
-  getRefineryCycles
+  getRefineryCycles,
+  getSaltsBalance
 } from '@parsers/world-3/refinery';
 import { IconInfoCircleFilled } from '@tabler/icons-react';
 
@@ -41,6 +49,7 @@ const Refinery = () => {
   const [squiresCooldown, setSquiresCooldown] = useState([]);
   const [refineryCycles, setRefineryCycles] = useState([]);
   const activePrints = calcTotals(state?.account);
+  const saltsBalance = getSaltsBalance(state?.account, state?.characters);
 
   useEffect(() => {
     const {
@@ -112,7 +121,7 @@ const Refinery = () => {
         </Card>
       })}
     </Stack>
-    <Stack direction={'row'} gap={2}>
+    <Stack mt={3} mb={3} direction={'row'} gap={2}>
       <CardTitleAndValue title={'More cycles'} stackProps>
         <FormControlLabel
           control={<Checkbox checked={includeSquireCycles}
@@ -126,9 +135,13 @@ const Refinery = () => {
           label="Show next level cost"/>
       </CardTitleAndValue>
     </Stack>
-    <Stack gap={3} direction={'row'} flexWrap={'wrap'}>
+    <SaltChainSummary balances={saltsBalance} salts={refinery?.salts}/>
+    <Stack mt={3} gap={3} direction={'row'} flexWrap={'wrap'}>
       {refinery?.salts?.map((salt, saltIndex) => {
-        const { saltName, refined, powerCap, rawName, rank, active, cost, autoRefinePercentage } = salt;
+        const { saltName, refined, powerCap, rawName, rank, active, cost, autoRefinePercentage, unlocked } = salt;
+        // Locked salts are rendered in their own row below - they're small enough that they'd
+        // otherwise wrap up beside the last unlocked salt.
+        if (unlocked === false) return null;
         const progressPercentage = refined / powerCap * 100;
         const hasMaterialsForCycle = cost?.every(({
                                                     rawName,
@@ -162,11 +175,11 @@ const Refinery = () => {
               </Stack>
               <Stack alignSelf={'center'} sx={{ width: { md: 250 } }} gap={.5}>
                 <Typography variant={'h6'}>{cleanUnderscore(saltName)}</Typography>
-                <Typography>Power: {numberWithCommas(refined)} / {numberWithCommas(powerCap)}</Typography>
-                <Typography>Auto refine: {autoRefinePercentage}%</Typography>
-                <Typography component={'span'}>Total time: <Timer staticTime date={totalTime}
-                                                                  lastUpdated={state?.lastUpdated}/></Typography>
-                <Typography component={'span'}>Rank up: {active ? <Timer
+                {/* The game's auto refine field is a 0 / 0.01 toggle, so a percentage reads as a
+                    rounding bug rather than a setting. */}
+                <Typography>Auto refine: {autoRefinePercentage > 0 ? 'On' : 'Off'}</Typography>
+                {/* Separates the timers from the settings above without a divider. */}
+                <Typography component={'span'} sx={{ ...boldSx, mt: .5 }}>Rank up: {active ? <Timer
                     type={'countdown'}
                     lastUpdated={state?.lastUpdated}
                     pause={!active || !hasMaterialsForCycle}
@@ -178,11 +191,17 @@ const Refinery = () => {
                       : 'Missing Mats'}</Typography>}
                     date={timeLeft}/> :
                   <Typography component={'span'} color={'error'}>Inactive</Typography>}</Typography>
-                <Typography component={'span'}>Fuel: {fuelTime ? <Timer type={'countdown'}
-                                                                        date={new Date().getTime() + fuelTime * 1000}
-                                                                        lastUpdated={state?.lastUpdated}
+                <Typography component={'span'} color={'text.secondary'}>From empty: <Timer
+                  staticTime
+                  date={totalTime}
+                  lastUpdated={state?.lastUpdated}/></Typography>
+                <Typography component={'span'} color={'text.secondary'}>Fuel: {fuelTime ? <Timer
+                  type={'countdown'}
+                  date={new Date().getTime() + fuelTime * 1000}
+                  lastUpdated={state?.lastUpdated}
                 /> : 'Empty'}</Typography>
-                <ProgressBar percent={progressPercentage} bgColor={saltsColors?.[saltIndex]}/>
+                <ProgressBar percent={progressPercentage} bgColor={saltsColors?.[saltIndex]}
+                             labelText={`${numberWithCommas(refined)} / ${numberWithCommas(powerCap)}`}/>
               </Stack>
               {isXs ? null : <Divider sx={{ mx: 2 }} orientation={'vertical'} flexItem/>}
               <Stack>
@@ -256,11 +275,11 @@ const Refinery = () => {
                 <Stack direction={'row'} gap={5} alignItems={'center'}
                        justifyContent={'center'}>
                   <Stack sx={{ width: 50 }} alignSelf={'center'} alignItems={'center'}>
-                    <img width={32} height={32} src={`${prefix}data/${rawName}.png`} alt=""/>
+                    <img width={32} height={32} src={`${prefix}data/${rawName}.png`} alt={rawName}/>
                     <Typography>{notateNumber(powerPerCycle)}</Typography>
                   </Stack>
                   <Stack sx={{ width: 50 }} alignSelf={'center'} alignItems={'center'}>
-                    <img width={32} height={32} src={`${prefix}data/${rawName}.png`} alt=""/>
+                    <img width={32} height={32} src={`${prefix}data/${rawName}.png`} alt={rawName}/>
                     <Typography>{notateNumber(saltPerHour)}</Typography>
                   </Stack>
                 </Stack>
@@ -270,8 +289,139 @@ const Refinery = () => {
         </Card>
       })}
     </Stack>
+    <Stack mt={3} gap={3} direction={'row'} flexWrap={'wrap'}>
+      {refinery?.salts?.map(({ saltName, rawName, unlocked }, saltIndex) => {
+        if (unlocked !== false) return null;
+        return <Card key={`${saltName}-${saltIndex}`} sx={{ width: 'fit-content', opacity: 0.5 }}>
+          <CardContent>
+            <Stack alignItems={'center'} gap={1}>
+              <img src={`${prefix}data/${rawName}.png`} alt="salt-icon" style={{ filter: 'grayscale(1)' }}/>
+              <Typography variant={'h6'}>{cleanUnderscore(saltName)}</Typography>
+              <Typography color={'text.secondary'}>Locked</Typography>
+            </Stack>
+          </CardContent>
+        </Card>;
+      })}
+    </Stack>
   </>
 };
+
+// Each salt is fuelled by the one above it, so the numbers that matter are comparisons down the
+// chain - a table reads them at a glance where per-card lines would need scrolling between salts.
+// Ranks are permanent, so a salt past its limit can't be walked back - it only recovers when the
+// salt feeding it grows. That makes "wait for the one above" the honest answer for those rows,
+// where the numbers alone leave the reader stuck.
+const getSaltAction = ({
+                         unlocked,
+                         active,
+                         autoRefinePercentage,
+                         rank,
+                         maxSafeRank,
+                         outputMaxed,
+                         isDeficit
+                       }, previousSaltName) => {
+  if (!unlocked || !active || outputMaxed) return null;
+  if (rank >= maxSafeRank) {
+    return previousSaltName
+      ? { label: `Wait for ${cleanUnderscore(previousSaltName)}`, color: 'text.secondary' }
+      : null;
+  }
+  // Auto refine never lets a salt bank power to its cap, so its rank is frozen. Only worth
+  // mentioning when something downstream is starving on it - otherwise it's a deliberate setting.
+  if (autoRefinePercentage > 0) {
+    return isDeficit ? { label: 'Turn auto refine off', color: 'warning.light' } : null;
+  }
+  return { label: 'Rank up', color: 'success.light' };
+}
+
+const SaltChainSummary = ({ balances, salts }) => {
+  if (!balances?.length) return null;
+  return <TableContainer component={Paper} sx={{ mt: 3, width: 'fit-content', maxWidth: '100%' }}>
+    <Table size={'small'}>
+      <TableHead>
+        <TableRow>
+          <TableCell>Salt</TableCell>
+          <TableCell align={'right'}>Rank</TableCell>
+          <TableCell align={'right'}>Produced /hr</TableCell>
+          <TableCell align={'right'}>Consumed /hr</TableCell>
+          <TableCell align={'right'}>Balance /hr</TableCell>
+          <TableCell align={'right'}>Max rank (no deficit)</TableCell>
+          <TableCell>
+            <Stack direction={'row'} gap={.5} alignItems={'center'}>
+              Action
+              <Tooltip title={<Stack gap={1.5}>
+                {[
+                  { label: 'Rank up', color: 'success.light', text: 'Room to grow before it out-consumes the salt above' },
+                  { label: 'Turn auto refine off', color: 'warning.light', text: 'Auto refine freezes the rank' },
+                  { label: 'Wait for a salt', color: 'text.secondary', text: 'Ranks are permanent. This one recovers when the salt above grows' }
+                ].map(({ label, color, text }) => <Stack key={label}>
+                  <Typography variant={'body2'} sx={boldSx} color={color}>{label}</Typography>
+                  <Typography variant={'body2'}>{text}</Typography>
+                </Stack>)}
+              </Stack>} titleStyle={{ width: 230 }}>
+                <IconInfoCircleFilled size={16}/>
+              </Tooltip>
+            </Stack>
+          </TableCell>
+        </TableRow>
+      </TableHead>
+      <TableBody>
+        {balances.map((balance) => {
+          const {
+            index,
+            rawName,
+            saltName,
+            rank,
+            unlocked,
+            outputPerHour,
+            consumedPerHour,
+            balancePerHour,
+            isDeficit,
+            maxSafeRank,
+            outputMaxed
+          } = balance;
+          const action = getSaltAction(balance, salts?.[index - 1]?.saltName);
+          const balanceColor = consumedPerHour === 0 ? '' : isDeficit ? 'error.light' : 'success.light';
+          // notateNumber leaves negatives unformatted, so notate the magnitude and carry the sign.
+          const balanceSign = balancePerHour > 0 ? '+' : balancePerHour < 0 ? '-' : '';
+          const rankColor = maxSafeRank > rank ? 'success.light' : maxSafeRank < rank ? 'error.light' : '';
+          return <TableRow key={`${saltName}-${index}`} sx={{ opacity: unlocked ? 1 : 0.5 }}>
+            <TableCell>
+              <Stack direction={'row'} gap={1} alignItems={'center'}>
+                <img width={24} height={24} src={`${prefix}data/${rawName}.png`} alt={rawName}
+                     style={unlocked ? null : { filter: 'grayscale(1)' }}/>
+                <Typography noWrap>{cleanUnderscore(saltName)}</Typography>
+              </Stack>
+            </TableCell>
+            <TableCell align={'right'}>{unlocked ? numberWithCommas(rank) : 'Locked'}</TableCell>
+            <TableCell align={'right'}>{unlocked ? notateNumber(outputPerHour) : '-'}</TableCell>
+            <TableCell align={'right'}>{consumedPerHour > 0 ? notateNumber(consumedPerHour) : '-'}</TableCell>
+            <TableCell align={'right'} sx={{ color: balanceColor }}>
+              {unlocked ? `${balanceSign}${notateNumber(Math.abs(balancePerHour))}` : '-'}
+            </TableCell>
+            <TableCell align={'right'} sx={{ color: outputMaxed ? '' : rankColor }}>
+              {!unlocked
+                ? '-'
+                : outputMaxed
+                  ? <Stack direction={'row'} gap={.5} alignItems={'center'} justifyContent={'flex-end'}>
+                    {numberWithCommas(rank)} (capped)
+                    <Tooltip title={'Power per cycle is capped, so ranking up adds cost but no output'}>
+                      <IconInfoCircleFilled size={16}/>
+                    </Tooltip>
+                  </Stack>
+                  : numberWithCommas(maxSafeRank)}
+            </TableCell>
+            <TableCell>
+              {action
+                ? <Typography noWrap component={'span'} color={action.color}>{action.label}</Typography>
+                : '-'}
+            </TableCell>
+          </TableRow>;
+        })}
+      </TableBody>
+    </Table>
+  </TableContainer>
+}
 
 const ItemCell = forwardRef((props, ref) => {
   const {
@@ -289,7 +439,7 @@ const ItemCell = forwardRef((props, ref) => {
     ref={ref}
     direction={'row'}
     alignItems={'center'}>
-    <ItemIcon src={`${prefix}data/${rawName}.png`} alt=""/>
+    <ItemIcon src={`${prefix}data/${rawName}.png`} alt={rawName}/>
     <Stack>
       <Typography
         fontSize={14}

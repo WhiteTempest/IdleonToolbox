@@ -91,7 +91,7 @@ const Character = ({
         charactersPage />, filter: 'Chips'
     },
     {
-      component: <Equipment {...{ charName: name, equipment, tools, food, character, account }} />,
+      component: <Equipment {...{ charName: name, equipment, tools, food, character, characters, account }} />,
       filter: 'Equipment'
     },
     { component: <PlayerBubbles bubbles={equippedBubbles} />, filter: 'Equipped Bubbles' }
@@ -113,7 +113,7 @@ const Character = ({
                 {name} ({level})
               </Typography>
               {trophy ?
-                <TrophyIcon src={`${prefix}data/${trophy.replace('Replica', '')}disp.png`} style={{ width: 102, height: 19 }} alt="" /> : <Box
+                <TrophyIcon src={`${prefix}data/${trophy.replace('Replica', '')}disp.png`} style={{ width: 102, height: 19 }} alt={trophy.replace('Replica', '')} /> : <Box
                   sx={{ width: 102, height: 19 }}></Box>}
             </Stack>
           </Stack>

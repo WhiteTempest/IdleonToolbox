@@ -8,7 +8,7 @@ import { isArtifactAcquired } from '@parsers/world-5/sailing';
 import { getMonumentBonus } from '@parsers/world-5/caverns/bravery';
 import { getMealsBonusByEffectOrStat } from '@parsers/world-4/cooking';
 import { getBubbleBonus, getVialsBonusByStat } from '@parsers/world-2/alchemy';
-import { CLASSES, getHighestTalentByClass } from '@parsers/talents';
+import { getBestActiveCharacter, getHighestTalentAcrossCharacters } from '@parsers/talents';
 import { getAchievementStatus } from '@parsers/achievements';
 import { getWinnerBonus } from '@parsers/world-6/summoning';
 import { getLampBonus } from '@parsers/world-5/caverns/the-lamp';
@@ -24,13 +24,40 @@ import { getResearchGridBonus } from '@parsers/world-7/research';
 import { getSushiBonus } from '@parsers/world-7/sushiStation';
 
 
+const GAMING_SPROUT_IMPORTS_START = 25;
+const GAMING_SPROUT_RAT_SHOP = 33;
+const emptyGamingRaw = () => {
+  const raw: any[] = new Array(Math.max(15, gamingUpgrades.length + 1)).fill(0);
+  raw[11] = ''; // logbook unlock string
+  raw[12] = ''; // superbit unlock string
+  return raw;
+};
+const emptyGamingSproutRaw = () => {
+  const length = Math.max(GAMING_SPROUT_RAT_SHOP + 1, GAMING_SPROUT_IMPORTS_START + gamingImports.length + 1);
+  return Array.from({ length }, () => [0, 0, 0, 0]);
+};
+const emptySpelunkRaw = () => {
+  const raw: any[] = new Array(11).fill(0);
+  raw[9] = new Array(gamingPalette.length).fill(0); // palette levels
+  raw[10] = [];                                     // selected palette slots
+  return raw;
+};
+
 export const getGaming = (idleonData: any, characters: any, account: any, serverVars: any) => {
   const gamingRaw = tryToParse(idleonData?.Gaming) || idleonData?.Gaming;
   const gamingSproutRaw = tryToParse(idleonData?.GamingSprout) || idleonData?.GamingSprout;
   const spelunkRaw = tryToParse(idleonData?.Spelunk) || idleonData?.Spelunk;
   const researchRaw = tryToParse(idleonData?.Research) || idleonData?.Research;
-  if (!gamingRaw || !gamingSproutRaw || !spelunkRaw) return null;
-  return parseGaming(gamingRaw, gamingSproutRaw, spelunkRaw, researchRaw, characters, account, serverVars);
+  return {
+    ...parseGaming(
+      gamingRaw || emptyGamingRaw(),
+      gamingSproutRaw || emptyGamingSproutRaw(),
+      spelunkRaw || emptySpelunkRaw(),
+      researchRaw,
+      characters, account, serverVars
+    ),
+    unlocked: !!gamingRaw && !!gamingSproutRaw && !!spelunkRaw
+  };
 }
 
 const parseGaming = (gamingRaw: any, gamingSproutRaw: any, spelunkRaw: any, researchRaw: any, characters: any, account: any, serverVars: any) => {
@@ -84,7 +111,7 @@ const parseGaming = (gamingRaw: any, gamingSproutRaw: any, spelunkRaw: any, rese
         saveSprinklerChance: saveSprinklerChance * 100
       } : {}),
       ...(index === 1 ? {
-        maxNuggetValue: maxNuggetValue(bonus?.result, getEquinoxBonus(account?.equinox?.upgrades, 'Metal_Detector'), account?.accountOptions?.[192])
+        maxNuggetValue: maxNuggetValue(bonus?.result, getEquinoxBonus(account?.equinox?.upgrades, 'Metal_Detector'), account?.accountOptions?.[192] ?? 0)
       } : {}),
       ...(index === 2 ? {
         acornShop
@@ -179,7 +206,7 @@ export const getBitsMulti = (account: any, characters: any) => {
   const mealBonus = getMealsBonusByEffectOrStat(account, null, 'GamingBits');
   const vialBonus = getVialsBonusByStat(account?.alchemy?.vials, 'GameBits');
   const vialBonus2 = getVialsBonusByStat(account?.alchemy?.vials, '7bits');
-  const bittyLittlyTalentBonus = getHighestTalentByClass(characters, CLASSES.Divine_Knight, 'BITTY_LITTY', undefined, undefined, false, true) ?? 0;
+  const bittyLittlyTalentBonus = getHighestTalentAcrossCharacters(characters, 'BITTY_LITTY', getBestActiveCharacter(characters)) ?? 0;
   const highestGaming = getHighestCharacterSkill(characters, 'gaming');
   const winBonus = getWinnerBonus(account, '<x Gaming Bits');
   const lampBonus = getLampBonus({ holesObject: account?.hole?.holesObject, t: 1, i: 1, account });
@@ -334,38 +361,46 @@ const getMutations = () => {
 
 const calcSuperbitBonus = (characters: any, account: any, index: any) => {
   let bonus, totalBonus, additionalInfo;
+  const totalWaves = account?.towers?.totalWaves ?? 0;
   if (index === 0) {
     bonus = account?.achievements?.filter(({ completed }: any) => completed)?.length ?? 0;
     totalBonus = Math.pow(1.03, bonus);
   }
   else if (index === 3 || index === 16) {
-    bonus = Math.floor(account?.towers?.totalWaves / 10);
-    additionalInfo = `Total Bonus: ${bonus}% (${account?.towers?.totalWaves} waves)`
+    bonus = Math.floor(totalWaves / 10);
+    additionalInfo = `Total Bonus: ${bonus}% (${totalWaves} waves)`
   }
   else if (index === 11) {
-    bonus = 1.12 * Math.floor(account?.towers?.totalWaves / 10);
-    additionalInfo = `Total Bonus: ${bonus.toFixed(2)}% (${account?.towers?.totalWaves} waves)`
+    bonus = 1.12 * Math.floor(totalWaves / 10);
+    additionalInfo = `Total Bonus: ${bonus.toFixed(2)}% (${totalWaves} waves)`
   }
   else if (index === 13) {
-    bonus = Math.floor(account?.towers?.totalWaves / 10) * 13;
-    additionalInfo = `Total Bonus: ${bonus}% (${account?.towers?.totalWaves} waves)`
+    bonus = Math.floor(totalWaves / 10) * 13;
+    additionalInfo = `Total Bonus: ${bonus}% (${totalWaves} waves)`
   }
   else if (index === 7) {
-    bonus = Math.floor(account?.towers?.totalWaves / 10);
-    additionalInfo = `Total Bonus: ${bonus}% (${account?.towers?.totalWaves} waves)`
+    bonus = Math.floor(totalWaves / 10);
+    additionalInfo = `Total Bonus: ${bonus}% (${totalWaves} waves)`
   }
   else if (index === 12) {
-    // skill level doesn't update if the character is away for a long time
-    const highestGaming = getHighestCharacterSkill(characters, 'gaming');
-    totalBonus = Math.floor(highestGaming);
+    // The game multiplies this superbit by Lv0[15] of the character you're logged in as, not by the
+    // account's best gamer, so using the highest level made the library book timer run fast for
+    // anyone whose last-played character wasn't their top gamer. getBestActiveCharacter recovers
+    // that character from the newest PTimeAway stamp, which is also the only one whose skill levels
+    // aren't frozen at the moment it was left.
+    const activeCharacter = getBestActiveCharacter(characters);
+    const activeGaming = activeCharacter
+      ? activeCharacter?.skillsInfo?.gaming?.level ?? 0
+      : getHighestCharacterSkill(characters, 'gaming');
+    totalBonus = Math.floor(activeGaming);
   }
   else if (index === 20) {
-    bonus = Math.floor(account?.towers?.totalWaves / 10) * 50;
-    additionalInfo = `Total Bonus: ${bonus}% (${account?.towers?.totalWaves} waves)`
+    bonus = Math.floor(totalWaves / 10) * 50;
+    additionalInfo = `Total Bonus: ${bonus}% (${totalWaves} waves)`
   }
   else if (index === 27) {
-    bonus = 2.5 * Math.max(0, Math.floor((account?.towers?.totalWaves - 300) / 10));
-    additionalInfo = `Total Bonus: ${bonus}% (${account?.towers?.totalWaves} waves)`
+    bonus = 2.5 * Math.max(0, Math.floor((totalWaves - 300) / 10));
+    additionalInfo = `Total Bonus: ${bonus}% (${totalWaves} waves)`
   }
   else if (index === 24) {
     const discoveriesCount = account?.spelunking?.discoveriesCount ?? 0;
@@ -397,8 +432,8 @@ const calcSuperbitBonus = (characters: any, account: any, index: any) => {
     additionalInfo = `${highestSneaking} sneaking level`
   }
   else if (index === 44) {
-    bonus = 0.3 * Math.max(0, Math.floor((account?.towers?.totalWaves - 300) / 10));
-    additionalInfo = `Total Bonus: ${bonus}% (${account?.towers?.totalWaves} waves)`
+    bonus = 0.3 * Math.max(0, Math.floor((totalWaves - 300) / 10));
+    additionalInfo = `Total Bonus: ${bonus}% (${totalWaves} waves)`
   }
   else if (index === 45) {
     const highestGaming = getHighestCharacterSkill(characters, 'gaming');
@@ -538,7 +573,7 @@ const calcFertilizerCost = (index: any, gamingRaw: any, serverVars: any) => {
 const calcAcornShop = (gamingSproutRaw: any, account: any) => {
   const bonusTexts = ['All plants give x{ bits', 'All plants grow {% faster', 'Boosts Palette Lucky by +{%']
   const [, , firstValue, secondValue] = gamingSproutRaw?.[27];
-  return [firstValue, secondValue, account?.accountOptions?.[415]].map((value, index) => {
+  return [firstValue, secondValue, account?.accountOptions?.[415] ?? 0].map((value, index) => {
     const bonus = index === 0 ? 1 + (8 * value) / (250 + (value)) : index === 1
       ? Math.pow(3 * (value), 0.8)
       : index === 2 ? Math.pow(value, 0.8) : 0;
@@ -558,7 +593,8 @@ export const isSuperbitUnlocked = (account: any, superbitName: any) => {
 }
 
 const calcRatKing = (gamingSproutRaw: any, researchRaw: any, account: any, superbitsUpg: any) => {
-  const ratShopRaw = gamingSproutRaw?.[33] ?? [];
+  const kingRatUnlocked = account?.research?.kingRatUnlocked ?? 0;
+  const ratShopRaw = kingRatUnlocked ? (gamingSproutRaw?.[33] ?? []) : [];
   const [ratBaseBonus, currencyUpgLv, crownOddsUpgLv, bitMultiUpgLv] = ratShopRaw;
   const crownsCount = researchRaw?.[11]?.length ?? 0;
 
@@ -583,7 +619,6 @@ const calcRatKing = (gamingSproutRaw: any, researchRaw: any, account: any, super
     * (1 + getSushiBonus(account, 31) / 100)
   );
 
-  const kingRatUnlocked = account?.research?.kingRatUnlocked ?? 0;
   const paletteBonus34 = getPaletteBonus(account, 34) ?? 0;
   const gridBonus108 = getResearchGridBonus(account, 108, 0);
   const ratCurrencyGain = kingRatUnlocked === 0 ? 0
@@ -638,6 +673,19 @@ export const calculateSnailEncouragementForSuccessChance = (snailLevel: any, des
   }
   return low; // Return low as a whole number
 }
+
+// Neighbouring hexes per palette slot, mirrors the game's AdjacentHex{i} code blocks.
+// A locked colour is only rollable (and only shows its unlock chance) when it borders an owned one.
+const paletteAdjacency = [
+  [1, 7, 8], [0, 2, 8, 9], [1, 3, 9, 10], [2, 4, 10, 11], [3, 5, 11, 12], [4, 6, 12, 13], [5, 13, 14],
+  [0, 8, 15], [0, 1, 7, 9, 15, 16], [1, 2, 8, 10, 16, 17], [2, 3, 9, 11, 17, 18], [3, 4, 10, 12, 18, 19],
+  [4, 5, 11, 13, 19, 20], [5, 6, 12, 14, 20, 21], [6, 13, 21],
+  [7, 8, 16, 22, 23], [8, 9, 15, 17, 23, 24], [9, 10, 16, 18, 24, 25], [10, 11, 17, 19, 25, 26],
+  [11, 12, 18, 20, 26, 27], [12, 13, 19, 21, 27, 28], [13, 14, 20, 28, 29],
+  [15, 23, 30], [15, 16, 22, 24, 30, 31], [16, 17, 23, 25, 31, 32], [17, 18, 24, 26, 32, 33],
+  [18, 19, 25, 27, 33, 34], [19, 20, 26, 28, 34, 35], [20, 21, 27, 29, 35, 36], [21, 28, 36],
+  [22, 23, 31], [23, 24, 30, 32], [24, 25, 31, 33], [25, 26, 32, 34], [26, 27, 33, 35], [27, 28, 34, 36], [28, 29, 35]
+];
 
 const getPalette = (account: any, ratKing: any, spelunkRaw: any, characters: any) => {
   const palette = [];
@@ -695,9 +743,19 @@ const getPalette = (account: any, ratKing: any, spelunkRaw: any, characters: any
     });
   }
 
-  const finalBonus = Math.round(sum * (1 + getLegendTalentBonus(account, 10) / 100));
+  // The game keeps the level sum raw here, the legend talent multiplier only applies per colour
+  const finalBonus = Math.round(sum);
   const paletteLuck = getPaletteLuck(sum, ratKing, { ...account, gaming: { ...account?.gaming, palette } }, characters);
   palette.push(finalBonus);
+
+  const unlockableSlots = new Set<number>();
+  for (let i = 0; i < 37; i++) {
+    if ((spelunkRaw?.[9]?.[i] ?? 0) > 0) {
+      for (const neighbour of paletteAdjacency[i]) {
+        unlockableSlots.add(neighbour);
+      }
+    }
+  }
 
   for (let i = 0; i < 37; i++) {
     const spelunkValue = spelunkRaw?.[9]?.[i];
@@ -708,14 +766,16 @@ const getPalette = (account: any, ratKing: any, spelunkRaw: any, characters: any
     let levelUpChance;
     if (baseValue && spelunkValue >= 0) {
       levelUpChance = paletteLuck?.value * (1 / (baseValue * Math.pow(multiplier, spelunkValue)));
-      levelUpChance = Math.min(1, levelUpChance);
     }
     if (spelunkValue >= 1) {
       (palette[i] as any).chance = levelUpChance;
     }
-    else {
+    else if (unlockableSlots.has(i)) {
       (palette[i] as any).chance = paletteLuck?.value
         * (1 / gamingPalette?.[i]?.x8);
+    }
+    else {
+      (palette[i] as any).chance = undefined;
     }
   }
 
@@ -742,7 +802,7 @@ export const getPaletteLuck = (paletteFinalBonus: any, ratKing: any, account: an
   const superbit28Unlocked = isSuperbitUnlocked(account, 'Lucky_Snail') ? 1 : 0;
   const acornShopBonus2 = account?.gaming?.imports?.[2]?.acornShop?.[2]?.bonus ?? 0;
   const exoticBonus44 = getExoticMarketBonus(account, 44) ?? 0;
-  const jadeEmporiumBonus = isJadeBonusUnlocked(account, 'Palette_Slot');
+  const jadeEmporiumBonus = isJadeBonusUnlocked(account, 'Palette_Slot') ? 1 : 0;
   const arcadeBonus = getArcadeBonus(account?.arcade?.shop, 'Palette_Luck')?.bonus ?? 0;
   const gridBonus = getResearchGridBonus(account, 107, 2);
   const superbit65Unlocked = isSuperbitUnlocked(account, 'Artistic_Gamer') ? 1 : 0;

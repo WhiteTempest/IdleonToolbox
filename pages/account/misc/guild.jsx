@@ -10,6 +10,7 @@ import ProgressBar from '../../../components/common/ProgressBar';
 import useFormatDate from '@hooks/useFormatDate';
 import Box from '@mui/material/Box';
 import Popper from '@components/common/Popper';
+import { CLIPBOARD_ERROR_MESSAGE, copyText } from '@utility/clipboard';
 
 const Guild = () => {
   const { state } = useContext(AppContext);
@@ -17,6 +18,7 @@ const Guild = () => {
   const { guild } = state?.account || {};
   const [dataTimestamp, setDataTimestamp] = useState([]);
   const [anchorEl, setAnchorEl] = React.useState(null);
+  const [popperMessage, setPopperMessage] = React.useState(null);
   const [error, setError] = useState('');
 
   useEffect(() => {
@@ -55,16 +57,19 @@ const Guild = () => {
   }
 
   const exportToJson = async (e) => {
-    setAnchorEl(e.currentTarget)
+    const target = e.currentTarget;
+    let copied = false;
     try {
       const exportedData = {
         date: formatDate(new Date()),
         members: guild?.members?.map(({ name, gpEarned }) => ({ name, gpEarned }))
       }
-      await navigator.clipboard.writeText(JSON.stringify(exportedData, null, 2));
+      copied = await copyText(JSON.stringify(exportedData, null, 2));
     } catch (e) {
       console.error('exportToJson -> ', e);
     }
+    setPopperMessage(copied ? null : CLIPBOARD_ERROR_MESSAGE);
+    setAnchorEl(target);
   }
 
   const onClear = () => {
@@ -72,15 +77,17 @@ const Guild = () => {
     setDataTimestamp([]);
   }
 
-  if (!guild || guild?.members?.length === 0) {
-    return <Typography variant={'h3'} mb={3}>You have to be in a guild to view this page's content</Typography>
+  if (!guild?.unlocked || guild?.members?.length === 0) {
+    return <>
+      <GuildSeo/>
+
+      <Typography variant={'h5'} mb={2}>Guild bonuses</Typography>
+      <GuildBonuses bonuses={guild?.guildBonuses}/>
+    </>
   }
 
   return <>
-    <NextSeo
-      title="Guild | Idleon Toolbox"
-      description="Keep track of your guild members, gp, bonuses and more"
-    />
+    <GuildSeo/>
     <Stack>
       <Stack direction={'row'} alignItems={'center'} gap={1}>
         <img src={`${prefix}data/G2icon${state?.account?.accountOptions?.[38]}.png`}
@@ -88,7 +95,7 @@ const Guild = () => {
         <Typography variant={'h3'}>{state?.account?.accountOptions?.[37]} <Typography component="span"
                                                                                       variant={'h5'}>({guild?.members?.length} / {guild?.maxMembers})</Typography></Typography>
       </Stack>
-      <Stack sx={{ mb: 1 }} direction={'row'} gap={2} flexWrap={'wrap'}>
+      <Stack mb={3} sx={{ mb: 1 }} direction={'row'} gap={2} flexWrap={'wrap'}>
         <CardTitleAndValue title={'Members'} value={`${guild?.members?.length} / ${guild?.maxMembers}`}/>
         <CardTitleAndValue title={'Exp'}>
           <ProgressBar boxSx={{ width: 200 }}
@@ -107,7 +114,7 @@ const Guild = () => {
             <Stack direction={'row'} alignItems={'center'} gap={2}>
               <Button variant={'contained'} onClick={saveToLS}>Save</Button>
               <Button variant={'contained'} onClick={exportToJson}>Export</Button>
-              <Popper anchorEl={anchorEl} handleClose={() => setAnchorEl(null)}/>
+              <Popper anchorEl={anchorEl} handleClose={() => setAnchorEl(null)} message={popperMessage ?? undefined}/>
               <Button variant={'contained'} color={'warning'} onClick={onClear}>Clear
                 all</Button>
             </Stack>
@@ -122,6 +129,11 @@ const Guild = () => {
     </Tabber>
   </>
 };
+
+const GuildSeo = () => <NextSeo
+  title="Guild | Idleon Toolbox"
+  description="Keep track of your guild members, gp, bonuses and more"
+/>;
 
 const CardTitleAndValue = ({ cardSx, title, value, children }) => {
   return <Card sx={{ my: { xs: 0, md: 3 }, width: 'fit-content', ...cardSx }}>

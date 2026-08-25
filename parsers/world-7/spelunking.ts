@@ -5,7 +5,7 @@ import { getSlabBonus, isArtifactAcquired } from '@parsers/world-5/sailing';
 import { getMealsBonusByEffectOrStat } from '@parsers/world-4/cooking';
 import { getPaletteBonus } from '@parsers/world-5/gaming';
 import { getExoticMarketBonus, getStickerBonus } from '@parsers/world-6/farming';
-import { getCardBonusByEffect } from '@parsers/cards';
+import { getCardBonusByEffect, getCardLevel } from '@parsers/cards';
 import { getArcadeBonus } from '@parsers/world-2/arcade';
 import { getGrimoireBonus } from '@parsers/class-specific/grimoire';
 import { getArmorSetBonus } from '@parsers/world-3/armorSmithy';
@@ -54,7 +54,13 @@ const parseSpelunking = (account: any, characters: any, rawSpelunking: any, rawT
 
   const totalCharactersSpelunkingLevels = characters?.reduce((res: any, { skillsInfo }: any) => res + (skillsInfo?.spelunking?.level ?? 0), 0) ?? 0;
   const highestSpelunkingLevelCharacter = characters?.reduce((res: any, { skillsInfo }: any) => Math.max(res, skillsInfo?.spelunking?.level ?? 0), 0) ?? 0;
-  const [currentAmber, overstimLevel, overstimCurrent, exaltedFragmentFound, prismaFragmentFound] = rawSpelunking?.[4] || [];
+  const [
+    currentAmber = 0,
+    overstimLevel = 0,
+    overstimCurrent = 0,
+    exaltedFragmentFound = 0,
+    prismaFragmentFound = 0
+  ] = rawSpelunking?.[4] || [];
   const biggestHauls = rawSpelunking?.[2] ?? [];
   const biggestHaul = biggestHauls?.reduce((sum: any, value: any) => {
     return sum + Math.ceil(lavaLog(value));
@@ -87,7 +93,9 @@ const parseSpelunking = (account: any, characters: any, rawSpelunking: any, rawT
       const artifactBonus = isArtifactAcquired(account?.sailing?.artifacts, 'Pointagon')?.bonus ?? 0;
 
       // const baseMultiplier = chapter?.x4 ? 1 + artifactBonus / 100 : 1;
-      const baseMultiplier = chapter?.x4 === 1 ? 1 + account?.sailing?.artifacts?.[35]?.bonus / 100 : 1; // TODO: remove after this is fixed in-game
+      // account.sailing is deliberately null when the feature is locked (real accounts too, not just
+      // empty ones) - guard to 0, matching the artifactBonus fallback two lines up.
+      const baseMultiplier = chapter?.x4 === 1 ? 1 + (account?.sailing?.artifacts?.[35]?.bonus ?? 0) / 100 : 1; // TODO: remove after this is fixed in-game
       const bonus = baseMultiplier * growth(chapter?.func, level, chapter?.x1, chapter?.x2, false) || 0;
       const isDecay = chapter?.func === 'decay' || chapter?.func === 'decayMulti';
       const maxBonus = chapter?.func === 'decay'
@@ -157,12 +165,14 @@ const parseSpelunking = (account: any, characters: any, rawSpelunking: any, rawT
       grandDiscoveriesChance
     })
     const cost = getSpelunkingUpgradeCost(account, characters, upgrade);
+    const costToMax = getSpelunkingUpgradeCostToMax(account, characters, upgrade);
     return {
       ...upgrade,
       description,
       baseBonus,
       bonus,
-      cost
+      cost,
+      costToMax
     }
   });
 
@@ -251,7 +261,7 @@ const parseSpelunking = (account: any, characters: any, rawSpelunking: any, rawT
     elixirs,
     currentAmber,
     overstimLevel,
-    overstimCurrent: overstimCurrent ?? 0,
+    overstimCurrent,
     overstimReq: 100 * Math.pow(1.3, overstimLevel),
     overstimFillRate,
     overstimRate,
@@ -378,7 +388,7 @@ export const getDiscoveryHp = (discovery: any) => {
 export const getOverstimBonus = (account: any) => {
   const shopUpg6 = getSpelunkingBonus(account, 6);
   const overstimPerLevel = 30 + shopUpg6;
-  return overstimPerLevel * account?.spelunking?.overstimLevel;
+  return overstimPerLevel * (account?.spelunking?.overstimLevel ?? 0);
 }
 
 export const getLoreBonus = (account: any, index: any) => {
@@ -434,7 +444,11 @@ export const getAmberGain = (account: any, loreBonuses: any) => {
   const vialBonus = getVialsBonusByEffect(account?.alchemy?.vials, null, '7amber');
   const mealBonus = getMealsBonusByEffectOrStat(account, null, 'SplkAmb');
   const dancingCoralBonus = getDancingCoralBonus(account, 2, 0);
-  const cardBonus = getCardBonusByEffect(account?.cards, 'Spelunk_Amber_(Passive)');
+  // Game: min(5 * CardLv("w7a7"), 40) + min(10 * CardLv("w7a7"), 100)
+  // Litterfish is counted twice, at two coefficients with two caps, so an effect lookup
+  // (which yields one bonus * level term) can only ever see the first half of it.
+  const litterfishLv = getCardLevel(account?.cards, 'w7a7');
+  const cardBonus = Math.min(5 * litterfishLv, 40) + Math.min(10 * litterfishLv, 100);
   const winnerBonus = getWinnerBonus(account, '<x Amber Gain');
   const shopUpg7 = getSpelunkingBonus(account, 7, 1);
   const shopUpg20 = getSpelunkingBonus(account, 20);
@@ -552,7 +566,14 @@ const getChapterBonus = (account: any, chapterArrIndex: any, innerIndex: any) =>
   return chapter?.bonus;
 }
 
+// The game locks POW to a flat 2 until the spelunking tutorial is past step 8.
+const SPELUNKING_TUTORIAL_STEP_INDEX = 478;
+const SPELUNKING_TUTORIAL_POWER_STEP = 8;
+const SPELUNKING_TUTORIAL_POWER = 2;
+
 const getPower = (account: any, _unused1?: any) => {
+  const tutorialStep = account?.accountOptions?.[SPELUNKING_TUTORIAL_STEP_INDEX] ?? 0;
+  const inTutorial = tutorialStep < SPELUNKING_TUTORIAL_POWER_STEP;
   const basePower = 1 + getSpelunkingBonus(account, 0);
   // Power multiplier - combines many different bonuses
   const winnerBonus = getWinnerBonus(account, '<x Spelunk POW');
@@ -602,12 +623,20 @@ const getPower = (account: any, _unused1?: any) => {
     * (1 + getSushiBonus(account, 20) / 100)
     * (1 + getButtonBonus(account, 6) / 100);
 
+  const value = inTutorial ? SPELUNKING_TUTORIAL_POWER : basePower * powerMulti;
+
   return {
-    value: basePower * powerMulti,
+    value,
     breakdown: {
       statName: "Power",
-      totalValue: notateNumber(basePower * powerMulti, "Big"),
+      totalValue: notateNumber(value, "Big"),
       categories: [
+        ...(inTutorial ? [{
+          name: "Tutorial",
+          sources: [
+            { name: "Power is locked to 2 until the spelunking tutorial is done", value: SPELUNKING_TUTORIAL_POWER }
+          ]
+        }] : []),
         {
           name: "Additive",
           sources: [
@@ -641,15 +670,19 @@ const getPower = (account: any, _unused1?: any) => {
   }
 }
 
-const getSpelunkingUpgradeCost = (account: any, characters: any, upgrade: any) => {
+// The meal and sushi discounts are account-wide, so per-level loops compute them once up front.
+const getSpelunkingCostDiscount = (account: any, characters: any) => {
   const mealBonus = getMealsBonusByEffectOrStat(account, null, 'SplkUpg');
   const firstPlayerSpelunkingLevel = characters?.[0]?.skillsInfo?.spelunking?.level ?? 0;
   const levelMultiplier = Math.max(1, Math.min(2, 1 + Math.floor(firstPlayerSpelunkingLevel / 50)));
-  var costReduction = 1 / (1 + (mealBonus * levelMultiplier) / 100);
+  const costReduction = 1 / (1 + (mealBonus * levelMultiplier) / 100);
   const sushiDiscount = Math.max(getSushiBonus(account, 6), getSushiBonus(account, 27));
-  var baseCost = costReduction
+  return costReduction * Math.max(0.1, 1 - sushiDiscount / 100);
+}
+
+const getSpelunkingUpgradeCost = (account: any, characters: any, upgrade: any, discount?: number) => {
+  var baseCost = (discount ?? getSpelunkingCostDiscount(account, characters))
     * (10 + (upgrade?.level ?? 0))
-    * Math.max(0.1, 1 - sushiDiscount / 100)
     * upgrade?.x1
     * Math.pow(9.5, upgrade?.x7)
     * Math.pow(6.3, upgrade?.x8);
@@ -659,6 +692,23 @@ const getSpelunkingUpgradeCost = (account: any, characters: any, upgrade: any) =
     const quadraticCost = Math.pow(upgrade?.level, 2) + 5 * upgrade?.level;
     return levelScaling + quadraticCost;
   }
+}
+
+// Upgrades without a real cap carry x3 = 99999, so a "cost to max" would be meaningless for them.
+const UNCAPPED_MAX_LEVEL = 99999;
+
+const getSpelunkingUpgradeCostToMax = (account: any, characters: any, upgrade: any) => {
+  const maxLevel = upgrade?.x3 ?? 0;
+  if (maxLevel >= UNCAPPED_MAX_LEVEL) return null;
+  const currentLevel = Math.max(0, upgrade?.level ?? 0);
+  if (currentLevel >= maxLevel) return 0;
+
+  let total = 0;
+  const discount = getSpelunkingCostDiscount(account, characters);
+  for (let level = currentLevel; level < maxLevel; level++) {
+    total += getSpelunkingUpgradeCost(account, characters, { ...upgrade, level }, discount) ?? 0;
+  }
+  return isFinite(total) ? total : null;
 }
 
 const getSpelunkingUpgradeBonus = (

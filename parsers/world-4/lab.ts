@@ -1,10 +1,11 @@
 import { growth, tryToParse } from '@utility/helpers';
 import { chips, classes, jewels, labBonuses, merits, randomList, talents } from '@website-data';
+import { liveEntries } from '@parsers/catalog';
 import { getMealsBonusByEffectOrStat } from '@parsers/world-4/cooking';
 import { getCardBonusByEffect } from '@parsers/cards';
 import { isArenaBonusActive, isCompanionBonusActive, isMasteryBonusUnlocked } from '@parsers/misc';
 import { getShinyBonus } from '@parsers/world-4/breeding';
-import { checkCharClass, CLASSES, getHighestTalentByClass, getTalentBonus } from '@parsers/talents';
+import { checkCharClass, CLASSES, getTalentBonus, getBestActiveCharacter, getHighestTalentAcrossCharacters } from '@parsers/talents';
 import { getEquinoxBonus } from '@parsers/world-3/equinox';
 import { getWinnerBonus } from '@parsers/world-6/summoning';
 import { calculateItemTotalAmount, getStatsFromGear } from '@parsers/items';
@@ -18,7 +19,18 @@ export const getLab = (idleonData: any, charactersData: any, account: any, updat
 }
 
 const parseLab = (labRaw: any, charactersData: any, account: any, updatedCharactersData: any) => {
-  if (!labRaw) return {}
+  if (!labRaw) {
+    return {
+      playersCords: [],
+      playersChips: [],
+      connectedPlayers: [],
+      jewels: liveEntries<any>(jewels as any[]).map(({ entry }) => ({ ...entry, acquired: false, active: false })),
+      chips: liveEntries<any>(chips as any[]).map(({ entry }) => ({ ...entry, repoAmount: 0, amount: 0, totalAmount: 0 })),
+      labBonuses: liveEntries<any>(labBonuses as any[]).map(({ entry }) => ({ ...entry, active: false })),
+      totalRawChips: 0,
+      currentRotation: []
+    };
+  }
   const arenaWave = account?.accountOptions?.[89];
   const waveReqs = randomList?.[53];
   const [cords] = labRaw;
@@ -63,7 +75,7 @@ const parseLab = (labRaw: any, charactersData: any, account: any, updatedCharact
   });
   const soupedUpSlots = (account?.gemShopPurchases?.find((value: any, index: any) => index === 123) ?? 0) * 2;
   const holeMajikConnected = account?.hole?.godsLinks?.find(({ index }: any) => index === 1);
-  // Game: Divinity("Bonus_MAJOR", n, 2) — research grid 173 grants Arctis (lab god) bonus to ALL players
+  // Game: Divinity("Bonus_MAJOR", n, 2) - research grid 173 grants Arctis (lab god) bonus to ALL players
   const hasArctisResearch = getResearchGridBonus(account, 173, 0) >= 1;
   let playersInTubes = [...charactersData].filter((character, index) => isCompanionBonusActive(account, 0)
     || holeMajikConnected
@@ -160,7 +172,7 @@ const parseLab = (labRaw: any, charactersData: any, account: any, updatedCharact
     return { ...bonus, bonusOn: bonus?.bonusOn + jewel19RawBonus / 100 };
   });
   const spelunkerObolMulti = getLabBonus(labBonusesList, 8);
-  // Game: jewel bonus = JewelDesc[n][12] * MainframeBonus(8) — pure spelunker multiplier
+  // Game: jewel bonus = JewelDesc[n][12] * MainframeBonus(8) - pure spelunker multiplier
   jewelsList = jewelsList.map((jewel: any, index: any) => ({
     ...jewel,
     multiplier: index === 19 ? 1 : spelunkerObolMulti
@@ -302,10 +314,11 @@ export const getPlayerLineWidth = (playerCords: any, labLevel: any, soupedTube: 
 
   let purpleTubeBonus = 0;
   if (playerCords?.x >= buboPlayer?.x) {
-    const purpleTubeLevel = buboPlayer.SkillLevels[536] || 0;
+    // 535 is PURPLE_TUBE; 536 is GREEN_TUBE, whose level was previously fed into purple's growth
+    const purpleTubeLevel = buboPlayer.SkillLevels[535] || 0;
     const purpleTubeData = (talents as Record<string, any>)?.[CLASSES.Bubonic_Conjuror]?.['PURPLE_TUBE'] || {};
     if (updatedCharactersData) {
-      purpleTubeBonus = getHighestTalentByClass(updatedCharactersData, CLASSES.Bubonic_Conjuror, 'PURPLE_TUBE', false, true)
+      purpleTubeBonus = getHighestTalentAcrossCharacters(updatedCharactersData, 'PURPLE_TUBE', getBestActiveCharacter(updatedCharactersData))
     } else {
       purpleTubeBonus = growth(purpleTubeData?.funcX, purpleTubeLevel, purpleTubeData?.x1, purpleTubeData?.x2, false) ?? 0;
     }

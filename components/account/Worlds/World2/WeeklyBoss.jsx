@@ -1,4 +1,4 @@
-import { cleanUnderscore, prefix } from '@utility/helpers';
+import { cleanUnderscore, MAX_CHARACTERS, prefix } from '@utility/helpers';
 import { Divider, Stack, Typography } from '@mui/material';
 import React from 'react';
 import styled from '@emotion/styled';
@@ -16,9 +16,9 @@ const WeeklyBoss = ({ bossIndex, bossName, shopItems, triplets, date, account, c
   const formatDate = useFormatDate();
   return (<>
     <Stack sx={{ width: '100%' }} direction={'row'} alignItems={'center'} gap={2}>
-      <img style={{ width: 50, height: 50 }} src={`${prefix}etc/${bossName}.png`} alt=""/>
+      <img style={{ width: 50, height: 50 }} src={`${prefix}etc/${bossName}.png`} alt={bossName}/>
       <Stack>
-        <Typography variant={'h4'}>{cleanUnderscore(bossName)}</Typography>
+        <Typography variant={'h5'}>{cleanUnderscore(bossName)}</Typography>
         <Typography variant={'caption'}>{isValid(date) ? formatDate(date) : null}</Typography>
       </Stack>
     </Stack>
@@ -28,12 +28,12 @@ const WeeklyBoss = ({ bossIndex, bossName, shopItems, triplets, date, account, c
       {shopItems?.map(({ name, rawName, x1 }) => {
         const fixedRawName = rawName === 'FoodG' ? 'FoodG1' : rawName;
         return <Stack key={rawName} direction={'row'} alignItems={'center'} gap={2}>
-          {name.includes('_UI') ? <UiIcon src={`${prefix}data/${fixedRawName}.png`} alt=""/> : <IconImg
-            src={`${prefix}data/${fixedRawName}.png`} alt=""/>}
+          {name.includes('_UI') ? <UiIcon src={`${prefix}data/${fixedRawName}.png`} alt={fixedRawName}/> : <IconImg
+            src={`${prefix}data/${fixedRawName}.png`} alt={fixedRawName}/>}
           <Stack>
             <Typography>{cleanUnderscore(name)}</Typography>
             <Stack gap={2} direction={'row'} alignItems={'center'}>
-              <Trophie src={`${prefix}data/Trophie.png`} alt=""/>
+              <Trophie src={`${prefix}data/Trophie.png`} alt="Trophie"/>
               <Typography variant={'body1'}>{x1}</Typography>
             </Stack>
           </Stack>
@@ -45,27 +45,27 @@ const WeeklyBoss = ({ bossIndex, bossName, shopItems, triplets, date, account, c
       <Stack>
         <Typography variant={'h5'}>Actions</Typography>
         {bossIndex === 0 ? <Typography variant={'caption'}>Current
-          turn: {account?.accountOptions?.[185] + 1}</Typography> : null}
+          turn: {(account?.accountOptions?.[185] ?? 0) + 1}</Typography> : null}
       </Stack>
       <Stack flexWrap={'wrap'} direction={'row'}>
-        {triplets?.map(({ task }, index) => index < (characters?.length ?? 10) ? <IconImg key={'all-moves' + index}
+        {triplets?.map(({ task }, index) => index < (characters?.length ?? MAX_CHARACTERS) ? <IconImg key={'all-moves' + index}
                                                                   style={{
                                                                     border: bossIndex === 0 && account?.accountOptions?.[185] === index
                                                                       ? '1px solid #81c784'
                                                                       : ''
                                                                   }}
                                                                   src={`${prefix}etc/Req_Icon_${task?.rawName}.png`}
-                                                                  alt=""/> : null)}
+                                                                  alt={task?.rawName}/> : null)}
       </Stack>
     </Stack>
     <Stack>
       {triplets?.map(({ actions, task }, index) => {
-        if (index >= (characters?.length ?? 10)) return null;
+        if (index >= (characters?.length ?? MAX_CHARACTERS)) return null;
         const quantity = getTaskQuantity(index, task?.taskIndex, account, characters);
         return (
           (<React.Fragment key={'triplets' + index}>
             <Stack mb={1} direction={'row'} alignItems={'center'} gap={2}>
-              <IconImg src={`${prefix}etc/Req_Icon_${task?.rawName}.png`} alt=""/>
+              <IconImg src={`${prefix}etc/Req_Icon_${task?.rawName}.png`} alt={task?.rawName}/>
               <Stack>
                 <Typography
                   color={bossIndex === 0 && account?.accountOptions?.[185] === index ? 'success.light' : 'text.primary'}

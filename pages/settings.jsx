@@ -32,16 +32,20 @@ import { intervalToDuration, isValid } from 'date-fns';
 import { uploadProfile } from '../services/profiles';
 import { expandLeaderboardInfo } from '../services/leaderboardInfo';
 import { copyForSupport, copyRawData, notateNumber, sortKeys } from '@utility/helpers';
+import { errorMessage } from '@utility/analytics';
+import { CLIPBOARD_ERROR_MESSAGE, copyText } from '@utility/clipboard';
 import useTimeout from '@hooks/useTimeout';
 import NormalTimer from '../components/common/Timer/Normal';
 import FileCopyIcon from '@mui/icons-material/FileCopy';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import Popper from '@components/common/Popper';
 import { TitleAndValue } from '@components/common/styles';
-import { useLocalStorage } from '@mantine/hooks';
+import { readLocalStorageValue, useLocalStorage } from '@mantine/hooks';
 
 const HOURS = 4;
 const WAIT_TIME = 1000 * 60 * 60 * HOURS;
+
+const ACCESS_LABELS = { off: 'Off', public: 'Public', anonymous: 'Anonymous' };
 
 const SectionHeader = ({ icon: Icon, title, description }) => (
   <>
@@ -77,7 +81,8 @@ const PeakStats = ({
                      greenMushroomKills,
                      totalBoats,
                      totalTomePoints,
-                     highestVillagerExpPerHour
+                     highestVillagerExpPerHour,
+                     totalVillagerExpPerHour
                    }) => {
   return <Stack>
     <Typography variant={'body1'} sx={{ fontWeight: 'bold' }}>Calculated stats</Typography>
@@ -94,6 +99,7 @@ const PeakStats = ({
     <TitleAndValue title={'Total Boats'} value={notateNumber(totalBoats)}/>
     <TitleAndValue title={'Total Tome Points'} value={notateNumber(totalTomePoints)}/>
     <TitleAndValue title={'Highest villager exp / hr'} value={notateNumber(highestVillagerExpPerHour)}/>
+    <TitleAndValue title={'Total villager exp / hr'} value={notateNumber(totalVillagerExpPerHour)}/>
   </Stack>
 };
 
@@ -111,11 +117,18 @@ const Settings = () => {
   const [showClearOptions, setShowClearOptions] = useState(false);
   const [selectedKeys, setSelectedKeys] = useState([]);
   const [anchorEl, setAnchorEl] = useState(null);
+  const [popperMessage, setPopperMessage] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [lastUpload, setLastUpload] = useState(false);
   const [isDisabled, setIsDisabled] = useState(false);
   const [uploaded, setUploaded] = useState(false);
-  const [anonId, setAnonId] = useState(null);
+  const [lastUpload, setLastUpload, removeLastUpload] = useLocalStorage({ key: `${state?.uid}/lastUpload` });
+  const [anonId, setAnonId, removeAnonId] = useLocalStorage({ key: `${state?.uid}/anonId` });
+  const [lastUploadAccess, setLastUploadAccess, removeLastUploadAccess] = useLocalStorage({
+    key: `${state?.uid}/lastUploadAccess`
+  });
+  const [lastUploadParticipation, setLastUploadParticipation, removeLastUploadParticipation] = useLocalStorage({
+    key: `${state?.uid}/lastUploadParticipation`
+  });
   const [profileAccess, setProfileAccess] = useLocalStorage({
     key: 'data:profileAccess',
     defaultValue: 'off'
@@ -125,16 +138,10 @@ const Settings = () => {
     defaultValue: 'off'
   });
   const [removeGemsInfo, setRemoveGemsInfo] = useLocalStorage({ key: 'data:removeGemsInfo', defaultValue: true });
+  const [, setMigrated] = useLocalStorage({ key: 'profileAccess:migrated' });
   const [error, setError] = useState('');
   const [open, setOpen] = useState(false);
   const [statsOpen, setStatsOpen] = useState(false);
-
-  useEffect(() => {
-    if (state?.uid) {
-      setLastUpload(localStorage.getItem(`${state?.uid}/lastUpload`));
-      setAnonId(localStorage.getItem(`${state.uid}/anonId`));
-    }
-  }, [state?.uid]);
 
   useEffect(() => {
     if (lastUpload) {
@@ -145,17 +152,11 @@ const Settings = () => {
   // One-time migration: derive new profileAccess + leaderboardParticipation
   // from the old profileVisibility + leaderboardConsent localStorage keys.
   useEffect(() => {
-    const migrated = localStorage.getItem('profileAccess:migrated');
-    if (migrated) return;
-    localStorage.setItem('profileAccess:migrated', '1');
+    if (readLocalStorageValue({ key: 'profileAccess:migrated' })) return;
+    setMigrated('1');
 
-    const oldVisibility = localStorage.getItem('data:profileVisibility');
-    const oldConsentRaw = localStorage.getItem('data:leaderboardConsent');
-    // Mantine useLocalStorage stores values JSON-encoded, so parse if possible
-    let oldConsent = oldConsentRaw;
-    try { oldConsent = JSON.parse(oldConsentRaw); } catch { /* keep raw */ }
-    let oldVis = oldVisibility;
-    try { oldVis = JSON.parse(oldVisibility); } catch { /* keep raw */ }
+    let oldConsent = readLocalStorageValue({ key: 'data:leaderboardConsent' });
+    const oldVis = readLocalStorageValue({ key: 'data:profileVisibility' });
 
     // Normalize legacy boolean consent
     if (oldConsent === true) oldConsent = 'public';
@@ -187,36 +188,37 @@ const Settings = () => {
 
   useTimeout(() => {
     setAnchorEl(null);
-  }, anchorEl ? 1000 : null);
+  }, anchorEl ? (popperMessage ? 4000 : 1000) : null);
 
-  const handleCopyITRaw = async (e) => {
+  const showPopper = (target, message = null) => {
+    setPopperMessage(message);
+    setAnchorEl(target);
+  };
+
+  // The popper reports the result, so it can only be shown once the write has actually resolved.
+  const runCopy = async (target, copy) => {
+    let copied = false;
     try {
-      setAnchorEl(e.currentTarget);
-      await copyForSupport(state?.account, state?.characters);
+      copied = await copy();
     } catch (err) {
       console.error(err);
     }
+    showPopper(target, copied ? null : CLIPBOARD_ERROR_MESSAGE);
+  };
+
+  const handleCopyITRaw = async (e) => {
+    await runCopy(e.currentTarget, () => copyForSupport(state?.account, state?.characters));
   };
 
   const handleCopyRaw = async (e) => {
-    try {
-      setAnchorEl(e.currentTarget);
-      await copyRawData();
-    } catch (err) {
-      console.error(err);
-    }
+    await runCopy(e.currentTarget, () => copyRawData());
   };
 
   const handleCopyLink = async (e) => {
     const target = e.currentTarget;
     const charName = state?.characters?.[0]?.name;
     if (!charName) return;
-    try {
-      await navigator.clipboard.writeText(`${process.env.NEXT_PUBLIC_IT_URL}/account/misc/general?profile=${encodeURIComponent(charName)}`);
-      setAnchorEl(target);
-    } catch (err) {
-      console.error(err);
-    }
+    await runCopy(target, () => copyText(`${process.env.NEXT_PUBLIC_IT_URL}/account/misc/general?profile=${encodeURIComponent(charName)}`));
   };
 
   const handleStorageClear = (keys) => {
@@ -228,8 +230,9 @@ const Settings = () => {
           }
         });
       } else if (storageKey === 'last-upload-time') {
-        localStorage.removeItem(`${state?.uid}/lastUpload`);
-        setLastUpload(false);
+        removeLastUpload();
+        removeLastUploadAccess();
+        removeLastUploadParticipation();
       } else {
         localStorage.removeItem(storageKey);
       }
@@ -261,21 +264,23 @@ const Settings = () => {
           leaderboardParticipation: safeParticipation
         }, state?.accessToken);
         const newAnonId = result?.anonId || null;
-        setAnonId(newAnonId);
         if (newAnonId) {
-          localStorage.setItem(`${state.uid}/anonId`, newAnonId);
+          setAnonId(newAnonId);
         } else {
-          localStorage.removeItem(`${state.uid}/anonId`);
+          removeAnonId();
         }
         setUploaded(true);
-        const now = Date.now();
-        localStorage.setItem(`${state?.uid}/lastUpload`, now);
-        setLastUpload(now);
+        setLastUpload(Date.now());
+        setLastUploadAccess(profileAccess);
+        setLastUploadParticipation(safeParticipation);
 
         if (typeof window.gtag !== 'undefined') {
           window.gtag('event', 'profile_uploaded', {
             event_category: 'engagement',
             event_label: 'success',
+            upload_status: 'success',
+            profile_access: profileAccess,
+            leaderboard: safeParticipation,
             value: 1
           });
         }
@@ -285,7 +290,9 @@ const Settings = () => {
           window.gtag('event', 'profile_uploaded', {
             event_category: 'engagement',
             event_label: 'failure',
-            value: 1
+            upload_status: 'failure',
+            value: 0,
+            error_message: errorMessage(err)
           });
         }
       }
@@ -297,12 +304,16 @@ const Settings = () => {
     return null;
   }
 
+  const effectiveParticipation = profileAccess === 'off' ? 'off' : leaderboardParticipation;
+  const settingsChangedSinceUpload = lastUploadAccess
+    && (lastUploadAccess !== profileAccess || lastUploadParticipation !== effectiveParticipation);
+
   return <>
-    <NextSeo title="Settings - Idleon Toolbox" description="Configure your Idleon Toolbox preferences and manage your profile"/>
+    <NextSeo title="Settings | Idleon Toolbox" description="Configure your Idleon Toolbox preferences and manage your profile"/>
     <Container maxWidth="md" sx={{ my: 3 }}>
-      <Typography variant="h4" sx={{ mb: 3 }}>Settings</Typography>
+      <Typography variant="h4" component="h1" sx={{ mb: 3 }}>Settings</Typography>
       <Stack divider={<Divider/>} spacing={3}>
-        {/* Profile — only show for account owner, not public profiles */}
+        {/* Profile - only show for account owner, not public profiles */}
         {state?.characters && !router.query.profile ? <Stack spacing={1.5}>
           <SectionHeader icon={IconUserCircle} title="Profile" description="Manage your public profile and leaderboard participation"/>
 
@@ -327,6 +338,13 @@ const Settings = () => {
                       end: new Date().getTime() - WAIT_TIME
                     })}/>
                 </Stack>}
+                {lastUploadAccess && <> &middot; Uploaded as: <strong>{ACCESS_LABELS[lastUploadAccess] ?? lastUploadAccess}</strong></>}
+                {lastUploadParticipation && <> &middot; Leaderboard:
+                  {' '}<strong>{lastUploadParticipation === 'on' ? 'On' : 'Off'}</strong></>}
+                {settingsChangedSinceUpload && <Typography component="span" variant="body2" color="warning.main">
+                  {' '}&middot; Now set to <strong>{ACCESS_LABELS[profileAccess] ?? profileAccess}</strong>
+                  {' '}/ leaderboard <strong>{effectiveParticipation === 'on' ? 'On' : 'Off'}</strong> - upload again to apply
+                </Typography>}
                 {anonId && <> &middot; Anonymous ID: <strong>{anonId}</strong></>}
                 {error && <Typography color="error" variant="body2">{error}</Typography>}
                 <br/>
@@ -509,7 +527,7 @@ const Settings = () => {
         </Stack>
       </Stack>
     </Container>
-    <Popper anchorEl={anchorEl} handleClose={() => setAnchorEl(null)}/>
+    <Popper anchorEl={anchorEl} handleClose={() => setAnchorEl(null)} message={popperMessage ?? undefined}/>
   </>;
 };
 

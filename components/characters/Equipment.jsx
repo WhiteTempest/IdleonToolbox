@@ -4,20 +4,21 @@ import { Box, Card, CardContent, Stack, Typography } from '@mui/material';
 import ItemDisplay from '../common/ItemDisplay';
 import { notateNumber, prefix } from 'utility/helpers';
 import Tooltip from '../Tooltip';
+import { getGoldenFoodBonus } from '@parsers/misc';
 
-const Equipment = ({ equipment, tools, food, account, character }) => {
+const Equipment = ({ equipment, tools, food, account, character, characters }) => {
   return <Stack>
     <Typography variant={'h5'}>Equipment</Typography>
     <Stack mt={2} direction={'row'} gap={1} flexWrap={'wrap'} justifyContent={'center'}>
-      <EquipmentPage items={equipment?.slice(0, 8)} character={character} account={account}/>
-      <EquipmentPage items={equipment?.slice(8)} character={character} account={account}/>
-      <EquipmentPage items={tools} character={character} account={account}/>
-      <EquipmentPage items={food} character={character} account={account}/>
+      <EquipmentPage items={equipment?.slice(0, 8)} character={character} account={account} characters={characters}/>
+      <EquipmentPage items={equipment?.slice(8)} character={character} account={account} characters={characters}/>
+      <EquipmentPage items={tools} character={character} account={account} characters={characters}/>
+      <EquipmentPage items={food} character={character} account={account} characters={characters}/>
     </Stack>
   </Stack>
 };
 
-const EquipmentPage = ({ items, character, account }) => {
+const EquipmentPage = ({ items, character, account, characters }) => {
   return <Box
     sx={{
       display: 'grid',
@@ -33,7 +34,9 @@ const EquipmentPage = ({ items, character, account }) => {
             <Stack alignItems={'center'} justifyContent={'center'}>
             <Tooltip
               title={displayName && displayName !== 'ERROR' ? <ItemDisplay {...item} character={character}
-                                                                           account={account}/> : ''}>
+                                                                           account={account}
+                                                                           characters={characters}
+                                                                           getGoldenFoodBonus={getGoldenFoodBonus}/> : ''}>
               <ItemIcon src={`${prefix}data/${rawName}.png`} alt={rawName}/>
             </Tooltip>
             {displayName !== 'ERROR' && rawName !== 'Blank' ? amount >= 1e5 ? notateNumber(amount) : amount : ' '}

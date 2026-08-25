@@ -1301,6 +1301,7 @@ const ensureDashboardOptions = (dashboardConfig) => {
   ensure(dashboardConfig?.account?.['World 2']?.arcade?.options, 'unmaxedRotation');
   ensure(dashboardConfig?.account?.['World 2']?.arcade?.options, 'includeSuper', { checked: false });
   ensure(dashboardConfig?.characters?.classSpecific?.options, 'betterRing');
+  ensure(dashboardConfig?.account?.['World 4']?.cooking?.options, 'cookingMastery');
 };
 
 const migration58 = (dashboardConfig) => {
@@ -1315,8 +1316,456 @@ const migration59 = (dashboardConfig) => {
   return dashboardConfig;
 };
 
+const migration60 = (dashboardConfig) => {
+  ensureDashboardOptions(dashboardConfig);
+  dashboardConfig.version = 60;
+  return dashboardConfig;
+};
+
+const migration61 = (dashboardConfig) => {
+  ensureDashboardOptions(dashboardConfig);
+  if (!dashboardConfig.account) dashboardConfig.account = {};
+  if (!dashboardConfig.account['World 4']) dashboardConfig.account['World 4'] = {};
+  if (!dashboardConfig.account['World 4'].tome) {
+    dashboardConfig.account['World 4'].tome = {
+      checked: true,
+      options: [
+        {
+          name: 'nametagClaim',
+          checked: true,
+          helperText: 'Alert when Tome ranking nametags are available to claim'
+        }
+      ]
+    };
+  }
+  dashboardConfig.version = 61;
+  return dashboardConfig;
+};
+
+const migration62 = (dashboardConfig) => {
+  ensureDashboardOptions(dashboardConfig);
+  if (dashboardConfig?.timers?.['World 7'] && !dashboardConfig?.timers?.['World 7']?.observationInsight) {
+    dashboardConfig.timers['World 7'].observationInsight = { checked: true, options: [] };
+  }
+  dashboardConfig.version = 62;
+  return dashboardConfig;
+};
+
+const migration63 = (dashboardConfig) => {
+  ensureDashboardOptions(dashboardConfig);
+  const world1 = dashboardConfig?.account?.['World 1'];
+  if (world1) {
+    if (!world1.stamps) {
+      world1.stamps = { checked: true, options: [] };
+    }
+    if (!Array.isArray(world1.stamps.options)) {
+      world1.stamps.options = [];
+    }
+  }
+  const stampsOptions = world1?.stamps?.options;
+  if (Array.isArray(stampsOptions) && !stampsOptions.some((option) => option?.name === 'affordableStampLevels')) {
+    stampsOptions.push({
+      name: 'affordableStampLevels',
+      type: 'input',
+      checked: true,
+      helperText: 'Stamps you can level with your account coins',
+      props: {
+        label: 'Max coin spend',
+        value: 25,
+        minValue: 1,
+        maxValue: 100,
+        endAdornment: '%',
+        helperText: ''
+      }
+    });
+  }
+  dashboardConfig.version = 63;
+  return dashboardConfig;
+};
+
+const migration64 = (dashboardConfig) => {
+  ensureDashboardOptions(dashboardConfig);
+  const world6 = dashboardConfig?.account?.['World 6'];
+  if (world6) {
+    if (!world6.farming) {
+      world6.farming = { checked: true, options: [] };
+    }
+    if (!Array.isArray(world6.farming.options)) {
+      world6.farming.options = [];
+    }
+  }
+  const farmingOptions = world6?.farming?.options;
+  if (Array.isArray(farmingOptions) && !farmingOptions.some((option) => option?.name === 'finishedPlots')) {
+    farmingOptions.push({
+      name: 'finishedPlots',
+      type: 'input',
+      checked: false,
+      helperText: 'How long you\'ll wait for a plot to double. Plots slower than this get flagged - collect them to start the doubling over',
+      props: { label: 'Days', value: 7, minValue: 1, maxValue: 365, helperText: '' }
+    });
+  }
+  dashboardConfig.version = 64;
+  return dashboardConfig;
+};
+
+// Object key order drives the settings UI ordering, so a new tracker has to be rebuilt into place
+// next to its baseTrackers neighbour: plain assignment would append it last. Appends when the
+// anchor is missing so the tracker still lands somewhere.
+const insertKeyNear = (obj, anchorKey, newKey, value, { before = false } = {}) => {
+  const ordered = {};
+  for (const [key, existing] of Object.entries(obj)) {
+    if (before && key === anchorKey && !(newKey in ordered)) ordered[newKey] = value;
+    ordered[key] = existing;
+    if (!before && key === anchorKey) ordered[newKey] = value;
+  }
+  if (!(newKey in ordered)) ordered[newKey] = value;
+  return ordered;
+};
+
+const migration65 = (dashboardConfig) => {
+  ensureDashboardOptions(dashboardConfig);
+  const timers = dashboardConfig.timers ?? {};
+  if (!timers['World 6']?.cropsReady) {
+    const ordered = insertKeyNear(timers, 'World 7', 'World 6', timers['World 6'] ?? {}, { before: true });
+    ordered['World 6'].cropsReady = { checked: true, options: [] };
+    dashboardConfig.timers = ordered;
+  }
+
+  const equipment = dashboardConfig?.characters?.equipment;
+  if (equipment && !Array.isArray(equipment.options)) {
+    equipment.options = [];
+  }
+  const equipmentOptions = equipment?.options;
+  if (Array.isArray(equipmentOptions) && !equipmentOptions.some((option) => option?.name === 'emptyGearSlots')) {
+    equipmentOptions.push({
+      name: 'emptyGearSlots',
+      type: 'array',
+      category: 'emptyGearSlots',
+      checked: true,
+      helperText: 'Alert when a gear slot is empty. Only the first equipment page is checked - tools, food and the second page are ignored',
+      props: { value: { weapon: true, armor: true, amulet: false, rings: false } }
+    });
+  }
+
+  const world1 = dashboardConfig?.account?.['World 1'];
+  if (world1) {
+    if (!world1.stamps) {
+      world1.stamps = { checked: true, options: [] };
+    }
+    if (!Array.isArray(world1.stamps.options)) {
+      world1.stamps.options = [];
+    }
+  }
+  const stampsOptions = world1?.stamps?.options;
+  if (Array.isArray(stampsOptions) && !stampsOptions.some((option) => option?.name === 'exaltedStamps')) {
+    stampsOptions.push({
+      name: 'exaltedStamps',
+      checked: true,
+      helperText: 'Alert when you have compass exalted stamps you haven\'t applied yet'
+    });
+  }
+  dashboardConfig.version = 65;
+  return dashboardConfig;
+};
+
+const migration66 = (dashboardConfig) => {
+  ensureDashboardOptions(dashboardConfig);
+  const world3 = dashboardConfig?.timers?.['World 3'];
+  // Selective salts: give the closest salt timer a per-salt array option, defaulting every salt to
+  // the timer's current checked state so behavior is unchanged until the user narrows it.
+  if (world3?.closestSalt && !world3.closestSalt.options?.some((option) => option?.name === 'salts')) {
+    const wasChecked = world3.closestSalt.checked ?? true;
+    const salts = Object.keys(getRawRefinerySalts()).reduce((res, key) => ({ ...res, [key]: wasChecked }), {});
+    world3.closestSalt.options = [{
+      name: 'salts',
+      type: 'array',
+      props: { value: salts, type: 'img' },
+      checked: wasChecked,
+      helperText: 'Only the selected salts are considered when picking the closest one'
+    }];
+  }
+  const zenithMarket = dashboardConfig?.account?.['World 7']?.zenithMarket;
+  // Cluster Farming state alert. Both states are legitimate, so it's an array option rather than a
+  // plain checkbox - the user picks which state(s) they want to be told about.
+  if (zenithMarket && !zenithMarket.options?.some((option) => option?.name === 'clusterFarming')) {
+    zenithMarket.options = [
+      ...(zenithMarket.options ?? []),
+      {
+        name: 'clusterFarming',
+        type: 'array',
+        category: 'Alert when Cluster Farming is',
+        props: { value: { Off: true, On: false } },
+        checked: true
+      }
+    ];
+  }
+  const etcOptions = dashboardConfig?.account?.General?.etc?.options;
+  if (Array.isArray(etcOptions) && !etcOptions.some((option) => option?.name === 'glimmerwickCandle')) {
+    etcOptions.push({
+      name: 'glimmerwickCandle',
+      checked: true,
+      helperText: 'Alert when you own a Glimmerwick Candle and haven\'t wished on it today'
+    });
+  }
+  const alchemyOptions = dashboardConfig?.account?.['World 2']?.alchemy?.options;
+  if (Array.isArray(alchemyOptions) && !alchemyOptions.some((option) => option?.name === 'p2wUpgrades')) {
+    alchemyOptions.push({
+      name: 'p2wUpgrades',
+      checked: true,
+      helperText: 'Cauldron and liquid p2w upgrades you can level with your account coins'
+    });
+  }
+  if (Array.isArray(etcOptions) && !etcOptions.some((option) => option?.name === 'arcanistDailyDrops')) {
+    etcOptions.push({
+      name: 'arcanistDailyDrops',
+      checked: true,
+      helperText: 'Alert when Arcanist weapon or ring drops remain for today'
+    });
+  }
+  if (Array.isArray(etcOptions) && !etcOptions.some((option) => option?.name === 'topOfTheMornin')) {
+    etcOptions.push({
+      name: 'topOfTheMornin',
+      checked: true,
+      helperText: 'Alert when Top of the Mornin\' kills remain for today'
+    });
+  }
+  // Salt chain balance alert: one salt picker plus which side of the limit to be told about.
+  // "Below its limit" is off by default - it fires for nearly every salt on nearly every account,
+  // where being at or past the limit is the rare, actionable case.
+  let constructionOpts = dashboardConfig?.account?.['World 3']?.construction?.options;
+  if (Array.isArray(constructionOpts)) {
+    // An earlier build of this same (unreleased) migration shipped these as two salt pickers.
+    constructionOpts = constructionOpts
+      .filter((option) => option?.name !== 'saltDeficit' && option?.name !== 'saltRankUpRoom');
+    dashboardConfig.account['World 3'].construction.options = constructionOpts;
+  }
+  if (Array.isArray(constructionOpts) && !constructionOpts.some((option) => option?.name === 'saltBalance')) {
+    constructionOpts.push({
+      name: 'saltBalance',
+      type: 'array',
+      props: { value: getRawRefinerySalts(), type: 'img' },
+      checked: true,
+      category: 'Refinery salt balance'
+    }, {
+      name: 'saltBalanceDirection',
+      type: 'array',
+      category: 'Alert when a salt is',
+      props: { value: { 'At or past its limit': true, 'Below its limit': false } },
+      checked: true,
+      helperText: 'The limit is the highest rank the previous salt can keep fuelled'
+    });
+  }
+  // Refinery salt costs joined the printer exclusion list - graft the new keys on top of whatever
+  // the user already toggled rather than resetting their choices.
+  const printerResources = dashboardConfig?.account?.['World 3']?.printer?.options
+    ?.find((option) => option?.name === 'includeResource');
+  if (printerResources?.props?.value) {
+    printerResources.props.value = { ...getPrinterExclusions(), ...printerResources.props.value };
+  }
+  dashboardConfig.version = 66;
+  return dashboardConfig;
+};
+
+const migration67 = (config) => {
+  const dashboardConfig = { ...config };
+
+  if (dashboardConfig?.timers?.General && !dashboardConfig.timers.General.serverWeekly) {
+    dashboardConfig.timers.General = {
+      ...dashboardConfig.timers.General,
+      serverWeekly: { checked: true, options: [] }
+    };
+  }
+
+  const holeOptions = dashboardConfig?.account?.['World 5']?.hole?.options;
+  if (Array.isArray(holeOptions) && !holeOptions.some((o) => o?.name === 'lanterns')) {
+    holeOptions.push({
+      name: 'lanterns',
+      checked: true,
+      type: 'input',
+      props: { label: 'Remaining lanterns threshold', value: 1, minValue: 1, maxValue: 12, helperText: 'Daily cap is 12' }
+    });
+  }
+
+  // The emperor option predates its helper text (migration 23), so stored configs never pick it up.
+  const emperorOption = dashboardConfig?.account?.['World 6']?.etc?.options?.find((o) => o?.name === 'emperor');
+  if (emperorOption && !emperorOption.helperText) {
+    emperorOption.helperText = 'Alerts at this number, or at your attempt cap if it\'s lower';
+  }
+
+  const world7 = dashboardConfig?.account?.['World 7'];
+  // Clam Work lands before The Button, matching baseTrackers.
+  if (world7 && !world7.clamWork) {
+    dashboardConfig.account['World 7'] = insertKeyNear(world7, 'theButton', 'clamWork', {
+      checked: true,
+      options: [{
+        name: 'promotionAffordable',
+        checked: true,
+        helperText: 'Pearls are spent even when the promotion fails, and a successful one resets your pearls and every clam upgrade'
+      }]
+    }, { before: true });
+  }
+
+  const mineheadOptions = dashboardConfig?.account?.['World 7']?.minehead?.options;
+  // Mine currency gain upgrades (Miney Farmey I/II, Miney Damagey Synergy) - the ones worth saving
+  // for, so the alert lists them as an image array instead of a single catch-all checkbox.
+  if (Array.isArray(mineheadOptions) && !mineheadOptions.some((o) => o?.name === 'currencyUpgrades')) {
+    mineheadOptions.push({
+      name: 'currencyUpgrades',
+      type: 'array',
+      category: 'Alert when you can afford these mine currency upgrades',
+      props: { value: { MineUpg5: true, MineUpg22: true, MineUpg28: true }, type: 'img' },
+      checked: true
+    });
+  }
+
+  const equinoxOptions = dashboardConfig?.account?.['World 3']?.equinox?.options;
+  const foodLustOption = equinoxOptions?.find((o) => o?.name === 'foodLust');
+  // Food Lust turned into a stacks threshold. Max value keeps the old "only when maxed" behaviour
+  // because the alert clamps the threshold to the account's Food Lust level.
+  if (foodLustOption && foodLustOption?.type !== 'input') {
+    foodLustOption.type = 'input';
+    foodLustOption.props = { label: 'Stacks threshold', value: 14, minValue: 1, maxValue: 14 };
+    foodLustOption.helperText = 'Alerts once you hold this many stacks, capped at your Food Lust level, so the default only alerts when Food Lust is maxed';
+  }
+
+  const world3 = dashboardConfig?.timers?.['World 3'];
+  // Closest flag timer, right after closestTrap, matching baseTrackers.
+  if (world3 && !world3.closestFlag) {
+    dashboardConfig.timers['World 3'] = insertKeyNear(world3, 'closestTrap', 'closestFlag', { checked: true, options: [] });
+  }
+
+  const talentsOptions = dashboardConfig?.characters?.talents?.options;
+  if (Array.isArray(talentsOptions)) {
+    if (!talentsOptions.some((o) => o?.name === 'unmaxedTalents')) {
+      talentsOptions.push({
+        name: 'unmaxedTalents',
+        checked: true,
+        helperText: 'Alert when a class talent still has talent points left to spend before its max level'
+      });
+    }
+    if (!talentsOptions.some((o) => o?.name === 'libraryUpgradableTalents')) {
+      talentsOptions.push({
+        name: 'libraryUpgradableTalents',
+        checked: false,
+        helperText: 'Alert when a maxed class talent could still be raised by a Talent Book Library book'
+      });
+    }
+  }
+
+  const world6 = dashboardConfig?.account?.['World 6'];
+  // Beanstalk lands right after Sneaking, matching baseTrackers.
+  if (world6 && !world6.beanstalk) {
+    dashboardConfig.account['World 6'] = insertKeyNear(world6, 'sneaking', 'beanstalk', {
+      checked: true,
+      options: [{
+        name: 'readyToPlant',
+        checked: true,
+        helperText: 'Alert when you own enough of a golden food to rank it up on the beanstalk'
+      }]
+    });
+  }
+
+  const constructionOptions = dashboardConfig?.account?.['World 3']?.construction?.options;
+  // Lead time for the refinery materials alert. Splice it in right after `materials` so the two
+  // sit together in the settings UI (option order drives the rendering).
+  if (Array.isArray(constructionOptions) && !constructionOptions.some((o) => o?.name === 'matsThreshold')) {
+    const matsThreshold = {
+      name: 'matsThreshold',
+      type: 'input',
+      props: { label: 'Materials lead time', value: 0, minValue: 0, endAdornment: 'h' },
+      checked: true,
+      helperText: 'Alert this many hours before a salt runs out of materials (0 alerts only once they are gone)'
+    };
+    const materialsIndex = constructionOptions.findIndex((o) => o?.name === 'materials');
+    dashboardConfig.account['World 3'].construction.options = materialsIndex === -1
+      ? [...constructionOptions, matsThreshold]
+      : constructionOptions.toSpliced(materialsIndex + 1, 0, matsThreshold);
+  }
+
+  const islandsOptions = dashboardConfig?.account?.['World 2']?.islands?.options;
+  // Uncollected trash island garbage. Splice it in right after `garbageUpgrade` so the two
+  // garbage alerts sit together in the settings UI (option order drives the rendering).
+  if (Array.isArray(islandsOptions) && !islandsOptions.some((o) => o?.name === 'collectibleGarbage')) {
+    const collectibleGarbage = {
+      name: 'collectibleGarbage',
+      type: 'input',
+      props: { label: 'Threshold', value: 80, minValue: 1, maxValue: 100 },
+      checked: true,
+      helperText: 'A single collection is capped at 100 garbage, anything above it is lost'
+    };
+    const garbageUpgradeIndex = islandsOptions.findIndex((o) => o?.name === 'garbageUpgrade');
+    dashboardConfig.account['World 2'].islands.options = garbageUpgradeIndex === -1
+      ? [...islandsOptions, collectibleGarbage]
+      : islandsOptions.toSpliced(garbageUpgradeIndex + 1, 0, collectibleGarbage);
+  }
+
+  const charTrackers = dashboardConfig?.characters;
+  // Quests lands right after Traps, matching baseTrackers.
+  if (charTrackers && !charTrackers.quests) {
+    dashboardConfig.characters = insertKeyNear(charTrackers, 'traps', 'quests', {
+      checked: true,
+      options: [{
+        name: 'picnicDaily',
+        checked: true,
+        helperText: 'Alert when a character hasn\'t completed any of the Picnic Stowaway daily quests today'
+      }]
+    });
+  }
+
+  dashboardConfig.version = 67;
+  return dashboardConfig;
+};
+
+const migration68 = (config) => {
+  const dashboardConfig = { ...config };
+
+  const charTrackers = dashboardConfig?.characters;
+  // Bags lands right after Equipment, matching baseTrackers.
+  if (charTrackers && !charTrackers.bags) {
+    dashboardConfig.characters = insertKeyNear(charTrackers, 'equipment', 'bags', {
+      checked: true,
+      options: [{
+        name: 'unmaxedBags',
+        checked: true,
+        helperText: 'Alert when a carry capacity bag isn\'t at its max tier'
+      }]
+    });
+  }
+
+  dashboardConfig.version = 68;
+  return dashboardConfig;
+};
+
+const migration69 = (config) => {
+  const dashboardConfig = { ...config };
+
+  // The weekly boss alert used to be a single flag on a daily value, so stored configs have no options.
+  const weeklyBosses = dashboardConfig?.account?.['World 2']?.weeklyBosses;
+  if (weeklyBosses) {
+    const weeklyBossesOptions = Array.isArray(weeklyBosses.options) ? weeklyBosses.options : [];
+    if (!weeklyBossesOptions.some((o) => o?.name === 'daily')) {
+      weeklyBossesOptions.push({
+        name: 'daily',
+        checked: true,
+        helperText: 'Alert when you haven\'t reset the W2 boss raid today (bonus class exp and damage)'
+      });
+    }
+    if (!weeklyBossesOptions.some((o) => o?.name === 'trophy')) {
+      weeklyBossesOptions.push({
+        name: 'trophy',
+        checked: true,
+        helperText: 'Alert until you\'ve beaten 5 skulls this week, the point where trophies stop dropping'
+      });
+    }
+    weeklyBosses.options = weeklyBossesOptions;
+  }
+
+  dashboardConfig.version = 69;
+  return dashboardConfig;
+};
+
 // Registry of migration functions indexed by target version.
-// Each migration receives (config, baseTrackers) — baseTrackers is only used by some.
+// Each migration receives (config, baseTrackers) - baseTrackers is only used by some.
 const migrations = {
   2: migrateToVersion2,
   3: migrateToVersion3,
@@ -1376,6 +1825,16 @@ const migrations = {
   57: migration57,
   58: migration58,
   59: migration59,
+  60: migration60,
+  61: migration61,
+  62: migration62,
+  63: migration63,
+  64: migration64,
+  65: migration65,
+  66: migration66,
+  67: migration67,
+  68: migration68,
+  69: migration69,
 };
 
 export const migrateConfig = (baseTrackers, userConfig) => {

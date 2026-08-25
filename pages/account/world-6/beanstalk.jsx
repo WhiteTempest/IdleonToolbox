@@ -9,10 +9,9 @@ import { addEquippedItems, findItemInInventory, getAllItems, mergeItemsByOwner }
 import Tooltip from '@components/Tooltip';
 import { Breakdown } from '@components/common/styles';
 import ItemDisplay from '@components/common/ItemDisplay';
-import { getGoldenFoodMulti } from '@parsers/misc';
+import { BEANSTALK_BREAKPOINTS, getGoldenFoodMulti, getGoldenFoodBonus } from '@parsers/misc';
 import { IconInfoCircleFilled } from '@tabler/icons-react';
 
-const breakpoints = [10000, 100000, 1e6];
 const Beanstalk = () => {
   const { state } = useContext(AppContext);
   const beanstalkData = state?.account?.sneaking?.beanstalkData;
@@ -34,14 +33,17 @@ const Beanstalk = () => {
   const allCharactersMulti = state?.characters?.map((character) => {
     const multi = getGoldenFoodMulti(character, state?.account, state?.characters);
     return {
+      character,
       name: character?.name,
       bonus: multi?.value,
       value: notateNumber(Math.max(0, 100 * (multi?.value - 1)), 'Small') + '%'
     }
-  });
+  }) ?? [];
   allCharactersMulti.sort((a, b) => a.bonus - b.bonus);
-  const allMultis = allCharactersMulti.map(({ bonus }) => bonus);
-  const highestMulti = notateNumber(Math.max(0, 100 * (Math.max(...allMultis) - 1)), 'Small');
+  // Sorted ascending, so the last entry is the best character. This page is account-wide and has no
+  // character picker, so the per-food bonuses are shown for whoever gets the most out of them.
+  const bestCharacter = allCharactersMulti.at(-1);
+  const highestMulti = notateNumber(Math.max(0, 100 * ((bestCharacter?.bonus ?? 1) - 1)), 'Small');
   return <>
     <NextSeo
       title="Beanstalk | Idleon Toolbox"
@@ -77,14 +79,17 @@ const Beanstalk = () => {
             <Typography variant={'body1'}>{cleanUnderscore(displayName)}</Typography>
             <Stack direction={'row'} justifyContent={'space-between'} alignItems={'center'}>
               <Tooltip
-                title={displayName && displayName !== 'ERROR' ? <ItemDisplay {...item} character={state?.character}
-                                                                             account={state?.account}/> : ''}>
+                title={displayName && displayName !== 'ERROR' ?
+                  <ItemDisplay {...item} character={bestCharacter?.character}
+                               account={state?.account}
+                               characters={state?.characters}
+                               getGoldenFoodBonus={getGoldenFoodBonus}/> : ''}>
                 <img width={42} height={42} src={`${prefix}data/${rawName}.png`} alt={displayName}/>
               </Tooltip>
               <Stack direction={'row'} gap={1}>
-                {breakpoints?.[rank] ? <Typography color={total >= breakpoints?.[rank]
+                {BEANSTALK_BREAKPOINTS?.[rank] ? <Typography color={total >= BEANSTALK_BREAKPOINTS?.[rank]
                     ? 'success.light'
-                    : ''}>{notateNumber(total)} / {notateNumber(breakpoints?.[rank])}</Typography> :
+                    : ''}>{notateNumber(total)} / {notateNumber(BEANSTALK_BREAKPOINTS?.[rank])}</Typography> :
                   <Typography>Maxed</Typography>}
                 <Tooltip title={<Breakdown breakdown={breakdown} titleStyle={{ width: 170 }}/>}>
                   <IconInfoCircleFilled size={22}/>

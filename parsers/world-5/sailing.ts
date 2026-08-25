@@ -8,7 +8,7 @@ import {
   isCompanionBonusActive,
   isMasteryBonusUnlocked
 } from '@parsers/misc';
-import { CLASSES, getHighestTalentByClass, mainStatMap } from '@parsers/talents';
+import { CLASSES, mainStatMap, getBestActiveCharacter, getHighestTalentAcrossCharacters } from '@parsers/talents';
 import { getBubbleBonus, getSigilBonus, getVialsBonusByStat } from '@parsers/world-2/alchemy';
 import { getCardBonusByEffect } from '@parsers/cards';
 import { getStampsBonusByEffect } from '@parsers/world-1/stamps';
@@ -49,9 +49,26 @@ export const getSailing = (idleonData: any, artifactsList: any, charactersData: 
   const captainsRaw = tryToParse(idleonData?.Captains) || idleonData?.Captains;
   const boatsRaw = tryToParse(idleonData?.Boats) || idleonData?.Boats;
   const chestsRaw = tryToParse(idleonData?.SailChests) || idleonData?.SailChests;
-  if (!sailingRaw || !captainsRaw || !boatsRaw || !chestsRaw) return null;
+  if (!sailingRaw || !captainsRaw || !boatsRaw || !chestsRaw) return getLockedSailing(artifactsList);
   return parseSailing(artifactsList, sailingRaw, captainsRaw, boatsRaw, chestsRaw, charactersData, account, serverVars, charactersLevels);
 }
+
+export const getLockedSailing = (artifactsList: any) => ({
+  unlocked: false,
+  artifacts: artifactsList ?? [],
+  lootPile: [],
+  chests: [],
+  maxChests: 0,
+  captains: [],
+  boats: [],
+  shopCaptains: [],
+  captainsOnBoats: {},
+  trades: [],
+  rareTreasureChance: 0,
+  timeToFullChests: undefined,
+  minimumTravelTime: 0,
+  minimumTravelTimeBreakdown: []
+});
 
 const parseSailing = (artifactsList: any, sailingRaw: any, captainsRaw: any, boatsRaw: any, chestsRaw: any, charactersData: any, account: any, serverVars: any, charactersLevels: any) => {
   const lootPile = sailingRaw?.[1];
@@ -66,11 +83,12 @@ const parseSailing = (artifactsList: any, sailingRaw: any, captainsRaw: any, boa
   const rareTreasureChance = getRareTreasureChance();
   const lootPileList = getLootPile(lootPile);
   const captainsAndBoats = getCaptainsAndBoats(sailingRaw, captainsRaw, boatsRaw, account, charactersData, charactersLevels, artifactsList, lootPileList);
-  const boatsRoundtrips = captainsAndBoats?.boats?.map(({ maxTime }: any) => maxTime);
+  const boatsRoundtrips = captainsAndBoats?.boats?.map(({ maxTime }: any) => maxTime).filter((time: any) => Number.isFinite(time));
   const timeToFullChests = calculateMaxCapacityTime(boatsRoundtrips, maxChests - (chests?.length || 0));
   const trades = getFutureTrades(captainsAndBoats, sailingRaw?.[0], lootPileList, artifactsList, account);
 
   return {
+    unlocked: true,
     maxChests,
     artifacts: artifactsList,
     lootPile: lootPileList,
@@ -83,6 +101,7 @@ const parseSailing = (artifactsList: any, sailingRaw: any, captainsRaw: any, boa
 }
 
 const calculateMaxCapacityTime = (roundtripTimes: any, maxCapacity: any) => {
+  if (!roundtripTimes?.length) return undefined;
   const minTime = Math.min(...roundtripTimes);
   const acquisitionRate = maxCapacity / minTime;
   let accumulatedTime = 0;
@@ -296,7 +315,7 @@ const getCaptainsAndBoats = (sailingRaw: any, captainsRaw: any, boatsRaw: any, a
   const captainsUnlocked = sailingRaw?.[2]?.[0] || 0;
   const boatsUnlocked = sailingRaw?.[2]?.[1] || 0;
   const highestLevelSiegeBreaker = getHighestLevelOfClass(charactersLevels, CLASSES.Siege_Breaker) ?? 0;
-  const theFamilyGuy = getHighestTalentByClass(characters, CLASSES.Siege_Breaker, 'THE_FAMILY_GUY') ?? 0;
+  const theFamilyGuy = getHighestTalentAcrossCharacters(characters, 'THE_FAMILY_GUY', getBestActiveCharacter(characters)) ?? 0;
   const familyBonus = getFamilyBonusBonus(classFamilyBonuses, 'FASTER_MINIMUM_BOAT_TRAVEL_TIME', highestLevelSiegeBreaker);
   const shinyBonus = getShinyBonus(account?.breeding?.pets, 'Lower_Minimum_Travel_Time_for_Sailing');
   const amplifiedFamilyBonus = familyBonus * (1 + theFamilyGuy / 100);
@@ -360,8 +379,8 @@ const getBoat = (boat: any, boatIndex: any, lootPile: any, captains: any, artifa
   boatObj.loot = getBoatLootValue(characters, account, artifactsList, boatObj, captain, daveyJones);
   const frame = getBoatFrame(lootLevel + speedLevel, account);
   boatObj.speed = getBoatSpeedValue(captain, island, speedLevel, baseSpeed * daveyJones, minimumTravelTime, frame)
-  boatObj.maxTime = ((island?.distance) / boatObj.speed?.value) * 3600 * 1000;
-  boatObj.timeLeft = ((island?.distance - distanceTraveled) / boatObj.speed?.value) * 3600 * 1000;
+  boatObj.maxTime = island ? (island.distance / boatObj.speed?.value) * 3600 * 1000 : undefined;
+  boatObj.timeLeft = island ? ((island.distance - distanceTraveled) / boatObj.speed?.value) * 3600 * 1000 : undefined;
   return boatObj
 }
 
@@ -381,7 +400,7 @@ const getBaseSpeed = (account: any, characters: any, artifactsList: any) => {
   const statueBonus = getStatueBonus(account, 24)
   const voteBonus = getVoteBonus(account, 24);
   const msaBonus = account?.msaTotalizer?.sailing?.value ?? 0;
-  // DaveyJones is now per-boat — applied separately in getBoat
+  // DaveyJones is now per-boat - applied separately in getBoat
   return (1 + (divinityMinorBonus
     + (cardBonus
       + bubbleBonus)) / 125)
@@ -521,7 +540,7 @@ const getFinalBoatLoot = ({
     * (1 + (treasureBoost ?? 0) / 100);
 }
 const getBoatLootValue = (characters: any, account: any, artifactsList: any, boat: any, captain: any, daveyJonesBonus?: any) => {
-  const unendingLootSearch = getHighestTalentByClass(characters, CLASSES.Siege_Breaker, 'UNENDING_LOOT_SEARCH');
+  const unendingLootSearch = getHighestTalentAcrossCharacters(characters, 'UNENDING_LOOT_SEARCH', getBestActiveCharacter(characters));
   const talentBonus = unendingLootSearch;
   const nextBreakpoint = boat?.lootLevel + (8 - (boat?.lootLevel % 8));
   const frame = getBoatFrame(boat?.lootLevel + boat?.speedLevel, account);
@@ -639,7 +658,7 @@ const getBoatArtifactChance = (artifacts: any, captain: any, account: any, chara
   const killroyBonus = Math.max(1, getKillRoyShopBonus(account, 0));
   const researchGrid106 = getResearchGridBonus(account, 106, 0);
   const turtleVial = getVialsBonusByStat(account?.alchemy?.vials, '6turtle');
-  // Summer event shop: Purple Chest Slugs (EventShopOwned 48) — multiplies artifact find by 1.5^owned
+  // Summer event shop: Purple Chest Slugs (EventShopOwned 48) - multiplies artifact find by 1.5^owned
   const purpleChestSlugs = Math.max(1, Math.pow(1.5, getEventShopBonus(account, 48)));
   const winnerBonus = getWinnerBonus(account, '<x Artifact Find');
   const daveyJonesBonus = getDaveyJonesBonus(account, lootLevel, speedLevel);
@@ -798,17 +817,18 @@ const getArtifact = (artifact: any, acquired: any, lootPile: any, index: any, ch
   }
   else if (artifact?.name === 'Triagulon') {
     const ownedTurkey = account?.cooking?.meals?.[0]?.amount;
-    bonus = (artifact?.baseBonus * lavaLog(ownedTurkey));
+    bonus = (artifact?.baseBonus * lavaLog(ownedTurkey ?? 0));
   }
   else if (artifact?.name === 'Opera_Mask') {
-    const sailingGold = lootPile?.[0];
+    const sailingGold = lootPile?.[0] ?? 0;
     bonus = (artifact?.baseBonus * lavaLog(sailingGold));
   }
   else if (artifact?.name === 'Fun_Hippoete') {
-    bonus = artifact?.baseBonus * lavaLog(account?.construction?.playersBuildRate)
+    // Construction is parsed after sailing, so this resolves on the second serialization pass.
+    bonus = artifact?.baseBonus * lavaLog(account?.construction?.playersBuildRate ?? 0)
   }
   else if (artifact?.name === 'The_True_Lantern') {
-    bonus = artifact?.baseBonus * (lavaLog(account?.atoms?.particles) ?? 0);
+    bonus = artifact?.baseBonus * lavaLog(account?.atoms?.particles ?? 0);
   }
   else if (artifact?.name === 'Gold_Relic') {
     const daysSinceLastSample = account?.accountOptions?.[125];
@@ -819,7 +839,7 @@ const getArtifact = (artifact: any, acquired: any, lootPile: any, index: any, ch
   else if (artifact?.name === 'Crystal_Steak') {
     const mainStats = charactersData?.map(({ name, class: className, stats }: any) => {
       const mainStat = mainStatMap?.[className];
-      return { name, stat: stats?.[mainStat] };
+      return { name, stat: stats?.[mainStat] ?? 0 };
     })
     fixedDescription = fixedDescription.replace('_Total_Bonus:_+}%_dmg', '')
     additionalData = mainStats.map(({ name, stat }: any) => ({

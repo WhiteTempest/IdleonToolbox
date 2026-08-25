@@ -1,5 +1,6 @@
 import React from 'react';
 import { Card, CardContent, Divider, Stack, Typography } from '@mui/material';
+import Link from 'next/link';
 import styled from '@emotion/styled';
 import {
   cleanUnderscore,
@@ -9,8 +10,13 @@ import {
   numberWithCommas,
   pascalCase,
   prefix,
-  randomFloatBetween
+  randomFloatBetween,
+  secondsToShortDuration
 } from '@utility/helpers';
+import ArrowDropUpIcon from '@mui/icons-material/ArrowDropUp';
+import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
+import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown';
+import WarningRoundedIcon from '@mui/icons-material/WarningRounded';
 import HtmlTooltip from '../Tooltip';
 import {
   getGeneralAlerts,
@@ -23,6 +29,21 @@ import {
   getWorld7Alerts
 } from '@utility/dashboard/account';
 import useAlerts from '@hooks/useAlerts';
+
+// Every refinery alert draws the same salt icon, and one salt can raise several of them at once,
+// so a corner glyph says which condition fired without having to hover each copy.
+// The border repeats the badge colour in a muted tone so the pair reads as one signal at a glance,
+// with the glyph there for anyone the colour alone doesn't reach.
+// The drop arrows carry a lot of empty viewBox, so they need a larger size than the other glyphs
+// to end up looking the same weight inside the badge.
+const alertBadges = {
+  saltRankUp: { Icon: ArrowDropUpIcon, color: '#66bb6a', border: '#3e6b40', size: 36 },
+  // A chevron rather than a second filled triangle - this one is headroom to rank up later,
+  // not power already banked and waiting.
+  saltRankUpRoom: { Icon: KeyboardArrowUpIcon, color: '#66bb6a', border: '#3e6b40', size: 24 },
+  saltDeficit: { Icon: ArrowDropDownIcon, color: '#d62727', border: '#833b3b', size: 36 },
+  saltMaterials: { Icon: WarningRoundedIcon, color: '#d1921e', border: '#7a5a1e', size: 18 }
+};
 
 const alertsMap = {
   General: getGeneralAlerts,
@@ -66,10 +87,25 @@ const Account = ({ account, characters, trackers, lastUpdated }) => {
               {alerts?.General?.etc?.tournamentRegister ?
                 <Alert title={'You have not registered for the current Pet Tournament'}
                        iconPath={'data/TournyRank0'}/> : null}
+              {alerts?.General?.etc?.glimmerwickCandle ?
+                <Alert
+                  title={`You haven't used the Glimmerwick Candle today (${alerts?.General?.etc?.glimmerwickCandle?.attempts}/${alerts?.General?.etc?.glimmerwickCandle?.pity} wishes until guaranteed)`}
+                  iconPath={'data/Quest114'}/> : null}
               {alerts?.General?.etc?.dailyCrystals ?
                 <Alert
                   title={`You have ${alerts?.General?.etc?.dailyCrystals} daily guaranteed crystal kill${alerts?.General?.etc?.dailyCrystals > 1 ? 's' : ''} remaining`}
                   iconPath={'afk_targets/Crystal_Carrot'}/> : null}
+              {alerts?.General?.etc?.arcanistDailyDrops?.length > 0
+                ?
+                alerts?.General?.etc?.arcanistDailyDrops?.map(({ type, remaining }) => <Alert
+                  key={`arcanist-${type}`}
+                  title={`You have ${remaining} Arcanist ${type} drop${remaining > 1 ? 's' : ''} remaining today`}
+                  iconPath={type === 'weapon' ? 'data/EquipmentWandsArc0' : 'data/EquipmentRingsArc0'}/>)
+                : null}
+              {alerts?.General?.etc?.topOfTheMornin ?
+                <Alert
+                  title={`You have ${alerts?.General?.etc?.topOfTheMornin} Top of the Mornin' kill${alerts?.General?.etc?.topOfTheMornin > 1 ? 's' : ''} remaining today`}
+                  iconPath={'data/CompassUpg9'}/> : null}
               {alerts?.General?.etc?.newCharacters ?
                 <Alert
                   title={`You can create ${alerts?.General?.etc?.newCharacters} new character${alerts?.General?.etc?.newCharacters > 1
@@ -98,13 +134,19 @@ const Account = ({ account, characters, trackers, lastUpdated }) => {
               {alerts?.General?.materialTracker?.length > 0
                 ?
                 alerts?.General?.materialTracker?.map(({ item, quantityOwned, text, note }, index) =>
-                  <Alert
+                  <Link
                     key={item?.rawName + '' + index}
-                    title={<>
-                      <Typography variant={'subtitle2'}>{text}</Typography>
-                      {note ? <Typography fontWeight={500} variant={'caption'}>Note: {note}</Typography> : null}
-                    </>}
-                    iconPath={`data/${item?.rawName}`}/>)
+                    href={'/tools/material-tracker'}
+                    style={{ display: 'flex', color: 'inherit', textDecoration: 'none' }}>
+                    <Alert
+                      title={<>
+                        <Typography variant={'subtitle2'}>{text}</Typography>
+                        {note ? <Typography fontWeight={500} variant={'caption'}>Note: {note}</Typography> : null}
+                        <Typography variant={'caption'} sx={{ display: 'block', mt: 0.5, opacity: 0.7 }}>Click to open
+                          Material Tracker</Typography>
+                      </>}
+                      iconPath={`data/${item?.rawName}`}/>
+                  </Link>)
                 : null}
               {alerts?.General?.etc?.dungeonTraits?.length > 0
                 ?
@@ -131,6 +173,12 @@ const Account = ({ account, characters, trackers, lastUpdated }) => {
               {alerts?.['World 1']?.stamps?.gildedStamps > 0 ?
                 <Alert title={`You have ${alerts?.['World 1']?.stamps?.gildedStamps} available gilded stamps`}
                        iconPath={'data/GildedStamp'}/> : null}
+              {alerts?.['World 1']?.stamps?.affordableStampLevels ?
+                <Alert title={<AffordableStampLevels {...alerts?.['World 1']?.stamps?.affordableStampLevels}/>}
+                       iconPath={'data/StampA34'}/> : null}
+              {alerts?.['World 1']?.stamps?.exaltedStamps > 0 ?
+                <Alert title={`You have ${alerts?.['World 1']?.stamps?.exaltedStamps} unused exalted stamps`}
+                       iconPath={'etc/Exalted_Stamp_Frame'}/> : null}
               {alerts?.['World 1']?.owl?.featherRestart ?
                 <Alert title={`Feather restart can be upgraded`}
                        iconPath={'etc/Owl_4'}/> : null}
@@ -163,11 +211,20 @@ const Account = ({ account, characters, trackers, lastUpdated }) => {
                   iconPath={'data/Island1'}/> : null}
               {alerts?.['World 2']?.islands?.shimmerIsland ?
                 <Alert
-                  title={'You haven\'t claimed your shimmer\'s trial reward this week'}
+                  title={<>
+                    <div>You haven&apos;t claimed your shimmer&apos;s trial reward this week</div>
+                    {typeof alerts?.['World 2']?.islands?.shimmerIsland === 'string' ? <div>
+                      Challenge: {cleanUnderscore(alerts?.['World 2']?.islands?.shimmerIsland)}
+                    </div> : null}
+                  </>}
                   iconPath={'etc/Shimmer_Currency'}/> : null}
               {alerts?.['World 2']?.islands?.garbageUpgrade ?
                 <Alert
                   title={'You have enough garbage to buy a \'Garbage Gain\' upgrade in trash island'}
+                  iconPath={'etc/Trash_Currency'}/> : null}
+              {alerts?.['World 2']?.islands?.collectibleGarbage ?
+                <Alert
+                  title={`You have around ${alerts?.['World 2']?.islands?.collectibleGarbage} garbage waiting to be collected in trash island`}
                   iconPath={'etc/Trash_Currency'}/> : null}
               {alerts?.['World 2']?.alchemy?.bargainTag ?
                 <Alert title={'You haven\'t use bargain tag even once today'} iconPath={'data/aShopItems10'}/> : null}
@@ -177,9 +234,15 @@ const Account = ({ account, characters, trackers, lastUpdated }) => {
                 <Alert
                   title={`You have ${alerts?.['World 2']?.alchemy?.alternateParticles} alternate particles upgrades available`}
                   iconPath={'etc/Particle'}/> : null}
-              {alerts?.['World 2']?.weeklyBosses
+              {alerts?.['World 2']?.weeklyBosses?.daily
                 ?
-                <Alert title={'You haven\'t done a weekly (W2) boss fight this week'} iconPath={'data/Trophie'}/>
+                <Alert title={'You haven\'t done a W2 boss fight today'} iconPath={'data/Trophie'}/>
+                : null}
+              {alerts?.['World 2']?.weeklyBosses?.trophy
+                ?
+                <Alert
+                  title={`You can still earn W2 boss trophies this week (${alerts?.['World 2']?.weeklyBosses?.trophy?.bestSkulls}/${alerts?.['World 2']?.weeklyBosses?.trophy?.maxSkulls} skulls)`}
+                  iconPath={'data/Trophie'}/>
                 : null}
               {alerts?.['World 2']?.killRoy?.general
                 ?
@@ -230,6 +293,18 @@ const Account = ({ account, characters, trackers, lastUpdated }) => {
               {alerts?.['World 2']?.alchemy?.vialsAttempts ? <Alert key={'vialsAttempts'}
                                                                     title={`You have available vial attempts`}
                                                                     iconPath={`data/aVials1`}/> : null}
+              {alerts?.['World 2']?.alchemy?.p2wUpgrades?.length > 0
+                ?
+                alerts?.['World 2']?.alchemy?.p2wUpgrades?.map(({ type, index, name, upgrades }) => <Alert
+                  key={`p2w-${type}-${index}`}
+                  title={<>
+                    <div>{name} {type === 'cauldron' ? 'cauldron' : 'liquid'} p2w upgrades you can afford</div>
+                    {upgrades?.map(({ label, level, maxLevel, cost }) => <div key={label}>
+                      {label}: Lv. {level} / {maxLevel} ({notateNumber(cost, 'Big')} coins)
+                    </div>)}
+                  </>}
+                  iconPath={`data/aJar${type === 'cauldron' ? 'B' : 'L'}${index}`}/>)
+                : null}
               {alerts?.['World 2']?.alchemy?.vials?.length > 0 ?
                 alerts?.['World 2']?.alchemy?.vials?.map((vial) => <Alert key={vial?.mainItem}
                                                                           vial={vial}
@@ -259,24 +334,50 @@ const Account = ({ account, characters, trackers, lastUpdated }) => {
                 <Alert title={`You have ${alerts?.['World 3']?.equinox?.challenges} challenges to validate`}
                        iconPath={'data/Quest78'}/> : null}
               {alerts?.['World 3']?.equinox?.foodLust ?
-                <Alert title={`Food Lust is maxed`} iconPath={'etc/Dream_Upgrade_10'}/> : null}
+                <Alert title={alerts?.['World 3']?.equinox?.foodLustMaxed
+                  ? `Food Lust is maxed (${alerts?.['World 3']?.equinox?.foodLustStacks} stacks)`
+                  : `You have ${alerts?.['World 3']?.equinox?.foodLustStacks} Food Lust stacks`}
+                       iconPath={'etc/Dream_Upgrade_10'}/> : null}
               {alerts?.['World 3']?.construction?.materials?.length > 0
                 ?
-                alerts?.['World 3']?.construction?.materials?.map(({ rawName, missingMats }) => <Alert key={rawName}
+                alerts?.['World 3']?.construction?.materials?.map(({ rawName, missingMats, hoursLeft }) => <Alert key={rawName}
                                                                                                        title={
                                                                                                          <RefineryTitle
-                                                                                                           missingMats={missingMats}/>}
-                                                                                                       imgStyle={{
-                                                                                                         border: '1px solid',
-                                                                                                         borderColor: '#833b3b'
-                                                                                                       }}
+                                                                                                           missingMats={missingMats}
+                                                                                                           hoursLeft={hoursLeft}/>}
+                                                                                                       badge={'saltMaterials'}
                                                                                                        iconPath={`data/${rawName}`}/>)
                 : null}
               {alerts?.['World 3']?.construction?.rankUp?.length > 0
                 ?
                 alerts?.['World 3']?.construction?.rankUp?.map(({ rawName, saltName }) => <Alert key={rawName}
                                                                                                  title={`${cleanUnderscore(saltName)} is ready to rank up`}
+                                                                                                 badge={'saltRankUp'}
                                                                                                  iconPath={`data/${rawName}`}/>)
+                : null}
+              {alerts?.['World 3']?.construction?.saltDeficit?.length > 0
+                ?
+                alerts?.['World 3']?.construction?.saltDeficit?.map(({
+                  rawName,
+                  saltName,
+                  previousSaltName,
+                  maxSafeRank,
+                  isDeficit
+                }) => <Alert
+                  key={`salt-deficit-${rawName}`}
+                  title={isDeficit
+                    ? `${cleanUnderscore(saltName)} is consuming more ${cleanUnderscore(previousSaltName)} than you produce (max rank without a deficit: ${maxSafeRank})`
+                    : `Don't rank up ${cleanUnderscore(saltName)} past ${maxSafeRank}, it would cause a ${cleanUnderscore(previousSaltName)} deficit`}
+                  badge={'saltDeficit'}
+                  iconPath={`data/${rawName}`}/>)
+                : null}
+              {alerts?.['World 3']?.construction?.saltRankUpRoom?.length > 0
+                ?
+                alerts?.['World 3']?.construction?.saltRankUpRoom?.map(({ rawName, saltName, maxSafeRank }) => <Alert
+                  key={`salt-rank-room-${rawName}`}
+                  title={`${cleanUnderscore(saltName)} can be ranked up to ${maxSafeRank} without causing a deficit`}
+                  badge={'saltRankUpRoom'}
+                  iconPath={`data/${rawName}`}/>)
                 : null}
               {alerts?.['World 3']?.construction?.buildings?.length > 0
                 ?
@@ -325,6 +426,10 @@ const Account = ({ account, characters, trackers, lastUpdated }) => {
                   title={`You can claim ${cleanUnderscore(name)} in jewel repository`}
                   iconPath={`data/${rawName}`}/>)
                 : null}
+              {alerts?.['World 4']?.tome?.nametagClaim > 0 ?
+                <Alert key={'tome-nametag-claim'}
+                       title={`You have ${alerts?.['World 4']?.tome?.nametagClaim} Tome ranking nametag${alerts?.['World 4']?.tome?.nametagClaim > 1 ? 's' : ''} available to claim`}
+                       iconPath={'data/EquipmentNametag22'}/> : null}
               {alerts?.['World 4']?.cooking?.spices > 0 ?
                 <Alert title={`You have ${alerts?.['World 4']?.cooking?.spices} spice clicks left`}
                        iconPath={'data/CookingSpice0'}/> : null}
@@ -332,6 +437,15 @@ const Account = ({ account, characters, trackers, lastUpdated }) => {
                 <Alert
                   title={`You have reached your threshold of ${alerts?.['World 4']?.cooking?.ribbons} empty ribbon slots`}
                   iconPath={'data/Ribbon0'}/> : null}
+              {alerts?.['World 4']?.cooking?.cookingMastery?.purple > 0 ?
+                <Alert
+                  title={`You have ${alerts?.['World 4']?.cooking?.cookingMastery?.purple} unspent purple Cooking Mastery point${alerts?.['World 4']?.cooking?.cookingMastery?.purple > 1 ? 's' : ''}`}
+                  iconPath={'etc/CookingMastery'}/> : null}
+              {alerts?.['World 4']?.cooking?.cookingMastery?.yellow > 0 ?
+                <Alert
+                  title={`You have ${alerts?.['World 4']?.cooking?.cookingMastery?.yellow} unspent yellow Cooking Mastery point${alerts?.['World 4']?.cooking?.cookingMastery?.yellow > 1 ? 's' : ''}`}
+                  iconPath={'etc/CookingMastery'}
+                  imgStyle={{ filter: 'sepia(1) saturate(4) hue-rotate(5deg) brightness(1.1)' }}/> : null}
               {alerts?.['World 4']?.breeding?.eggs ? <Alert key={'breeding-eggs'}
                                                             title={`Eggs are at full capacity`}
                                                             iconPath={`data/PetEgg1`}/> : null}
@@ -463,6 +577,10 @@ const Account = ({ account, characters, trackers, lastUpdated }) => {
                   title={`${cleanUnderscore(name)} study is ready to level up`}
                   iconPath={`etc/Study_Rate`}/>)
                 : null}
+              {alerts?.['World 5']?.hole?.lanterns > 0 ?
+                <Alert
+                  title={`You can use ${alerts?.['World 5']?.hole?.lanterns} more Blinding Lantern${alerts?.['World 5']?.hole?.lanterns > 1 ? 's' : ''} today`}
+                  iconPath={'data/Quest90_x1'}/> : null}
             </Stack>
           </Stack> : null}
           {!emptyAlertRows?.['World 6'] ? <Stack direction={'row'} gap={4}>
@@ -480,6 +598,18 @@ const Account = ({ account, characters, trackers, lastUpdated }) => {
                 <Alert
                   title={`${alerts?.['World 6']?.sneaking?.remainingSymbolRolls.remaining} symbol rolls remaining (${alerts?.['World 6']?.sneaking?.remainingSymbolRolls.used}/75 used)`}
                   iconPath={'data/NjTrP0'}/> : null}
+              {alerts?.['World 6']?.beanstalk?.readyToPlant?.length > 0
+                ?
+                alerts?.['World 6']?.beanstalk?.readyToPlant?.map(({ rawName, displayName, total, breakpoint }) =>
+                  <Link
+                    key={'beanstalk' + rawName}
+                    href={'/account/world-6/beanstalk'}
+                    style={{ display: 'flex', color: 'inherit', textDecoration: 'none' }}>
+                    <Alert
+                      title={`You own ${commaNotation(total)} ${cleanUnderscore(displayName)} - enough to rank it up on the beanstalk (${commaNotation(breakpoint)} needed)`}
+                      iconPath={`data/${rawName}`}/>
+                  </Link>)
+                : null}
               {alerts?.['World 6']?.summoning?.familiar ?
                 <Alert
                   title={`Summoning familiar bonus isn't maxed (${alerts?.['World 6']?.summoning?.familiar.level}/${alerts?.['World 6']?.summoning?.familiar.maxLvl})`}
@@ -496,6 +626,12 @@ const Account = ({ account, characters, trackers, lastUpdated }) => {
                 <Alert
                   title={`${alerts?.['World 6']?.farming?.plots?.length} plots reached the threshold of ${alerts?.['World 6']?.farming?.plots?.[0]?.threshold} OGs (x${Math.min(1e9, Math.max(1, Math.pow(2, alerts?.['World 6']?.farming?.plots?.[0]?.threshold)))})`}
                   iconPath={'data/ClassIcons57'}/> : null}
+              {alerts?.['World 6']?.farming?.finishedPlots ?
+                <Alert
+                  title={`${alerts?.['World 6']?.farming?.finishedPlots.plots.length} plot${alerts?.['World 6']?.farming?.finishedPlots.plots.length > 1
+                    ? 's'
+                    : ''} won't double again within ${alerts?.['World 6']?.farming?.finishedPlots.days} days - collect to restart them`}
+                  iconPath={'data/FarmPlant1'}/> : null}
               {alerts?.['World 6']?.farming?.totalCrops > 0 ?
                 <Alert
                   title={`You have ${commaNotation(alerts?.['World 6']?.farming?.totalCrops)} crops ready to be collected`}
@@ -569,6 +705,10 @@ const Account = ({ account, characters, trackers, lastUpdated }) => {
                 <Alert
                   title={'You can afford Double Clusters upgrade'}
                   iconPath={'etc/Cluster'}/> : null}
+              {alerts?.['World 7']?.zenithMarket?.clusterFarming ?
+                <Alert
+                  title={`Zenith Cluster Farming is ${alerts?.['World 7']?.zenithMarket?.clusterFarming}`}
+                  iconPath={'etc/Cluster'}/> : null}
               {alerts?.['World 7']?.construction?.jeweledCogs ?
                 <Alert
                   title={`You have ${alerts?.['World 7']?.construction?.jeweledCogs?.available} jeweled cog pull${alerts?.['World 7']?.construction?.jeweledCogs?.available > 1
@@ -579,6 +719,11 @@ const Account = ({ account, characters, trackers, lastUpdated }) => {
                 <Alert
                   title={`You have ${alerts?.['World 7']?.minehead?.dailyTries?.left} minehead attempt${alerts?.['World 7']?.minehead?.dailyTries?.left === 1 ? '' : 's'} left (${alerts?.['World 7']?.minehead?.dailyTries?.left}/${alerts?.['World 7']?.minehead?.dailyTries?.max})`}
                   iconPath={'data/MineHead0'}/> : null}
+              {alerts?.['World 7']?.minehead?.currencyUpgrades?.length > 0 ?
+                alerts?.['World 7']?.minehead?.currencyUpgrades?.map((upgrade) => <Alert
+                  key={`minehead-upgrade-${upgrade?.index}`}
+                  title={`You can afford ${cleanUnderscore(upgrade?.name)} Lv. ${upgrade?.level + 1} (${notateNumber(upgrade?.cost, 'Big')})`}
+                  iconPath={`data/MineUpg${upgrade?.index}`}/>) : null}
               {alerts?.['World 7']?.research?.observationRollsLeft ?
                 <Alert
                   title={`You have ${alerts?.['World 7']?.research?.observationRollsLeft?.left} observation roll${alerts?.['World 7']?.research?.observationRollsLeft?.left === 1 ? '' : 's'} left (${alerts?.['World 7']?.research?.observationRollsLeft?.left}/${alerts?.['World 7']?.research?.observationRollsLeft?.max})`}
@@ -594,7 +739,7 @@ const Account = ({ account, characters, trackers, lastUpdated }) => {
                   iconPath={'data/ResMagni1'}/> : null}
               {alerts?.['World 7']?.sushiStation?.fuelFull ?
                 <Alert
-                  title={'Sushi Station fuel is full — cook some sushi!'}
+                  title={'Sushi Station fuel is full: cook some sushi!'}
                   iconPath={'data/Sushi6'}/> : null}
               {alerts?.['World 7']?.sushiStation?.shakerUses?.length > 0 ?
                 alerts?.['World 7']?.sushiStation?.shakerUses?.map((shaker) => {
@@ -611,6 +756,10 @@ const Account = ({ account, characters, trackers, lastUpdated }) => {
                     key={`sushi-kn-${sushi.index}`}
                     title={`${sushi.name} is ready for knowledge level-up (Lv.${sushi.level})`}
                     iconPath={`data/Sushi${sushi.index}`}/>) : null}
+              {alerts?.['World 7']?.clamWork?.promotionAffordable ?
+                <Alert
+                  title={`You can afford a promotion to Worker Class Lv. ${alerts?.['World 7']?.clamWork?.promotionAffordable?.nextClass} (${notateNumber(alerts?.['World 7']?.clamWork?.promotionAffordable?.cost, 'Big')} pearls, ${(alerts?.['World 7']?.clamWork?.promotionAffordable?.chance * 100).toFixed(2)}% chance)`}
+                  iconPath={'data/ClamPearl0'}/> : null}
               {alerts?.['World 7']?.theButton?.instaSkipAvailable ?
                 <Alert
                   title={`${alerts?.['World 7']?.theButton?.instaSkipAvailable?.skipsLeft} insta-skip${alerts?.['World 7']?.theButton?.instaSkipAvailable?.skipsLeft === 1 ? '' : 's'} available - current task can be skipped`}
@@ -628,6 +777,29 @@ const Account = ({ account, characters, trackers, lastUpdated }) => {
   </>
 };
 
+// Past this many stamps the tooltip turns into a wall of names, so the rest is summed up instead.
+const MAX_LISTED_STAMPS = 4;
+
+const AffordableStampLevels = ({ count, names = [], totalCost, percentOfMoney, stampsPerDay }) => {
+  const listed = names.slice(0, MAX_LISTED_STAMPS).map((name) => cleanUnderscore(name));
+  const others = names.length - listed.length;
+  return <Stack gap={.5}>
+    <Typography>
+      You can afford to level {count} stamp{count > 1 ? 's' : ''} for {notateNumber(totalCost)} coins
+      ({percentOfMoney}% of your account coins){listed.length > 0 ? ':' : ''}
+    </Typography>
+    {listed.length > 0 ? <Stack component={'ul'} sx={{ m: 0, pl: 2.5 }}>
+      {listed.map((name) => <Typography component={'li'} key={name}>{name}</Typography>)}
+      {others > 0 ? <Typography component={'li'} sx={{ opacity: .7 }}>
+        and {others} more
+      </Typography> : null}
+    </Stack> : null}
+    {stampsPerDay > 0 ? <Typography>
+      Level them before your +{stampsPerDay} free stamp LVs roll today
+    </Typography> : null}
+  </Stack>
+}
+
 const Alert = ({
                  title,
                  iconPath,
@@ -637,14 +809,21 @@ const Alert = ({
                  style = {},
                  imgStyle = {},
                  onError = () => { },
+                 badge,
                  extra
                }) => {
+  const { Icon: BadgeIcon, color: badgeColor, border: badgeBorder, size: badgeSize } = alertBadges[badge] || {};
+  const badgeImgStyle = badgeBorder ? { border: '1px solid', borderColor: badgeBorder } : {};
   return <HtmlTooltip title={title}>
     <Stack sx={{ position: 'relative', ...style, alignItems: 'center', justifyContent: 'center' }}>
-      <IconImg onError={onError} style={{ ...imgStyle }} vial={vial} src={`${prefix}${iconPath}.png`} alt=""/>
+      <IconImg onError={onError} style={{ ...badgeImgStyle, ...imgStyle }} vial={vial}
+               src={`${prefix}${iconPath}.png`} alt=""/>
+      {BadgeIcon ? <AlertBadge badgeColor={badgeColor}><BadgeIcon sx={{ fontSize: badgeSize }}/></AlertBadge> : null}
       {atom || breedability ? <FloatingIcon vial={vial} src={`${prefix}etc/${atom ? 'Particle' : breedability
         ? 'PetHeart'
-        : ''}.png`} alt=""/> : null}
+        : ''}.png`} alt={atom ? 'Particle' : breedability
+        ? 'PetHeart'
+        : ''}/> : null}
       {vial ? <div style={{ width: 35, height: 35, overflow: 'hidden' }}>
         <img
           key={vial?.name}
@@ -662,15 +841,19 @@ const Alert = ({
   </HtmlTooltip>
 }
 
-const RefineryTitle = ({ missingMats }) => {
+// Coarse on purpose - the projection is only as good as the current cycle rates, so minute
+// precision would read as more certain than it is.
+const RefineryTitle = ({ missingMats, hoursLeft }) => {
   return <Stack alignItems={'center'}>
-    Missing materials
+    {hoursLeft > 0
+      ? `Materials run out in ${secondsToShortDuration(hoursLeft * 3600, { minUnit: 'minute' })}`
+      : 'Missing materials'}
     <Stack direction={'row'}>
       {missingMats.map(({ rawName }) =>
         <IconImg
           key={rawName}
           src={`${prefix}data/${rawName}.png`}
-          alt=""/>)}
+          alt={rawName}/>)}
     </Stack>
   </Stack>
 }
@@ -679,12 +862,25 @@ const ShopTitle = ({ shop }) => {
   return <Stack direction={'row'} gap={2} flexWrap={'wrap'}>
     {shop?.map(({ amount, rawName }, index) => {
       return <Stack alignItems={'center'} key={rawName + index}>
-        <IconImg key={'shop' + rawName} src={`${prefix}data/${rawName}.png`}/>
+        <IconImg key={'shop' + rawName} src={`${prefix}data/${rawName}.png`} alt={rawName}/>
         <Typography>{notateNumber(amount)}</Typography>
       </Stack>
     })}
   </Stack>
 }
+
+// Bottom right - the atom/breeding FloatingIcon owns the bottom left corner. The glyph sits bare on
+// top of the icon, with a dark outline so it stays readable over the brighter salt colours.
+const AlertBadge = styled.div`
+  position: absolute;
+  /* Anchored by a percentage of its own box so every glyph size hangs off the corner the same way. */
+  right: 0;
+  bottom: 0;
+  transform: translate(40%, 40%);
+  display: flex;
+  color: ${({ badgeColor }) => badgeColor};
+  filter: drop-shadow(0 0 1px #000) drop-shadow(0 0 2px #000);
+`;
 
 const FloatingIcon = styled.img`
   width: 15px;

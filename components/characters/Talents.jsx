@@ -6,14 +6,8 @@ import { Box, Stack, Tab, Tabs, Typography } from '@mui/material';
 import { TalentTooltip } from '../common/styles';
 import { Breakdown } from '../common/Breakdown/Breakdown';
 import { IconInfoCircleFilled } from '@tabler/icons-react';
+import { isBookEligibleTalent } from '@parsers/talents';
 
-
-const BOOK_ELIGIBLE_MAX_INDEX = 615;
-// Talents excluded from Talent Book Library increases (game's RANDOlist[16] check —
-// shows "This Book is not Available" instead of a Book Lv Range). These are the page 1
-// stat-allocation talents (STR/AGI/WIS/LUK) plus their paired Basics-tab talents, which use
-// a different level mechanic than the book library system.
-const BOOK_INELIGIBLE_INDICES = [10, 11, 12, 23, 75, 79, 86, 87, 266, 267, 446, 447];
 
 const Talents = ({
   talents,
@@ -123,7 +117,7 @@ const Talents = ({
       <Tab sx={{ minWidth: { xs: 'unset', sm: 'inherit' } }}
         onClick={() => setActiveTab(STAR_TAB_INDEX)}
         aria-label={`star-sign-tab`}
-        icon={<TabIcon src={`${prefix}data/ClassIcons0.png`} alt="" />} />
+        icon={<TabIcon src={`${prefix}data/ClassIcons0.png`} alt="Class Icons0" />} />
     </Tabs>
     {activeTab === STAR_TAB_INDEX ? <Typography variant={'caption'} mt={2} style={{
       opacity: activeTab === 4
@@ -161,8 +155,7 @@ const Talents = ({
         const isActiveTalent = talentDetails.hasOwnProperty('manaCost') && talentDetails.hasOwnProperty('cooldown');
         const isStarTab = activeTab === STAR_TAB_INDEX;
         const isMaxed = isStarTab ? true : baseLevel >= maxLevel;
-        const isBookEligible = !isStarTab && Number(talentId) < BOOK_ELIGIBLE_MAX_INDEX
-          && !BOOK_INELIGIBLE_INDICES.includes(Number(talentId));
+        const isBookEligible = !isStarTab && isBookEligibleTalent(talentId);
         const pendingLibraryBooks = isMaxed && isBookEligible && maxLevel < maxBookLv;
         const levelText = getLevelAndMaxLevel(level, maxLevel);
         const levelTextSx = isStarTab || !isMaxed
@@ -173,7 +166,7 @@ const Talents = ({
 
         return (talentId === 'Blank' || talentId === '84' || talentId === 'arrow') ?
           <div key={talentId + '' + index} className={`blank ${(index === 10 || index === 14) && 'arrow'}`}>
-            {(index !== 10 && index !== 14) && <TalentIcon src={`${prefix}data/UISkillIconLocke.png`} alt="" />}
+            {(index !== 10 && index !== 14) && <TalentIcon src={`${prefix}data/UISkillIconLocke.png`} alt="UISkill Icon Locke" />}
             {index === 10 && specialsTab > 0 ?
               <div>
                 <TalentIcon onClick={() => switchSpecials(specialsTab - 1)} className={'arrow'}
@@ -191,8 +184,8 @@ const Talents = ({
           </div> :
           <Tooltip key={talentId + '' + index} title={talentId >= 0 ? <TalentTooltip {...talentDetails} /> : ''}>
             <div className={'talent-wrapper'}>
-              {isSuperTalent && <TalentIcon style={{ position: 'absolute' }} src={`${prefix}etc/Super_Talent_${isActiveTalent ? 'Active' : 'Passive'}_Border.png`} alt="" />}
-              {!name ? <TalentIcon src={`${prefix}data/UISkillIconLocke.png`} alt="" /> : <TalentIcon
+              {isSuperTalent && <TalentIcon style={{ position: 'absolute' }} src={`${prefix}etc/Super_Talent_${isActiveTalent ? 'Active' : 'Passive'}_Border.png`} alt={isActiveTalent ? 'Active' : 'Passive'} />}
+              {!name ? <TalentIcon src={`${prefix}data/UISkillIconLocke.png`} alt="UISkill Icon Locke" /> : <TalentIcon
                 src={`${prefix}data/UISkillIcon${talentId}.png`} alt="" />}
               <Typography fontSize={12} sx={levelTextSx}>
                 {levelText}

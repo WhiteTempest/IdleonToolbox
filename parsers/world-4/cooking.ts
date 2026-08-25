@@ -1,4 +1,5 @@
 import { atomsInfo, cookingMenu, monsters, randomList, randomList2, bonuses } from '@website-data';
+import { liveEntries } from '@parsers/catalog';
 import { getStampsBonusByEffect } from '@parsers/world-1/stamps';
 import { getStatsFromGear } from '@parsers/items';
 import { lavaLog, notateNumber, tryToParse } from '@utility/helpers';
@@ -11,7 +12,7 @@ import { getAchievementStatus } from '@parsers/achievements';
 import { isArtifactAcquired } from '@parsers/world-5/sailing';
 import { getShinyBonus } from '@parsers/world-4/breeding';
 import { isSuperbitUnlocked } from '@parsers/world-5/gaming';
-import { CLASSES, getHighestTalentByClass, getTalentBonus, getVoidWalkerTalentEnhancements } from '@parsers/talents';
+import { getTalentBonus, getVoidWalkerTalentEnhancements, getBestActiveCharacter, getHighestTalentAcrossCharacters } from '@parsers/talents';
 import { getEquinoxBonus } from '@parsers/world-3/equinox';
 import LavaRand from '@utility/lavaRand';
 import { allProwess, getAllBaseSkillEff, getAllEff } from '@parsers/efficiency';
@@ -119,23 +120,23 @@ const getMeals = (mealsRaw: any, account: any, cookMasterRaw?: any) => {
   const mealsLevelsListRaw = mealsRaw?.[0];
   const mealsQuantityListRaw = mealsRaw?.[2];
   const shinyMealBonus = getShinyBonus(account?.breeding?.pets, 'Bonuses_from_All_Meals');
-  return mealsLevelsListRaw?.map((mealLevel: any, index: any) => {
-    if (!cookingMenu?.[index]) return null;
+  return liveEntries<any>(cookingMenu).map(({ entry, index }) => {
+    const mealLevel = mealsLevelsListRaw?.[index] ?? 0;
     const levelCost = getMealLevelCost(mealLevel, account?.achievements, account);
     const cookingMasteryNodeLevel = cookMasterRaw?.[0]?.[index] ?? 0;
     return {
       index,
       level: mealLevel,
-      amount: parseFloat(mealsQuantityListRaw?.[index]),
+      amount: parseFloat(mealsQuantityListRaw?.[index]) || 0,
       shinyMulti: shinyMealBonus,
       levelCost,
       cookingMasteryNode: {
         level: cookingMasteryNodeLevel,
         multi: getMealNodeMulti(cookingMasteryNodeLevel)
       },
-      ...(cookingMenu?.[index] || {})
+      ...entry
     }
-  }).filter((meal: any) => meal);
+  });
 }
 
 export const applyMealsMulti = (meals: any, multiplier: any) => {
@@ -217,9 +218,10 @@ export const getMealsBonusByEffectOrStat = (account: any, effectName: any, statN
 export const getRibbonBonus = (account: any, t: any) => {
   const armorSetBonus = getArmorSetBonus(account, 'EMPEROR_SET');
   const cloudBonus73 = account?.equinox?.challenges?.[73]?.current === -1 ? 1 : 0;
-  return 1 + (Math.floor(5 * t + Math.floor(t / 2) *
-    (4 + 6.5 * Math.floor(t / 5))) + Math.floor(t / 4) * (armorSetBonus / 4)
-    + Math.floor(t / 10) * cloudBonus73) / 100;
+  const rank = t ?? 0;
+  return 1 + (Math.floor(5 * rank + Math.floor(rank / 2) *
+    (4 + 6.5 * Math.floor(rank / 5))) + Math.floor(rank / 4) * (armorSetBonus / 4)
+    + Math.floor(rank / 10) * cloudBonus73) / 100;
 }
 
 export const COOKING_MASTERY_RANK_THRESHOLDS = [0, 1, 5, 10, 25, 100, 150, 250, 500];
@@ -240,7 +242,7 @@ export interface CookingMasteryCategory {
 }
 
 // Category labels + description templates. These are inline UI strings from the game's render
-// loop (N.js ~line 98188 / 98201) — they are NOT part of any data-returning function, so the
+// loop (N.js ~line 98188 / 98201) - they are NOT part of any data-returning function, so the
 // z-processing section/VM extractor cannot pull them (it only evaluates data functions, not
 // draw-loop literals). They are therefore maintained here by hand, indexed in category order:
 // SALTY, SPICY, SWEET, SMOKY, SOUR, SAVORY.
@@ -337,7 +339,7 @@ export const getCookingMastery = (cookMasterRaw: any, mealsRaw: any, account: an
     return null;                             // SMOKY (t=3): a ribbon-rank chance, no scaling source
   };
 
-  // BonusAmountcook(t, 99) — the actual % each category contributes to the EXP rate.
+  // BonusAmountcook(t, 99) - the actual % each category contributes to the EXP rate.
   const bonusAmount = (t: number) => {
     const m = categoryMult(t);
     if (t === 0) return lavaLog(cookMaster?.[1]?.[3] ?? 0) * m;
@@ -496,8 +498,8 @@ export const parseKitchens = (cookingRaw: any, atomsRaw: any, characters: any, a
       superbitBonus = superbit?.bonus;
     }
 
-    const voidWalkerEnhancementEclipse = getHighestTalentByClass(characters, CLASSES.Voidwalker, 'ENHANCEMENT_ECLIPSE');
-    const voidWalkerBloodMarrow = getHighestTalentByClass(characters, CLASSES.Voidwalker, 'BLOOD_MARROW');
+    const voidWalkerEnhancementEclipse = getHighestTalentAcrossCharacters(characters, 'ENHANCEMENT_ECLIPSE', getBestActiveCharacter(characters));
+    const voidWalkerBloodMarrow = getHighestTalentAcrossCharacters(characters, 'BLOOD_MARROW', getBestActiveCharacter(characters));
     const voidWalkerBonusTalent = Math.pow(Math.min(1.012, 1 + voidWalkerBloodMarrow / 100), totalMeals);
     const voidWalkerEnhancement = getVoidWalkerTalentEnhancements(characters, account, voidWalkerEnhancementEclipse, 146);
     const voidWalkerApocalypseBonus = Math.max(1, voidWalkerEnhancement as number);
@@ -755,7 +757,7 @@ export const getMealLevelCost = (level: any, achievements: any, account?: any, l
     * Math.pow(10, 22 * Math.floor((level + 1e3) / 1111))
     * (1 / Math.min(5, Math.max(1, 1 + (10 * getAchievementStatus(achievements, 233)) / 100)))
     * Math.max(0.001, Math.pow(Math.max(0.58, 0.8 - 0.22 * foodLustChallenge),
-      Math.min(account?.accountOptions?.[193],
+      Math.min(account?.accountOptions?.[193] ?? 0,
         getEquinoxBonus(localEquinoxUpgrades || account?.equinox?.upgrades, 'Food_Lust')))) *
     (10 + (level
       + Math.pow(level, 2)))
@@ -767,6 +769,58 @@ export const getMealLevelCost = (level: any, achievements: any, account?: any, l
 
 export const calcTimeToNextLevel = (amountNeeded: any, cookReq: any, totalMealSpeed: any) => {
   return amountNeeded * cookReq / totalMealSpeed;
+}
+
+export interface NoMealLeftBehindProc {
+  index: number;
+  name: string;
+  rawName: string;
+  fromLevel: number;
+  ladles: number;
+}
+
+// No Meal Left Behind hands a free level to the lowest-level meal and picks its target again after
+// every proc, so the upcoming procs have to be simulated. Sorting once by level implies one proc
+// per meal and hides the runs where a single low meal soaks up procs until it catches up.
+export const getNoMealLeftBehindQueue = (meals: any[], mealMaxLevel: any, procCount: any, {
+  achievements,
+  account,
+  equinoxUpgrades,
+  mealSpeed,
+  overflowMulti = 1
+}: any = {}): NoMealLeftBehindProc[] => {
+  if (!isJadeBonusUnlocked(account, 'No_Meal_Left_Behind')) return [];
+  const state = meals
+    ?.filter((meal: any) => meal?.level > 5 && meal?.level < mealMaxLevel)
+    ?.map(({ index, name, rawName, level, amount, cookReq }: any) => ({
+      index,
+      name,
+      rawName,
+      level,
+      cookReq,
+      remaining: amount
+    })) ?? [];
+  const queue: NoMealLeftBehindProc[] = [];
+  for (let proc = 0; proc < procCount; proc++) {
+    // Ties go to the meal furthest down the book, matching the game's pick.
+    const target = state
+      .filter(({ level }: any) => level < mealMaxLevel)
+      .sort((a: any, b: any) => a.level === b.level ? b.index - a.index : a.level - b.level)
+      .at(0);
+    if (!target) break;
+    const levelCost = getMealLevelCost(target.level, achievements, account, equinoxUpgrades);
+    const needed = Math.max(0, levelCost - target.remaining);
+    queue.push({
+      index: target.index,
+      name: target.name,
+      rawName: target.rawName,
+      fromLevel: target.level,
+      ladles: calcTimeToNextLevel(needed, target.cookReq, mealSpeed) / overflowMulti
+    });
+    target.remaining = Math.max(0, target.remaining - levelCost);
+    target.level += 1;
+  }
+  return queue;
 }
 
 export const getTotalKitchenLevels = (kitchens: any) => {

@@ -31,6 +31,7 @@ import {
   evaluateStamp,
   getStampBonus,
   getStampsPerDay,
+  MAX_STAMP_REDUCTION,
   unobtainableStamps,
   updateStamps
 } from '@parsers/world-1/stamps';
@@ -63,6 +64,7 @@ const Stamps = () => {
       money: true,
       materials: true,
       player: true,
+      impossible: true,
       equipments: true,
       reduction: true,
       upgradable: true
@@ -107,14 +109,30 @@ const Stamps = () => {
   });
   const [SnapshotCheckboxEl, showSnapshotLevels] = useCheckbox('Show level-up indicator', true);
   const stampReducer = state?.account?.atoms?.stampReducer;
-  const localStamps = updateStamps(state?.account, state?.characters, forcedGildedStamp, forcedStampReducer, forceMaxCapacity);
+  const localStamps = updateStamps(state?.account, state?.characters, forcedGildedStamp, forcedStampReducer, forceMaxCapacity, true);
   const exaltedMulti = getExaltedStampBonus(state?.account);
 
   const getStampTypeAndBorder = (stamp, mode) => {
-    const { materials, level, hasMoney, hasMaterials, greenStackHasMaterials, enoughPlayerStorage } = stamp;
+    const {
+      materials, level, hasMoney, hasMaterials, greenStackHasMaterials, enoughPlayerStorage, minReduction
+    } = stamp;
     if (level <= 0) return { border: '#1d1c1c', type: 'level' };
     if (!hasMoney && mode === 'money') {
       return { border: 'warning.light', type: 'money' };
+    }
+    // Equipment cost before every material state: `materials` is only non-empty when the required
+    // item is craftable gear, and that gate outranks how many sub-materials happen to be on hand.
+    // Checked later it would almost never win, since gear costs run into the hundreds and the
+    // stamp would already have been typed 'impossible'/'player'/'materials' - which is why the
+    // Equipments legend switch only ever hid the handful of stamps whose craft was affordable.
+    else if (materials.length > 0) {
+      return { border: 'grey', type: 'equipments' };
+    }
+    // Out of reach before the softer "missing X" states: it's a strict refinement of 'player'
+    // (no reducer value fits the cost in carry capacity), so checked later it would never win.
+    // Stored materials are deliberately not part of it - a material shortage is 'materials'.
+    else if (mode === 'material' && isOutOfReach(minReduction)) {
+      return { border: 'error.dark', type: 'impossible' };
     }
     else if (!enoughPlayerStorage && mode === 'material') {
       return { border: '#e3e310', type: 'player' }
@@ -122,10 +140,12 @@ const Stamps = () => {
     else if (mode === 'material' && (!hasMaterials || (subtractGreenStacks && !greenStackHasMaterials))) {
       return { border: 'error.light', type: 'materials' };
     }
-    else if (materials.length > 0) {
-      return { border: 'grey', type: 'equipments' };
+    // Every remaining state must map to a type: an untyped stamp slips past the legend filter
+    // entirely (types.hasOwnProperty(undefined) is false), so it shows even with all switches off.
+    else if (!hasMoney) {
+      return { border: 'warning.light', type: 'money' };
     }
-    else if (materials.length === 0 && ((hasMaterials && enoughPlayerStorage) || mode === 'money') && hasMoney) {
+    else {
       const index = reducerValues.indexOf(forcedStampReducer);
       const minReductionStamp = evaluateStamp(stamp, state?.account, state?.characters, gildedStamps, reducerValues[index - 1], forceMaxCapacity);
       if (forcedStampReducer !== 0 && minReductionStamp?.materials.length === 0 && ((minReductionStamp?.hasMaterials && minReductionStamp?.enoughPlayerStorage) || mode === 'money') && minReductionStamp?.hasMoney) {
@@ -155,7 +175,7 @@ const Stamps = () => {
         title="Stamps | Idleon Toolbox"
         description="Track your stamp levels, upgrade costs, and bonus effects across all stamp categories in Legends of Idleon"
       />
-      <Stack mt={1} direction={'row'} gap={3} justifyContent={'center'} flexWrap={'wrap'}>
+      <Stack mb={3} mt={1} direction={'row'} gap={3} justifyContent={'center'} flexWrap={'wrap'}>
         <CardTitleAndValue title={'Legend'} stackProps={{ gap: .7 }}>
           <Color onChange={handleSwitchChange} name={'level'} value={types.level} color={'#1d1c1c'}
                  desc={'Level 0'}/>
@@ -165,6 +185,10 @@ const Stamps = () => {
                  desc={'Missing Materials'}/>
           <Color onChange={handleSwitchChange} name={'player'} value={types.player} color={'#e3e310'}
                  desc={'Not Enough Player Storage'}/>
+          <Color onChange={handleSwitchChange} name={'impossible'} value={types.impossible ?? true}
+                 color={'error.dark'}
+                 desc={'Out of reach'}
+                 info={`Costs more than your carry capacity even at the ${MAX_STAMP_REDUCTION}% reducer cap, so no reduction can unlock it. Raise your carry capacity first. Stored materials don't count here: being short on the material shows as Missing Materials.`}/>
           <Color onChange={handleSwitchChange} name={'equipments'} value={types.equipments} color={'grey'}
                  desc={'Equipments'}/>
           <Color onChange={handleSwitchChange} name={'reduction'} value={types.reduction} color={'secondary.dark'}
@@ -174,7 +198,7 @@ const Stamps = () => {
         </CardTitleAndValue>
         <CardTitleAndValue title={'Gilded Stamp'}>
           <Stack alignItems={'center'} direction={'row'} gap={2}>
-            <img src={`${prefix}data/GildedStamp.png`} alt=""/>
+            <img src={`${prefix}data/GildedStamp.png`} alt="Gilded Stamp"/>
             <Stack>
               <Typography>Owned: {gildedStamps}</Typography>
               <Typography>Chance: {calcStampLevels(state?.account?.stamps) / 100}%</Typography>
@@ -204,7 +228,7 @@ const Stamps = () => {
         </CardTitleAndValue>
         <CardTitleAndValue title={'Stamp Reducer'}>
           <Stack alignItems={'center'} direction={'row'} gap={2}>
-            <img src={`${prefix}data/Atom0.png`} height={36} alt=""/>
+            <img src={`${prefix}data/Atom0.png`} height={36} alt="Atom0"/>
             {stampReducer ?? 0}%
           </Stack>
           <FormControl fullWidth sx={{ mt: 3 }}>
@@ -225,7 +249,7 @@ const Stamps = () => {
           <Typography sx={{ fontSize: 14, mb: 1 }} variant={'body1'} color={'text.secondary'}>Exalted
             Stamps</Typography>
           <Stack direction={'row'} alignItems={'center'} gap={2}>
-            <img src={`${prefix}etc/Exalted_Stamp_Frame.png`} style={{ width: 32, height: 32 }}/>
+            <img src={`${prefix}etc/Exalted_Stamp_Frame.png`} style={{ width: 32, height: 32 }} alt="Exalted Stamp Frame"/>
             <Typography>{state?.account?.compass?.remainingExaltedStamps} / {state?.account?.compass?.usedExaltedStamps + state?.account?.compass?.remainingExaltedStamps}</Typography>
           </Stack>
         </CardTitleAndValue>
@@ -328,6 +352,7 @@ const Stamps = () => {
                       size={{ xs: 4, sm: 3 }}>
                       <Tooltip maxWidth={450}
                                title={isBlank ? '' : <StampInfo {...stamp} bonus={bonus}
+                                                                currentReduction={forcedStampReducer}
                                                                 subtractGreenStacks={subtractGreenStacks}/>}>
                         <Card sx={{
                           position: 'relative',
@@ -361,11 +386,11 @@ const Stamps = () => {
                                   width: 40,
                                   height: 40
                                 }}
-                                src={`${prefix}etc/Exalted_Stamp_Frame.png`}/> : null}
+                                src={`${prefix}etc/Exalted_Stamp_Frame.png`} alt="Exalted Stamp Frame"/> : null}
                               <StampIcon width={40} height={40}
                                          level={level}
                                          src={`${prefix}data/${rawName}.png`}
-                                         alt=""/>
+                                         alt={rawName}/>
                               <Typography>{level}</Typography>
                             </Stack>
                           </CardContent>
@@ -400,7 +425,9 @@ const StampInfo = ({
                      enoughPlayerStorage,
                      itemReq,
                      bonus,
-                     maxLevel
+                     maxLevel,
+                     minReduction,
+                     currentReduction
                    }) => {
   const storageColor = enoughPlayerStorage ? '' : '#e57373';
   const materialColor = hasMaterials ? '' : '#e57373';
@@ -419,6 +446,8 @@ const StampInfo = ({
                    goldCost={goldCost}
                    mode={mode}
                    level={level}/>
+      {mode === 'material' ? <MinReductionInfo minReduction={minReduction}
+                                              currentReduction={currentReduction}/> : null}
       <Divider variant={'middle'} sx={{ bgcolor: grey[600], my: 1 }}/>
       {futureCosts?.map((futureCost, index) => {
         return <CostSection key={'future-' + index}
@@ -444,6 +473,24 @@ const StampInfo = ({
   </Box>;
 }
 
+// Absent entirely when a caller skipped the calculation, versus present with a null reduction,
+// which is the real "no reducer value fits this in carry capacity" answer.
+const isOutOfReach = (minReduction) => Boolean(minReduction) && minReduction.reduction == null;
+
+const MinReductionInfo = ({ minReduction, currentReduction }) => {
+  if (!minReduction) return null;
+  const { reduction } = minReduction;
+  if (reduction == null) {
+    return <Typography variant={'body2'} sx={{ color: 'warning.light' }}>
+      {`${MAX_STAMP_REDUCTION}% reduction still exceeds your carry capacity`}
+    </Typography>;
+  }
+  const isAffordable = reduction <= (currentReduction ?? 0);
+  return <Typography variant={'body2'} sx={{ color: isAffordable ? 'success.light' : '#e57373' }}>
+    Min. reduction to carry: {reduction}%
+  </Typography>;
+}
+
 const CostSection = ({
                        showBoth,
                        reduction,
@@ -461,7 +508,7 @@ const CostSection = ({
     <Typography variant={'subtitle2'}>{level}</Typography>
     {mode === 'material' || showBoth ? <Stack my={1} direction={'row'} alignItems={'center'} gap={1}>
       <ItemIcon src={`${prefix}data/${rawName}.png`}
-                alt=""/>
+                alt={rawName}/>
       <Typography variant={'subtitle2'}>{materialCost
         ? notateNumber(materialCost, 'Big')
         : null}</Typography>
@@ -486,11 +533,12 @@ const ItemIcon = styled.img`
   opacity: ${({ hide }) => hide ? 0.5 : 1};
 `;
 
-const Color = ({ color, desc, value, onChange, name }) => {
+const Color = ({ color, desc, value, onChange, name, info }) => {
   return <Stack direction={'row'} gap={1} alignItems={'center'} justifyContent={'space-between'}>
     <Stack direction={'row'} gap={1} alignItems={'center'}>
       <Avatar sx={{ bgcolor: color, width: 24, height: 24 }} alt={color} src={''}>&nbsp;</Avatar>
       <Typography variant={'body2'}>{desc}</Typography>
+      {info ? <Tooltip title={info}><IconInfoCircleFilled size={16}/></Tooltip> : null}
     </Stack>
     <Switch size={'small'} checked={value} onChange={(e) => onChange(e, name)}/>
   </Stack>

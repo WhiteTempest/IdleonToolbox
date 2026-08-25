@@ -9,6 +9,7 @@ import { items } from '@website-data';
 import ItemDisplay from '@components/common/ItemDisplay';
 import { addEquippedItems, getAllItems, mergeItemsByOwner } from '@parsers/items';
 import useCheckbox from '@components/common/useCheckbox';
+import { getGoldenFoodBonus } from '@parsers/misc';
 
 const ArmorSmithy = () => {
   const { state } = useContext(AppContext);
@@ -24,7 +25,7 @@ const ArmorSmithy = () => {
       title="Armor Smithy | Idleon Toolbox"
       description="Track your armor smithy set completion progress, set bonuses, and required items in Legends of Idleon"
     />
-    <Stack direction={'row'} gap={2} alignItems={'center'}>
+    <Stack mb={3} direction={'row'} gap={2} alignItems={'center'}>
       <CardTitleAndValue title={'Completed sets'} value={`${unlockedSets.length} / ${sets.length}`}/>
       {!isSmithyUnlocked ? <CardTitleAndValue title={'Unlock smithy in'} value={`${30 - days} days`}/> : null}
     </Stack>
@@ -45,7 +46,7 @@ const ArmorSmithy = () => {
         return <Card key={'upgrade-' + index} sx={{ width: 350 }}>
           <CardContent>
             <Stack direction={'row'} alignItems={'center'} gap={1} sx={{ width: '100%' }}>
-              <img src={`${prefix}data/${armors?.[0]}.png`} style={{ width: 32, height: 32 }}/>
+              <img src={`${prefix}data/${armors?.[0]}.png`} style={{ width: 32, height: 32 }} alt=""/>
               <Stack sx={{ width: '100%' }}>
                 <Stack direction={'row'} alignItems={'center'}>
                   <Typography
@@ -89,8 +90,8 @@ const RequiredItems = ({ title, requiredItems, account, allItems }) => {
       {requiredItems?.map((rawName, index) => {
         const owners = allItems.filter(({ rawName: rName }) => rName === rawName).map(({ owner }) => owner);
         return <Tooltip key={rawName + index}
-                        title={<ItemDisplay {...items[rawName]} owners={owners} account={account}/>}>
-          <img src={`${prefix}data/${rawName}.png`} style={{ width: 32, height: 32 }}/>
+                        title={<ItemDisplay {...items[rawName]} owners={owners} account={account} getGoldenFoodBonus={getGoldenFoodBonus}/>}>
+          <img src={`${prefix}data/${rawName}.png`} style={{ width: 32, height: 32 }} alt={rawName}/>
         </Tooltip>
       })}
     </Stack>

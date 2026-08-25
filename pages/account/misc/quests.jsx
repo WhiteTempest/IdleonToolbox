@@ -1,16 +1,28 @@
 import React, { useContext, useEffect, useState } from 'react';
 import FormatAlignCenterIcon from '@mui/icons-material/FormatAlignCenter';
-import { Container, Stack, ToggleButton, ToggleButtonGroup, Typography } from '@mui/material';
+import {
+  Checkbox,
+  Container,
+  FormControlLabel,
+  Stack,
+  ToggleButton,
+  ToggleButtonGroup,
+  Typography
+} from '@mui/material';
 import WorldQuest from 'components/account/Misc/WorldQuest';
-import { prefix } from 'utility/helpers';
+import { numberWithCommas, prefix } from 'utility/helpers';
 import { AppContext } from 'components/common/context/AppProvider';
 import { NextSeo } from 'next-seo';
-import { calcTotalQuestCompleted } from '@parsers/misc';
+import { CardTitleAndValue } from '@components/common/styles';
+import HtmlTooltip from '@components/Tooltip';
+import InfoIcon from '@mui/icons-material/Info';
 
 const Quests = () => {
   const { state } = useContext(AppContext);
   const [worldQuests, setWorldQuests] = useState();
   const [filteredCharacters, setFilteredCharacters] = useState([0]);
+  const [hideCompleted, setHideCompleted] = useState(false);
+  const totalQuestsCompleted = state?.account?.totalQuestsCompleted ?? 0;
 
   useEffect(() => {
     if (!filteredCharacters) return;
@@ -42,8 +54,20 @@ const Quests = () => {
             inProgressQuests++;
           }
         }
+        // Every selected character finished the final quest, so there's nothing left to do here
+        // even if an earlier quest went unfinished - some are unreachable once you've moved past
+        // them, and would otherwise hold the npc at "in progress" forever.
+        const lastQuest = clonedNpcQuests[clonedNpcQuests.length - 1];
+        const charactersAtTheEnd = (lastQuest?.progress || [])
+          .filter(({ status }) => status === 1)
+          .map(({ charIndex }) => charIndex);
+        const everyoneFinished = filteredCharacters?.length > 0
+          && filteredCharacters.every((charIndex) => charactersAtTheEnd.includes(charIndex));
+
         let questsStatus;
-        if (completedQuests === 0) {
+        if (everyoneFinished) {
+          questsStatus = 1;
+        } else if (completedQuests === 0) {
           if (inProgressQuests > 0) {
             questsStatus = 0;
           } else {
@@ -90,6 +114,17 @@ const Quests = () => {
       />
       {filteredCharacters ? (
         <>
+          <Stack direction={'row'} mt={2} justifyContent={'center'} flexWrap={'wrap'} gap={2}>
+            <CardTitleAndValue title={'Unique quests completed'}>
+              <Stack direction={'row'} alignItems={'center'} gap={1}>
+                <Typography>{numberWithCommas(totalQuestsCompleted)}</Typography>
+                <HtmlTooltip
+                  title={'Every quest counts once, no matter how many characters finished it. This is the number the QUEST KAPOW! and QUEST CHUNGUS star talents scale off.'}>
+                  <InfoIcon sx={{ fontSize: 16, cursor: 'pointer' }}/>
+                </HtmlTooltip>
+              </Stack>
+            </CardTitleAndValue>
+          </Stack>
           <Stack direction={'row'} my={2} justifyContent={'center'} flexWrap={'wrap'}>
             <ToggleButtonGroup
               size={'small'}
@@ -119,6 +154,11 @@ const Quests = () => {
                 <FormatAlignCenterIcon/>
               </ToggleButton>
             </ToggleButtonGroup>
+            <FormControlLabel
+              sx={{ ml: 1 }}
+              control={<Checkbox checked={hideCompleted}
+                                 onChange={(e) => setHideCompleted(e.target.checked)}/>}
+              label={'Hide completed'}/>
           </Stack>
           <Stack mt={6} direction={'row'} justifyContent={'center'} flexWrap={'wrap'} gap={4}>
             <WorldQuest
@@ -127,6 +167,7 @@ const Quests = () => {
               characters={state?.characters}
               worldName={'Blunder_Hills'}
               worldIndex={0}
+              hideCompleted={hideCompleted}
             />
             <WorldQuest
               quests={worldQuests}
@@ -134,6 +175,7 @@ const Quests = () => {
               characters={state?.characters}
               worldName={'Yum_Yum_Desert'}
               worldIndex={1}
+              hideCompleted={hideCompleted}
             />
             <WorldQuest
               quests={worldQuests}
@@ -141,6 +183,7 @@ const Quests = () => {
               characters={state?.characters}
               worldName={'Frostbite_Tundra'}
               worldIndex={2}
+              hideCompleted={hideCompleted}
             />
             <WorldQuest
               quests={worldQuests}
@@ -148,6 +191,7 @@ const Quests = () => {
               characters={state?.characters}
               worldName={'Hyperion_Nebula'}
               worldIndex={3}
+              hideCompleted={hideCompleted}
             />
             <WorldQuest
               quests={worldQuests}
@@ -155,6 +199,7 @@ const Quests = () => {
               characters={state?.characters}
               worldName={'Smolderin\'_Plateau'}
               worldIndex={4}
+              hideCompleted={hideCompleted}
             />
             <WorldQuest
               quests={worldQuests}
@@ -162,6 +207,7 @@ const Quests = () => {
               characters={state?.characters}
               worldName={'Spirited_Valley'}
               worldIndex={5}
+              hideCompleted={hideCompleted}
             />
             <WorldQuest
               quests={worldQuests}
@@ -169,6 +215,7 @@ const Quests = () => {
               characters={state?.characters}
               worldName={'Shimmerfin_Deep'}
               worldIndex={6}
+              hideCompleted={hideCompleted}
             />
           </Stack>
         </>

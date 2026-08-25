@@ -1,6 +1,6 @@
 import { tryToParse, commaNotation, notateNumber } from '@utility/helpers';
 import { statues as statuesList, zenithMarket } from '@website-data';
-import { CLASSES, getHighestTalentByClass, getTalentBonus } from '@parsers/talents';
+import { getTalentBonus, getBestActiveCharacter, getHighestTalentAcrossCharacters } from '@parsers/talents';
 import { isArtifactAcquired } from '@parsers/world-5/sailing';
 import { getUpgradeVaultBonus } from '@parsers/misc/upgradeVault';
 import { getEventShopBonus } from '@parsers/misc';
@@ -50,6 +50,10 @@ export const parseStatues = (statuesRaw: any, charactersData: any[], rawSpelunki
 
   return {
     statues,
+    // The raw grade per statue slot. StuG is longer than the named statue catalog, and the game's
+    // StatueOnyxOwned/StatueZenithOwned count every slot in it, so the counts have to come from
+    // here rather than from the catalog-shaped `statues` array.
+    grades: Array.isArray(statuesRaw) ? statuesRaw.map((grade: any) => Number(grade) || 0) : [],
     zenith: {
       market,
       clusters
@@ -93,13 +97,14 @@ const getZenithMarket = (rawSpelunking: any) => {
 }
 
 const getHighestLevelStatues = (characters: any[], statueIndex: number): any => {
+  if (!characters?.length) return undefined;
   return characters.reduce((prev: any, current: any) => (prev?.StatueLevels?.[statueIndex]?.[0] > current?.StatueLevels?.[statueIndex]?.[0])
     ? prev
     : current)
 };
 
 export const applyStatuesMulti = (account: Account, characters: any[]) => {
-  const voodoStatusification = getHighestTalentByClass(characters, CLASSES.Voidwalker, 'VOODOO_STATUFICATION');
+  const voodoStatusification = getHighestTalentAcrossCharacters(characters, 'VOODOO_STATUFICATION', getBestActiveCharacter(characters));
   const talentMulti = 1 + voodoStatusification / 100;
   const artifact = isArtifactAcquired((account as any)?.sailing?.artifacts, 'The_Onyx_Lantern');
   const eventBonus = getEventShopBonus(account, 19) ?? 0;
@@ -196,5 +201,5 @@ export const calcStatueLevels = (allStatues: any): number => {
 
 export const calcTotalOnyx = (account: Account): number => {
   if ((account?.accountOptions as any)?.[69] < 2) return 0;
-  return (account?.statues as any[])?.reduce((res: number, { onyxStatue }: any) => res + (onyxStatue ? 1 : 0), 0);
+  return ((account as any)?.statueGrades as number[])?.reduce((res: number, grade: number) => res + (grade >= 2 ? 1 : 0), 0) ?? 0;
 }

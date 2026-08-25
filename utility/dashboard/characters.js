@@ -1,6 +1,6 @@
 import { differenceInHours, differenceInMinutes, isPast } from 'date-fns';
 import { getPostOfficeBonus } from '@parsers/world-3/postoffice';
-import { items, randomList } from '@website-data';
+import { carryBags, items, randomList } from '@website-data';
 import { getExpReq, isArenaBonusActive, isCompanionBonusActive } from '../../parsers/misc';
 import { getPlayerAnvil, getTimeTillCap } from '@parsers/world-1/anvil';
 import {
@@ -8,6 +8,7 @@ import {
   CLASSES,
   getTalentBonus,
   getTalentBonusIfActive,
+  isBookEligibleTalent,
   relevantTalents
 } from '../../parsers/talents';
 import { getAllTools } from '../../parsers/items';
@@ -90,6 +91,22 @@ export const trapsAlerts = (account, characters, character, lastUpdated, options
   }
   return alerts;
 }
+// Picnic Stowaway's repeatable daily questline is Picnic_Stowaway4 through Picnic_Stowaway12. The
+// daily reset clamps NPCdialogue.Picnic_Stowaway back down to 20 and sets every one of those quests
+// to -1 on every character, so a character with any of them completed (1) has already fed him today.
+const PICNIC_DAILY_QUESTS = [4, 5, 6, 7, 8, 9, 10, 11, 12];
+const PICNIC_QUESTLINE_DIALOG = 20;
+
+export const questsAlerts = (account, characters, character, lastUpdated, options) => {
+  const alerts = {};
+  if (options?.quests?.picnicDaily?.checked) {
+    const questlineUnlocked = character?.npcDialog?.Picnic_Stowaway >= PICNIC_QUESTLINE_DIALOG;
+    const picnicQuests = character?.quests?.Picnic_Stowaway;
+    alerts.picnicDaily = questlineUnlocked
+      && !PICNIC_DAILY_QUESTS.some((questIndex) => picnicQuests?.[questIndex] === 1);
+  }
+  return alerts;
+}
 export const alchemyAlerts = (account, characters, character, lastUpdated, options) => {
   const alerts = {};
   if (options?.alchemy?.missingBubbles?.checked) {
@@ -162,7 +179,34 @@ export const talentsAlerts = (account, characters, character, lastUpdated, optio
       alerts.superTalentLeftToSpend = superTalentLeftToSpend;
     }
   }
+  if (options?.talents?.unmaxedTalents?.checked) {
+    alerts.unmaxedTalents = getUnmaxedTalents(character);
+  }
+  if (options?.talents?.libraryUpgradableTalents?.checked) {
+    alerts.libraryUpgradableTalents = getLibraryUpgradableTalents(character);
+  }
   return alerts;
+}
+
+// Class talents only - star talents have no per-talent cap to fill or book to raise. Placeholder
+// tiles ('Blank', locked slots) carry a non numeric skillIndex or no maxLevel, so they're skipped.
+const getRealTalents = (character) => character?.flatTalents?.filter(({ skillIndex, name, maxLevel }) =>
+  name && maxLevel > 0 && Number.isFinite(Number(skillIndex))) || [];
+
+// Talents with points left to spend - the white tier of the Talents page level color legend.
+const getUnmaxedTalents = (character) => getRealTalents(character)
+  .filter(({ baseLevel, maxLevel }) => baseLevel < maxLevel)
+  .map(({ name, skillIndex, baseLevel, maxLevel }) => ({ name, skillIndex, level: baseLevel, target: maxLevel }));
+
+// Talents already at their cap that a Talent Book Library book could raise further - the blue tier
+// of the level color legend.
+const getLibraryUpgradableTalents = (character) => {
+  const maxBookLv = character?.maxBookLv ?? 0;
+  return getRealTalents(character)
+    .filter(({ skillIndex, baseLevel, maxLevel }) => baseLevel >= maxLevel
+      && maxLevel < maxBookLv
+      && isBookEligibleTalent(skillIndex))
+    .map(({ name, skillIndex, maxLevel }) => ({ name, skillIndex, level: maxLevel, target: maxBookLv }));
 }
 export const isTalentReady = (character, options) => {
   const { talents } = options;
@@ -241,6 +285,20 @@ export const getDivinityAlert = (account, characters, character, lastUpdated, op
   }
   return null;
 };
+// character.equipment holds both gear pages back to back - indices 0-7 are the first page, which is
+// the only one this alert looks at. Page 2 (keychains, trophy, cape...), tools and food are left out
+// on purpose: they're legitimately empty for most accounts.
+const EQUIPMENT_SLOTS = [
+  { index: 0, group: 'armor', label: 'Helmet' },
+  { index: 1, group: 'weapon', label: 'Weapon' },
+  { index: 2, group: 'armor', label: 'Shirt' },
+  { index: 3, group: 'amulet', label: 'Pendant' },
+  { index: 4, group: 'armor', label: 'Pants' },
+  { index: 5, group: 'rings', label: 'Ring' },
+  { index: 6, group: 'armor', label: 'Shoes' },
+  { index: 7, group: 'rings', label: 'Ring' }
+];
+
 export const getEquipmentAlert = (account, characters, character, lastUpdated, options) => {
   const alerts = {};
   if (options?.equipment?.availableUpgradesSlots?.checked) {
@@ -250,6 +308,37 @@ export const getEquipmentAlert = (account, characters, character, lastUpdated, o
         ? [...result, item]
         : result;
     }, [])
+  }
+  if (options?.equipment?.emptyGearSlots?.checked) {
+    const enabledGroups = options?.equipment?.emptyGearSlots?.props?.value || {};
+    alerts.emptyGearSlots = EQUIPMENT_SLOTS.reduce((result, { index, group, label }) => {
+      return enabledGroups?.[group] && character?.equipment?.[index]?.rawName === 'Blank'
+        ? [...result, label]
+        : result;
+    }, []);
+  }
+  return alerts;
+};
+// MaxCarryCap also holds Quests/fillerz/Statues pseudo-bags that have no upgrade path.
+const NON_UPGRADABLE_CARRY_BAGS = ['Quests', 'fillerz', 'Statues'];
+export const bagsAlerts = (account, characters, character, lastUpdated, options) => {
+  const alerts = {};
+  if (options?.bags?.unmaxedBags?.checked) {
+    alerts.unmaxedBags = Object.entries(character?.maxCarryCap || {})
+      .filter(([bagType]) => !NON_UPGRADABLE_CARRY_BAGS.includes(bagType) && carryBags?.[bagType])
+      .map(([bagType, capacity]) => {
+        const tiers = Object.keys(carryBags?.[bagType]).map(Number).sort((a, b) => a - b);
+        const maxCapacity = tiers[tiers.length - 1];
+        if (capacity >= maxCapacity) return null;
+        const currentBag = carryBags?.[bagType]?.[capacity];
+        return {
+          bagType,
+          capacity,
+          maxCapacity,
+          rawName: currentBag?.rawName ?? carryBags?.[bagType]?.[maxCapacity]?.rawName
+        };
+      })
+      .filter(Boolean);
   }
   return alerts;
 };

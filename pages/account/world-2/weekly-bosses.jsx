@@ -15,13 +15,6 @@ const WeeklyBosses = () => {
   const { state } = useContext(AppContext);
   const formatDate = useFormatDate();
   const [weeks, setWeeks] = useState(10);
-  const handleCopy = async (data) => {
-    try {
-      await navigator.clipboard.writeText(JSON.stringify(data, null, 2));
-    } catch (err) {
-      console.error(err);
-    }
-  };
 
   const weeklyBosses = getWeeklyBoss(state?.account, weeks);
   return weeklyBosses?.length ? <>
@@ -33,7 +26,7 @@ const WeeklyBosses = () => {
       <CardTitleAndValue title={'Trophies'}
                          icon={'data/Trophie.png'}
                          imgStyle={{ width: 24, height: 24, objectFit: 'contain' }}
-                         value={numberWithCommas(state?.account?.accountOptions?.[188])}/>
+                         value={numberWithCommas(state?.account?.accountOptions?.[188] ?? 0)}/>
       <CardTitleAndValue title={'Options'}
                          value={<Button onClick={() => setWeeks((tempWeeks) => tempWeeks + 10)}>+ Add more
                            bosses</Button>}/>

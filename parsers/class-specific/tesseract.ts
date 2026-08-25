@@ -1,7 +1,8 @@
 import { commaNotation, lavaLog, lavaLog2, notateNumber, tryToParse } from '@utility/helpers';
 import { getFilteredPortals } from '@parsers/portals';
-import { mapEnemiesArray, mapPortals, monsterDrops, monsters, tesseract, items } from '@website-data';
-import { CLASSES, getCharacterByHighestTalent, getTalentBonus, getHighestTalentByClass } from '@parsers/talents';
+import { liveEntries } from '@parsers/catalog';
+import { mapEnemiesArray, mapPortals, monsterCoinQuantity, monsters, tesseract, items } from '@website-data';
+import { CLASSES, getCharacterByHighestTalent, getTalentBonus, getHighestTalentAcrossCharacters } from '@parsers/talents';
 import { getStatsFromGear } from '@parsers/items';
 import { getArcadeBonus } from '@parsers/world-2/arcade';
 import { getLabBonus } from '@parsers/world-4/lab';
@@ -67,17 +68,17 @@ export const mapBonusNames = {
 }
 
 export const getTesseract = (idleonData: any, characters: any[], account: any, _unused3?: any) => {
-  const tachyons = account?.accountOptions?.slice(388, 394).map((value: any, index: any) => ({
-    value,
-    name: (tachyonNames as Record<string, any>)?.[index]
+  const tachyons = Object.entries(tachyonNames).map(([index, name]) => ({
+    value: account?.accountOptions?.[388 + Number(index)] ?? 0,
+    name
   }));
-  const totalTachyons = tachyons?.reduce((sum: any, { value }: any) => sum + value, 0);
+  const totalTachyons = tachyons?.reduce((sum: any, { value }: any) => sum + value, 0) ?? 0;
   const tesseractRaw = tryToParse(idleonData?.Arcane) || [];
   const [portalsRaw] = tryToParse(idleonData?.Tess) || [];
   const mapBonusRaw = tryToParse(idleonData?.MapBon) || [];
-  const totalUpgradeLevels = tesseractRaw?.reduce((sum: any, level: any) => sum + level, 0);
-  let upgrades = tesseract?.map((upgrade, index) => {
-    const level = tesseractRaw?.[index]
+  const totalUpgradeLevels = tesseractRaw?.reduce((sum: any, level: any) => sum + level, 0) ?? 0;
+  let upgrades = liveEntries<any>(tesseract).map(({ entry: upgrade, index }) => {
+    const level = tesseractRaw?.[index] ?? 0;
     return {
       ...upgrade,
       level,
@@ -105,9 +106,9 @@ export const getTesseract = (idleonData: any, characters: any[], account: any, _
   })
 
   const crystalChargeReq = getCrystalChargeReq(characters, upgrades)
-  const weaponDropChance = 1 / (300 * Math.pow(1.2, account?.accountOptions?.[396]));
+  const weaponDropChance = 1 / (300 * Math.pow(1.2, account?.accountOptions?.[396] ?? 0));
   const weaponQuality = calcTesseractBonus(upgrades, 5, 0);
-  const ringDropChance = 1 / (500 * Math.pow(1.2, account?.accountOptions?.[397]));
+  const ringDropChance = 1 / (500 * Math.pow(1.2, account?.accountOptions?.[397] ?? 0));
   const ringQuality = calcTesseractBonus(upgrades, 23, 0);
 
   const unlockedPortals = (portalsRaw || []).reduce((result: any, mapRaw: any) => {
@@ -237,7 +238,7 @@ export const getTesseractMapBonus = (account: any, characters: any, character: a
 }
 export const getMaps = (account: any, characters: any, character: any) => {
   const { unlockedPortals, upgrades, mapBonusRaw } = account?.tesseract;
-  const highestOverwhelmingEnergy = getHighestTalentByClass(characters, CLASSES.Arcane_Cultist, 'OVERWHELMING_ENERGY');
+  const highestOverwhelmingEnergy = getHighestTalentAcrossCharacters(characters, 'OVERWHELMING_ENERGY', character);
 
   const maxMapBonus = 100 * (highestOverwhelmingEnergy - 1) + Math.min(10, calcTesseractBonus(upgrades, 58, 0))
   return getFilteredPortals()?.map(({ mapIndex, mapName }) => {
@@ -248,7 +249,7 @@ export const getMaps = (account: any, characters: any, character: any) => {
       }
     });
     const monsterRawName = (mapEnemiesArray as any)?.[mapIndex];
-    const coinQuantity = monsterDrops?.[monsterRawName]?.find(({ rawName }: any) => rawName === 'COIN')?.quantity;
+    const coinQuantity = (monsterCoinQuantity as any)?.[monsterRawName];
     const tachyonQuantity = getTachyonQuantityBase(coinQuantity);
     const tachyonType = getTachyonType(coinQuantity);
     const mapBonuses = getMapMultiBonus(mapBonusRaw?.[mapIndex], maxMapBonus);
@@ -348,7 +349,7 @@ export const getTachyonType = (index: any) => {
   if (index === 5e5) return 5;
   if (index === 12500 || index === 4e5) return 4;
   if (index === 2500 || index === 1850) return 3;
-  if (index === 770 || index === 1500 || index === 22e3 || index === 23e4) return 2;
+  if (index === 770 || index === 870 || index === 1500 || index === 22e3 || index === 23e4) return 2;
   if (index === 6e3 || index === 2e5) return 1;
   if (index === 8500 || index === 17e3 || index === 175e3) return 0;
   if (index >= 1e4) {
@@ -387,8 +388,8 @@ export const getExtraTachyon = (character: any, account: any) => {
   const bundleBonus = isBundlePurchased(account?.bundles, 'bun_x') ? 1.2 : 1; // ExtraTachyonMulti
 
   const upgrade17 = calcTesseractBonus(upgrades, 17, 0);
-  const upgrade34 = calcTesseractBonus(upgrades, 34, 0) * lavaLog(account?.accountOptions?.[390]);
-  const upgrade56 = calcTesseractBonus(upgrades, 56, 0) * lavaLog(account?.accountOptions?.[393]);
+  const upgrade34 = calcTesseractBonus(upgrades, 34, 0) * lavaLog(account?.accountOptions?.[390] ?? 0);
+  const upgrade56 = calcTesseractBonus(upgrades, 56, 0) * lavaLog(account?.accountOptions?.[393] ?? 0);
 
   const additive = upgrade17 + tesseract + upgrade34 + upgrade56
     + equipBonus + mainframeBonus + arcadeBonus + paletteBonus + exoticBonus;
@@ -475,7 +476,7 @@ export const getArcanistStats = (upgrades: any, totalUpgradeLevels: any, charact
     * Math.pow(1.04, Math.max(0, equipmentWeaponPower))
     * (1 + arcanistForm / 100)
     * (1 + (calcTesseractBonus(upgrades, 12, 0)
-      * lavaLog(account?.accountOptions?.[388])
+      * lavaLog(account?.accountOptions?.[388] ?? 0)
       + (calcTesseractBonus(upgrades, 4, 0) + (calcTesseractBonus(upgrades, 24, 0)
         + (calcTesseractBonus(upgrades, 31, 0)
           + (calcTesseractBonus(upgrades, 42, 0) + calcTesseractBonus(upgrades, 53, 0)))))) / 100)
@@ -490,7 +491,7 @@ export const getArcanistStats = (upgrades: any, totalUpgradeLevels: any, charact
       + (calcTesseractBonus(upgrades, 44, 0)
         + calcTesseractBonus(upgrades, 55, 0))) / 100)
     * (1 + (calcTesseractBonus(upgrades, 41, 0)
-      * lavaLog(account?.accountOptions?.[391])) / 100);
+      * lavaLog(account?.accountOptions?.[391] ?? 0)) / 100);
 
   const accuracy = (2 + (calcTesseractBonus(upgrades, 1, 0)
     + (calcTesseractBonus(upgrades, 9, 0)
@@ -503,11 +504,12 @@ export const getArcanistStats = (upgrades: any, totalUpgradeLevels: any, charact
       + (calcTesseractBonus(upgrades, 44, 0) +
         calcTesseractBonus(upgrades, 55, 0))) / 100)
     * (1 + (calcTesseractBonus(upgrades, 27, 0) *
-      lavaLog(account?.accountOptions?.[389])) / 100)
+      lavaLog(account?.accountOptions?.[389] ?? 0)) / 100)
     * (1 + equipBonus / 100);
   const mastery = 0.25;
+  const laboratoryLevel = character?.skillsInfo?.laboratory?.level ?? 0;
   const critPct = 5 + calcTesseractBonus(upgrades, 8, 0) + labotomizer
-    * Math.floor(character?.skillsInfo?.laboratory?.level / 10);
+    * Math.floor(laboratoryLevel / 10);
   const critDamage = 1 + (20 + calcTesseractBonus(upgrades, 14, 0)) / 100;
   const attackSpeed = ghastlyPowerY
     * (totalUpgradeLevels / 100)
@@ -552,10 +554,10 @@ const getCrystalChargeReq = (characters: any, upgrades: any) => {
 }
 export const getPrismaFragChance = (character: any, account: any, upgrades: any) => {
   const primoPrisma = getTalentBonus(character?.flatTalents, 'PRIMO_PRISMA');
-  return (1 / (1e3 * Math.pow(1.27, account?.accountOptions?.[395])))
+  return (1 / (1e3 * Math.pow(1.27, account?.accountOptions?.[395] ?? 0)))
     * Math.max(1, (character?.dropRate?.dropRate - 1)
       * (calcTesseractBonus(upgrades, 51, 0) / 100))
-    * Math.max(1, primoPrisma * Math.pow(1.5, Math.floor(character?.mapIndex / 50)))
+    * Math.max(1, primoPrisma * Math.pow(1.5, Math.floor((character?.mapIndex ?? 0) / 50)))
 }
 
 export const getPrismaMulti = (account: any) => {
@@ -602,7 +604,7 @@ export const getPrismaMulti = (account: any) => {
 const getUpgradeCost = ({ index, x1, x2, level, account, upgrades, forceLegendTalent }: any) => {
   return 3 * getMasterclassCostReduction(account, forceLegendTalent)
     * (1 / (1 + (calcTesseractBonus(upgrades, 49, 0)
-      * lavaLog(account?.accountOptions?.[392])) / 100))
+      * lavaLog(account?.accountOptions?.[392] ?? 0)) / 100))
     * Math.pow(1.04, index) * (level + (x1 + level) * Math.pow(x2 + 0.01, level))
 }
 
@@ -651,6 +653,14 @@ export const getOptimizedTesseractUpgrades = (character: any, account: any, cate
       if (resource) resource.value -= cost;
     },
     resourceNames: tachyonNames,
+    // x6 is the unlock gate, checked against total levels bought anywhere in the tree
+    getUnlockedIndices: (upgrades: any) => {
+      const totalLevels = upgrades.reduce((sum: number, upgrade: any) => sum + (upgrade?.level ?? 0), 0);
+      return new Set(upgrades
+        .filter((upgrade: any) => (upgrade?.x6 ?? 0) <= totalLevels)
+        .map((upgrade: any) => upgrade.index));
+    },
+    heldResourceOptionBase: 388, // accountOptions[388 + color] = tachyons currently held
     extraArgs: options
   });
 };

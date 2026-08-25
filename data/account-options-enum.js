@@ -92,7 +92,10 @@ export const AccountOptions = {
   // Weekly Bosses
   WEEKLY_BOSSES_TURN: 185,
   WEEKLY_BOSSES_VALUE: 188,
+  // Highest skull tier beaten this week (0-5), resets weekly. Trophies only drop on a new best,
+  // so 5 means no more trophies until reset. Also what the boss battle talent scales off.
   BOSS_BATTLE_TALENT: 189,
+  // Daily "reset the raid" flag, back to 0 on every daily reset.
   WEEKLY_BOSSES: 190,
   GAMING_NUGGETS_SINCE_UPGRADE: 192,
   GEMS_FROM_BOSSES: 195,
@@ -129,6 +132,7 @@ export const AccountOptions = {
   KANGAROO_UPGRADE_9: 279,
   KANGAROO_PROGRESS: 280,
   KANGAROO_MULTI_0: 281,
+  KANGAROO_FISH_PROGRESS: 288,
   KANGAROO_SHINY_PROGRESS: 289,
   KANGAROO_RESET_BONUS_0: 291,
   KANGAROO_RESET_BONUS_1: 292,
@@ -141,6 +145,7 @@ export const AccountOptions = {
   KANGAROO_UPGRADE_11: 300,
   KANGAROO_TAR_UPGRADE_1: 301,
   KANGAROO_UPGRADE_12: 304,
+  KANGAROO_TAR_PROGRESS: 305,
 
   // Highscores
   PEN_PALS_SCORE: 99,

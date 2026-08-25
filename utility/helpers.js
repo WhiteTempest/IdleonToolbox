@@ -1,6 +1,9 @@
 import { format, getDaysInMonth, getDaysInYear, intervalToDuration, isValid } from 'date-fns';
-import { drawerPages } from '@components/constants';
+import { drawerPages, simulatedCompanionsKey } from '@components/constants';
+import { readLocalStorageValue } from '@mantine/hooks';
 import merge from 'lodash.merge';
+import { copyText } from '@utility/clipboard';
+import { errorMessage, trackEvent } from '@utility/analytics';
 
 export const getTabs = (array, label, tabName, nestedTabName) => {
   const navItem = array.find((item) => item.label === label);
@@ -383,6 +386,13 @@ export const cleanUnderscore = (str) => {
   }
 };
 
+// Star sign bonuses use "{" as a value placeholder, but decimal-valued bonuses
+// use the "{.{" token pair instead, so both have to be substituted.
+export const formatStarSignBonus = (rawName, bonus) => {
+  if (!rawName) return '';
+  return String(rawName).replace('{.{', bonus).replace(/{/g, bonus);
+};
+
 export const getActivityIcon = (character) => {
   const { afkTarget, targetMonster, monsterFace } = character || {};
   if (!afkTarget || afkTarget === '_' || afkTarget === 'Nothing') return 'data/Afkz5';
@@ -458,7 +468,10 @@ function applyThousandSeparator(
 }
 
 export const numberWithCommas = (numStr, isFloat = true) => {
-  numStr = String(numStr);
+  // Number#toString switches to exponential notation at 1e21, which the grouping below would mangle
+  numStr = typeof numStr === 'number' && Number.isFinite(numStr) && Math.abs(numStr) >= 1e21
+    ? BigInt(Math.round(numStr)).toString()
+    : String(numStr);
   const hasDecimalSeparator = numStr.indexOf('.') !== -1;
   let { beforeDecimal, afterDecimal } = splitDecimal(numStr); // eslint-disable-line prefer-const
   beforeDecimal = applyThousandSeparator(beforeDecimal, ',');
@@ -514,6 +527,10 @@ export const getBitIndex = (e) => {
   }
   return num;
 }
+// Straight port of _customBlock_NotateNumber (N.js:68616). Every branch is a chain of `limit > e`
+// tests that assumes a positive number - the game only ever notates magnitudes, so a negative falls
+// through to `Math.floor(e)` and prints raw digits. Callers that can produce a signed value must
+// notate `Math.abs()` and render the sign themselves.
 export const notateNumber = (e, s) => {
   if (s === 'bits') {
     let bits = e, t = 0;
@@ -563,9 +580,13 @@ export const notateNumber = (e, s) => {
         : 1e9 > e ? Math.floor(e / 1e6) + 'M'
           : 1e10 > e ? Math.floor(e / 1e8) / 10 + 'B'
             : Math.floor(e / 1e9) + 'B')
-    : 'MultiplierInfo' === s ? (0 === (10 * e) % 10 ? Math.round(e) + '.00'
-      : 0 === (100 * e) % 10 ? Math.round(10 * e) / 10 + '0'
-        : Math.round(100 * e) / 100 + '')
+    : 'MultiplierInfo' === s ? (1e6 < e
+      ? (0 === Math.round((e / 1e6) * 100) % 100 ? Math.round(e / 1e6) + '.00M'
+        : 0 === Math.round((e / 1e6) * 100) % 10 ? Math.round((e / 1e6) * 10) / 10 + '0M'
+          : Math.round((e / 1e6) * 100) / 100 + 'M')
+      : 0 === (10 * e) % 10 ? Math.round(e) + '.00'
+        : 0 === (100 * e) % 10 ? Math.round(10 * e) / 10 + '0'
+          : Math.round(100 * e) / 100 + '')
       : 'ThreeDecimals' === s ? '' + parseFloat((Math.round(1000 * e) / 1000).toFixed(3))
         : 'Micro' === s ? (10 < e ? '' + Math.round(e)
           : 0.1 < e ? '' + Math.round(10 * e) / 10
@@ -585,22 +606,42 @@ export const notateNumber = (e, s) => {
                   : 1e6 > e ? Math.ceil(e / 1e3) + 'K'
                     : 1e7 > e ? Math.ceil(e / 1e4) / 100 + 'M'
                       : 1e8 > e ? Math.ceil(e / 1e5) / 10 + 'M'
-                        : 1e10 > e ? Math.ceil(e / 1e6) + 'M'
-                          : 1e13 > e ? Math.ceil(e / 1e9) + 'B'
-                            : 1e16 > e ? Math.ceil(e / 1e12) + 'T'
-                              : 1e19 > e ? Math.ceil(e / 1e15) + 'Q'
-                                : 1e22 > e ? Math.ceil(e / 1e18) + 'QQ'
-                                  : 1e24 > e ? Math.ceil(e / 1e21) + 'QQQ'
-                                    : 'TinyE' === s
+                        : 1e9 > e ? Math.ceil(e / 1e6) + 'M'
+                          : 1e10 > e ? Math.ceil(e / 1e7) / 100 + 'B'
+                            : 1e11 > e ? Math.ceil(e / 1e8) / 10 + 'B'
+                              : 1e12 > e ? Math.ceil(e / 1e9) + 'B'
+                                : 1e13 > e ? Math.ceil(e / 1e10) / 100 + 'T'
+                                  : 1e14 > e ? Math.ceil(e / 1e11) / 10 + 'T'
+                                    : 1e15 > e ? Math.ceil(e / 1e12) + 'T'
+                                      : 1e16 > e ? Math.ceil(e / 1e13) / 100 + 'Q'
+                                        : 1e17 > e ? Math.ceil(e / 1e14) / 10 + 'Q'
+                                          : 1e18 > e ? Math.ceil(e / 1e15) + 'Q'
+                                            : 1e19 > e ? Math.ceil(e / 1e16) / 100 + 'QQ'
+                                              : 1e20 > e ? Math.ceil(e / 1e17) / 10 + 'QQ'
+                                                : 1e21 > e ? Math.ceil(e / 1e18) + 'QQ'
+                                                  : 'TinyE' === s
                                       ? '' + Math.floor(e / Math.pow(10, Math.floor(lavaLog(e))) * 10) / 10 + ('e' + Math.floor(lavaLog(e)))
                                       : '' + Math.floor(e / Math.pow(10, Math.floor(lavaLog(e))) * 100) / 100 + ('E' + Math.floor(lavaLog(e)))
 }
 export const commaNotation = (number) => {
   // Initialize variables
   let formattedNumber = '';
-  const roundedNumberAsString = '' + Math.round(number);
 
-  // Initialize CommaDT1 and CommaDT2
+  // The game shortens past 1e9 so the digit string never reaches exponential notation
+  let roundedNumberAsString = '' + Math.round(number);
+  let suffix = '';
+  if (number > 1e9) {
+    roundedNumberAsString = '' + Math.round(number / 1e6);
+    suffix = 'M';
+    if (number > 1e15) {
+      roundedNumberAsString = '' + Math.round(number / 1e12);
+      suffix = 'T';
+      if (number > 1e21) {
+        roundedNumberAsString = '' + Math.round(number / 1e18);
+        suffix = 'QQ';
+      }
+    }
+  }
 
   // Calculate number of commas needed
   const numberOfCommas = Math.floor((roundedNumberAsString.length - 1) / 3) + 1;
@@ -619,7 +660,7 @@ export const commaNotation = (number) => {
   }
 
   // Return formatted number
-  return formattedNumber;
+  return formattedNumber + suffix;
 }
 
 
@@ -689,6 +730,12 @@ export const totalHoursBetweenDates = (start, end) => {
   }
 }
 
+// Character slots the game currently sells. Its unlock table is
+// [0, 8, 30, 70, 150, 300, 500, 750, 1100, 1500, 5e3, 99999, ...] indexed by how many characters
+// you own - index 10 costs 5000 combined levels for the 11th, and 99999 past that means locked.
+// Bump this when that sentinel moves.
+export const MAX_CHARACTERS = 11;
+
 export const fillArrayToLength = (length, array, defaultValue = {}) => {
   return [...new Array(length)].map((item, index) => {
     return array !== undefined ? array?.[index] ?? defaultValue : defaultValue;
@@ -751,9 +798,13 @@ export const shouldDisplayDrawer = (pathname = '') => {
   return drawerPages.includes(pathname?.split('/').at(1))
 }
 
+export const UNKNOWN_TIME = '-';
+export const isUnknownTime = (ms) => typeof ms !== 'number' || !Number.isFinite(ms);
+
 export const getRealDateInMs = (ms, shouldFormat = true, formatString = 'dd/MM/yyyy HH:mm:ss') => {
   const dateInMs = ms;
   if (shouldFormat) {
+    if (isUnknownTime(dateInMs)) return UNKNOWN_TIME;
     return isValid(new Date(dateInMs))
       ? format(dateInMs, formatString)
       : `${notateNumber(getTimeAsDays(dateInMs))} days`;
@@ -783,6 +834,49 @@ export const msToDate = (ms) => {
     // Regular format for time above one minute
     return `${formattedHours}h:${formattedMinutes}m:${formattedSeconds}s`;
   }
+}
+
+const SECONDS_IN = { minute: 60, hour: 3600, day: 86400, year: 31536000 };
+
+/**
+ * A single rounded unit for spans that can reach centuries, where msToDate's hours-only format
+ * stops being readable. Anything past a human lifetime reads as "never".
+ */
+export const secondsToCoarseDuration = (seconds) => {
+  if (!(seconds > 0)) return null;
+  if (seconds < SECONDS_IN.hour) return `${Math.max(1, Math.round(seconds / SECONDS_IN.minute))}m`;
+  if (seconds < SECONDS_IN.day) return `${Math.round(seconds / SECONDS_IN.hour)}h`;
+  if (seconds < SECONDS_IN.year) return `${Math.round(seconds / SECONDS_IN.day)}d`;
+  const years = seconds / SECONDS_IN.year;
+  if (years >= 100) return 'never';
+  return `${years < 10 ? years.toFixed(1) : Math.round(years)}y`;
+}
+
+/**
+ * Up to the two largest units ("2d 5h", "3m 12s") for compact countdowns and split times.
+ * minUnit floors the precision: 'minute' turns sub-minute spans into "1m" instead of seconds.
+ */
+export const secondsToShortDuration = (seconds, { minUnit = 'second' } = {}) => {
+  if (!Number.isFinite(seconds)) return '-';
+  const floorSeconds = minUnit === 'minute' ? SECONDS_IN.minute : 1;
+  if (seconds < floorSeconds) return minUnit === 'minute' ? '1m' : '<1s';
+  const units = [
+    { label: 'd', size: SECONDS_IN.day },
+    { label: 'h', size: SECONDS_IN.hour },
+    { label: 'm', size: SECONDS_IN.minute },
+    { label: 's', size: 1 }
+  ].filter(({ size }) => size >= floorSeconds);
+  const first = units.findIndex(({ size }) => seconds >= size);
+  const major = units[first];
+  const minor = units[first + 1];
+  if (!minor) return `${Math.round(seconds / major.size)}${major.label}`;
+  let majorValue = Math.floor(seconds / major.size);
+  let minorValue = Math.round((seconds % major.size) / minor.size);
+  if (minorValue * minor.size >= major.size) {
+    majorValue += 1;
+    minorValue = 0;
+  }
+  return minorValue > 0 ? `${majorValue}${major.label} ${minorValue}${minor.label}` : `${majorValue}${major.label}`;
 }
 
 export const fillMissingTalents = (arr) => {
@@ -847,12 +941,8 @@ function renameSettingInPostOffice(obj) {
 }
 
 export const handleCopyToClipboard = async (data, beautify = true) => {
-  try {
-    const text = beautify ? JSON.stringify(data, null, 2) : data;
-    await navigator.clipboard.writeText(text);
-  } catch (err) {
-    console.error(err);
-  }
+  const text = beautify ? JSON.stringify(data, null, 2) : data;
+  return copyText(text);
 };
 
 export const handleDownload = (jsonData, fileName) => {
@@ -900,12 +990,12 @@ export const copyForSupport = async (account, characters) => {
   const data = JSON.parse(sessionStorage.getItem('rawJson'));
   const extraData = expandLeaderboardInfo(account, characters);
   const sanitized = { ...data, data: sanitizeRawData(data?.data) };
-  await navigator.clipboard.writeText(JSON.stringify(sortKeys({ ...sanitized, extraData }), null, 2));
+  return copyText(JSON.stringify(sortKeys({ ...sanitized, extraData }), null, 2));
 };
 
 export const copyRawData = async () => {
   const data = JSON.parse(sessionStorage.getItem('rawJson'));
-  await navigator.clipboard.writeText(JSON.stringify(sortKeys(sanitizeRawData(data?.data)), null, 2));
+  return copyText(JSON.stringify(sortKeys(sanitizeRawData(data?.data)), null, 2));
 };
 
 export const handleLoadJson = async (dispatch) => {
@@ -913,7 +1003,9 @@ export const handleLoadJson = async (dispatch) => {
     const content = JSON.parse(await navigator.clipboard.readText());
     let { data = content, charNames, companion, guildData, serverVars = {}, accountCreateTime, tournament } = content;
     const { parseData } = await import('@parsers/index');
-    const parsedData = parseData(data, charNames, companion, guildData, serverVars, accountCreateTime, tournament);
+    const parsedData = parseData(data, charNames, companion, guildData, serverVars, accountCreateTime, tournament, {
+      simulatedCompanions: readLocalStorageValue({ key: simulatedCompanionsKey, defaultValue: [] })
+    });
     const lastUpdated = new Date().getTime();
     localStorage.setItem('lastUpdated', JSON.stringify(lastUpdated));
     // console.log('Manual Import', { ...parsedData, lastUpdated, manualImport: true });
@@ -923,10 +1015,11 @@ export const handleLoadJson = async (dispatch) => {
       companion,
       guildData,
       serverVars,
+      accountCreateTime,
       tournament,
       lastUpdated
     });
-    dispatch({ type: 'data', data: { ...parsedData, lastUpdated, manualImport: true } });
+    dispatch({ type: 'data', data: { ...parsedData, lastUpdated, manualImport: true, emptyAccount: false } });
 
     if (typeof window.gtag !== 'undefined') {
       window.gtag('event', 'save_imported', {
@@ -937,6 +1030,7 @@ export const handleLoadJson = async (dispatch) => {
     }
   } catch (e) {
     console.error('Error while trying to manual import', e);
+    trackEvent('import_failed', { import_source: 'manual', error_message: errorMessage(e) });
   }
 }
 
@@ -1118,3 +1212,8 @@ export function parseShorthandNumber(input) {
 }
 
 export const worldColor = ['#64b564', '#f1ac45', '#00bcd4', '#864ede', '#de4e4e', '#5FF1B4FF', '#40e0d0'];
+export const getNextCompanionClaim = (account) => {
+  const globalTime = account?.timeAway?.GlobalTime ?? 0;
+  const lastFreeClaim = account?.companions?.lastFreeClaim ?? 0;
+  return new Date().getTime() + Math.max(0, 594e6 - (1e3 * globalTime - lastFreeClaim));
+};

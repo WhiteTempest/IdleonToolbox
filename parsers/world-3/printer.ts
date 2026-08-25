@@ -8,6 +8,7 @@ import { getCharmBonus } from '@parsers/world-6/sneaking';
 import { getVoteBonus } from '@parsers/world-2/voteBallot';
 import { getCompassBonus } from '@parsers/class-specific/compass';
 import { getLegendTalentBonus } from '@parsers/world-7/legendTalents';
+import { items, refinery } from '@website-data';
 import type { IdleonData, Account } from '../types';
 
 export const getPrinter = (idleonData: IdleonData, charactersData: any[], accountData: Account) => {
@@ -79,7 +80,7 @@ const parsePrinter = (rawPrinter: any[], rawExtraPrinter: any[], charactersData:
             { name: 'Vote', value: params.voteBonus },
             {
               name: 'Winter event',
-              value: 1 + (2 * Number(accountData?.accountOptions?.[323]) * getEventShopBonus(accountData, 4)) / 100
+              value: 1 + (2 * Number(accountData?.accountOptions?.[323] ?? 0) * getEventShopBonus(accountData, 4)) / 100
             },
             {
               name: 'Legend Talent',
@@ -112,8 +113,8 @@ export const getPrinterMulti = (accountData: Account, charactersData: any[]) => 
         : goldRelic?.acquired === 2
           ? goldRelic?.ancientMultiplier
           : 0;
-  const daysSinceLastSample = accountData?.accountOptions?.[125];
-  const orbOfRemembranceKills = accountData?.accountOptions?.[138];
+  const daysSinceLastSample = accountData?.accountOptions?.[125] ?? 0;
+  const orbOfRemembranceKills = accountData?.accountOptions?.[138] ?? 0;
   const divineKnights = charactersData?.filter((character) => checkCharClass(character?.class, CLASSES.Divine_Knight));
   const highestKingOfRemembrance = divineKnights?.reduce((res, { flatTalents, addedLevels }) => {
     const kingOfRemembrance = getTalentBonus(flatTalents, 'KING_OF_THE_REMEMBERED', false, false, addedLevels, false);
@@ -123,16 +124,14 @@ export const getPrinterMulti = (accountData: Account, charactersData: any[]) => 
     return res;
   }, 0);
 
-  const isSkillMasteryUnlocked = accountData?.rift?.currentRift > 15;
-  const skillMasteryBonus = isSkillMasteryUnlocked
-    ? getSkillMasteryBonusByIndex(accountData?.totalSkillsLevels, accountData?.rift, 3)
-    : 0;
+  // The game applies RiftSkillETC ungated here - it already returns its base 7 when the rift is too low
+  const skillMasteryBonus = getSkillMasteryBonusByIndex(accountData?.totalSkillsLevels, accountData?.rift, 3);
 
   // this._DNprint = .1 + m._customBlock_WorkbenchStuff("ExtraPrinting", this._DRI, 0)
   const charmBonus = getCharmBonus(accountData, 'Lolly_Flower');
   const voteBonus = (1 + getVoteBonus(accountData, 11) / 100);
-  const companionBonus = 1 + Number(accountData?.accountOptions?.[354]) * isCompanionBonusActive(accountData, 17) / 100;
-  const compassBonus = 1 + (Number(accountData?.accountOptions?.[364]) * getCompassBonus(accountData, 43)) / 100;
+  const companionBonus = 1 + Number(accountData?.accountOptions?.[354] ?? 0) * isCompanionBonusActive(accountData, 17) / 100;
+  const compassBonus = 1 + (Number(accountData?.accountOptions?.[364] ?? 0) * getCompassBonus(accountData, 43)) / 100;
   // Legend talent "Yet Another Printer Multi" (index 17): +x% printer output per day for 20 days, resets on sample
   const legendTalentDays = Number(accountData?.accountOptions?.[479]) || 0;
   const legendTalentBonus = getLegendTalentBonus(accountData, 17) ?? 0;
@@ -142,7 +141,7 @@ export const getPrinterMulti = (accountData: Account, charactersData: any[]) => 
     * (1 + skillMasteryBonus / 100
     ) * (1 + charmBonus / 100)
     * voteBonus
-    * (1 + (2 * Number(accountData?.accountOptions?.[323]) * getEventShopBonus(accountData, 4)) / 100)
+    * (1 + (2 * Number(accountData?.accountOptions?.[323] ?? 0) * getEventShopBonus(accountData, 4)) / 100)
     * companionBonus
     * compassBonus
     * yetAnotherPrinterMulti;
@@ -221,12 +220,15 @@ const calcAtoms = (totals: Record<string, any> = {}, atomThreshold: number, show
   }, {});
 }
 
+// Materials people park in the printer on purpose: the long standing defaults, plus every
+// refinery salt cost - the refinery eats those continuously, so their atom alerts are noise.
+const DEFAULT_PRINTER_EXCLUSIONS = ['Copper', 'OakTree', 'Grasslands1', 'Bug1', 'Fish1'];
+
 export const getPrinterExclusions = () => {
-  return ([
-    'Copper',
-    'OakTree',
-    'Grasslands1',
-    'Bug1',
-    'Fish1'
-  ] as any).toSimpleObject();
+  const refineryCosts = Object.values(refinery as any)
+    .flatMap((salt: any) => (salt?.cost ?? []).map(({ rawName }: any) => rawName))
+    .filter((rawName: string) => !/^Refinery\d+$/.test(rawName) // the salts themselves can't be printed
+      && rawName !== 'FillerMaterial' // placeholder cost on unreleased salts
+      && (items as any)?.[rawName]?.typeGen !== 'bBar'); // bars come from the forge, never from a sample
+  return ([...new Set([...DEFAULT_PRINTER_EXCLUSIONS, ...refineryCosts])] as any).toSimpleObject();
 }

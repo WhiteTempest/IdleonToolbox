@@ -6,6 +6,7 @@ import {
   tryToParse
 } from '@utility/helpers';
 import { getFilteredPortals } from '@parsers/portals';
+import { liveEntries } from '@parsers/catalog';
 import {
   abominations,
   compass,
@@ -14,7 +15,7 @@ import {
   mapEnemiesArray,
   mapNames,
   mapPortals,
-  monsterDrops,
+  monsterCoinQuantity,
   monsters,
   randomList
 } from '@website-data';
@@ -97,12 +98,12 @@ export const getCompass = (idleonData: any, charactersData: any, accountData: an
 const parseCompass = (compassRaw: any, charactersData: any, accountData: any, serverVars: any) => {
   const [upgradesLevels, abominationsRaw, portalsRaw, medallionsRaw, exaltedStampsRaw] = compassRaw || [];
 
-  const totalUpgradeLevels = upgradesLevels?.reduce((sum: any, level: any) => sum + level, 0);
-  const dusts = accountData?.accountOptions?.slice(357, 362).map((value: any, index: any) => ({
-    value,
-    name: (dustNames as Record<string, any>)?.[index]
+  const totalUpgradeLevels = upgradesLevels?.reduce((sum: any, level: any) => sum + level, 0) ?? 0;
+  const dusts = Object.entries(dustNames).map(([index, name]) => ({
+    value: accountData?.accountOptions?.[357 + Number(index)] ?? 0,
+    name
   }));
-  const totalDustsCollected = accountData?.accountOptions?.[362];
+  const totalDustsCollected = accountData?.accountOptions?.[362] ?? 0;
 
   const unlockedPortals = (portalsRaw || []).reduce((result: any, mapRaw: any) => {
     return {
@@ -134,7 +135,7 @@ const parseCompass = (compassRaw: any, charactersData: any, accountData: any, se
     }
   })
   const abominationsList = abominations.map((abomination, index) => {
-    const unlocked = abominationsRaw?.[index]
+    const unlocked = abominationsRaw?.[index] ?? false
     return {
       ...abomination,
       unlocked,
@@ -144,8 +145,8 @@ const parseCompass = (compassRaw: any, charactersData: any, accountData: any, se
       world: Math.floor((abomination?.x2 / 50) + 1)
     }
   })
-  let upgrades = compass.map((upgrade, index) => {
-    const level = upgradesLevels?.[index];
+  let upgrades = liveEntries<any>(compass).map(({ entry: upgrade, index }) => {
+    const level = upgradesLevels?.[index] ?? 0;
     const shapeIcon = 1 === upgrade?.x9 ? 'CompassCir' : level >= upgrade?.x4 ? 'CompassSqMax' : 'CompassSq';
     return {
       ...upgrade,
@@ -162,10 +163,17 @@ const parseCompass = (compassRaw: any, charactersData: any, accountData: any, se
     const isMulti = upgrade?.description.includes('}');
     let extraData;
     if (upgrade?.name === 'Top_of_the_Mornin\'') {
-      const killsLeft = Math.max(0, accountData?.accountOptions?.[365]);
+      const killsLeft = Math.max(0, accountData?.accountOptions?.[365] ?? 0);
       const totalKills = getLocalCompassBonus(upgrades, 9) + getLocalCompassBonus(upgrades, 71);
       topOfTheMorninKills = `${totalKills - killsLeft} / ${totalKills}`;
       extraData = `Kills: ${topOfTheMorninKills}`
+    }
+    let description = upgrade?.description
+      .replace(/{/g, '' + commaNotation(bonus))
+      .replace(/}/g, '' + notateNumber(1 + bonus / 100, 'MultiplierInfo'));
+    const totalBonus = getTotalBonusText(index, bonus, accountData);
+    if (totalBonus !== null) {
+      description = description.replace(/\$/g, () => totalBonus);
     }
     return {
       ...upgrade,
@@ -174,7 +182,7 @@ const parseCompass = (compassRaw: any, charactersData: any, accountData: any, se
       bonusDiff: nextLevelBonus - bonus,
       cost,
       isMulti,
-      description: upgrade?.description.replace(/{/g, '' + commaNotation(bonus)).replace(/}/g, '' + notateNumber(1 + bonus / 100, 'MultiplierInfo')),
+      description,
       extraData
     }
   });
@@ -192,18 +200,18 @@ const parseCompass = (compassRaw: any, charactersData: any, accountData: any, se
       }
     }
   }, { combat: {}, skills: {}, misc: {} });
-  const remainingExaltedStamps = getRemainingExaltedStamps(accountData, exaltedStampsRaw?.length, 0);
+  const remainingExaltedStamps = getRemainingExaltedStamps(accountData, exaltedStampsRaw?.length ?? 0, 0);
   return {
     upgrades,
     groupedUpgrades: getGroupedUpgrades(upgrades, abominationsList),
     abominations: abominationsList,
     medallions,
     maps,
-    totalAcquiredMedallions: medallionsRaw?.length,
-    totalKilledAbominations: abominationsRaw?.reduce((sum: any, killed: any) => killed > 0 ? sum + 1 : sum, 0),
+    totalAcquiredMedallions: medallionsRaw?.length ?? 0,
+    totalKilledAbominations: abominationsRaw?.reduce((sum: any, killed: any) => killed > 0 ? sum + 1 : sum, 0) ?? 0,
     dusts,
     exaltedStamps,
-    usedExaltedStamps: exaltedStampsRaw?.length,
+    usedExaltedStamps: exaltedStampsRaw?.length ?? 0,
     remainingExaltedStamps,
     totalUpgradeLevels,
     totalDustsCollected,
@@ -230,7 +238,7 @@ const getMedallions = (medallions: any, upgrades: any[]) => {
   return Array.from(
     new Map(
       randomList?.[112]?.map((monsterRawName: any) => {
-        const coinQuantity = monsterDrops?.[monsterRawName]?.find(({ rawName }: any) => rawName === 'COIN')?.quantity;
+        const coinQuantity = (monsterCoinQuantity as any)?.[monsterRawName];
         const bowDrop = 5 > Math.floor(coinQuantity / 3) % 16 ? (1 <= getLocalCompassBonus(upgrades, 3)
           ? Math.floor(coinQuantity / 3) % 16 : -1) : 670 === coinQuantity
             || 2500 === coinQuantity || 13e4 === coinQuantity
@@ -365,30 +373,35 @@ const getGroupedUpgrades = (upgrades: any[], abominations: any[]) => {
     else {
       // Apply "unlocked" based on first upgrade's level
       const unlockedCount = list[0]?.level ?? 0;
+      const pathRootIndex = list[0]?.index;
       list = list.map((upg: any, i: any) => ({
         ...upg,
         unlocked: i <= unlockedCount,
-        unlocksAt: i
+        unlocksAt: i,
+        // lets the optimizer re-check the gate as it buys root levels during the walk
+        pathRootIndex
       }));
     }
 
     return { path, list };
   }).filter(Boolean);
 
-  // Handle "Default" group separately
-  const defaultList = [upgrades[0], upgrades[170]].filter(Boolean);
-  const defaultUnlockedCount = defaultList[0]?.level ?? 0;
-  const defaultListWithUnlocks = defaultList.map((upg, i) => ({
-    ...upg,
-    unlocked: i <= defaultUnlockedCount
-  }));
+  // Default group: 0 always shown, 170 gated on Pathfinder, 171/172 on their own drop-unlock upgrades
+  const defaultListWithUnlocks = [
+    { upgrade: upgrades[0], unlocked: true },
+    { upgrade: upgrades[170], unlocked: (upgrades[0]?.level ?? 0) >= 1 },
+    { upgrade: upgrades[171], unlocked: getLocalCompassBonus(upgrades, 3) >= 0.01 },
+    { upgrade: upgrades[172], unlocked: getLocalCompassBonus(upgrades, 4) >= 0.01 }
+  ]
+    .filter(({ upgrade }) => upgrade)
+    .map(({ upgrade, unlocked }) => ({ ...upgrade, unlocked }));
   return [{ path: 'Default', list: defaultListWithUnlocks }, ...groupedUpgrades];
 }
 
 const getRemainingExaltedStamps = (account: any, usedExaltedStamps: number, index: number): any => {
   return 999 === index ?
     getCompassBonus(account, 44)
-    + account?.accountOptions?.[366]
+    + (account?.accountOptions?.[366] ?? 0)
     + getEventShopBonus(account, 18)
     : Math.round(getRemainingExaltedStamps(account, usedExaltedStamps, 999) - usedExaltedStamps);
 }
@@ -429,8 +442,8 @@ export const getCompassStats = (character: any, account: any) => {
     * Math.pow(1.05, equipmentWeaponPower)
     * (1 + equipBonus4 / 100)
     * (1 + (getLocalCompassBonus(upgrades, 23)
-      * lavaLog(account?.accountOptions?.[360])) / 100)
-    * Math.pow(1 + getLocalCompassBonus(upgrades, 26) / 100, account?.accountOptions?.[232])
+      * lavaLog(account?.accountOptions?.[360] ?? 0)) / 100)
+    * Math.pow(1 + getLocalCompassBonus(upgrades, 26) / 100, account?.accountOptions?.[232] ?? 0)
     * (1 + (getLocalCompassBonus(upgrades, 6) * account?.compass?.totalAcquiredMedallions) / 100)
     * (1 + (getLocalCompassBonus(upgrades, 119) + getLocalCompassBonus(upgrades, 10) + (getLocalCompassBonus(upgrades, 121)
       + (getLocalCompassBonus(upgrades, 122) + (getLocalCompassBonus(upgrades, 123)
@@ -448,7 +461,7 @@ export const getCompassStats = (character: any, account: any) => {
     * (1 + (defenceAndAccTalent
       * (totalUpgradeLevels / 100)) / 100)
     * (1 + (getLocalCompassBonus(upgrades, 22)
-      * lavaLog(account?.accountOptions?.[357])) / 100)
+      * lavaLog(account?.accountOptions?.[357] ?? 0)) / 100)
     * (1 + (getLocalCompassBonus(upgrades, 6) * account?.compass?.totalAcquiredMedallions) / 100)
     * (1 + (getLocalCompassBonus(upgrades, 120) + (getLocalCompassBonus(upgrades, 124)
       + (getLocalCompassBonus(upgrades, 125) + (getLocalCompassBonus(upgrades, 128)
@@ -463,7 +476,7 @@ export const getCompassStats = (character: any, account: any) => {
     * (1 + (defenceAndAccTalent
       * (totalUpgradeLevels / 100)) / 100)
     * (1 + (getLocalCompassBonus(upgrades, 30)
-      * lavaLog(account?.accountOptions?.[358])) / 100)
+      * lavaLog(account?.accountOptions?.[358] ?? 0)) / 100)
     * (1 + equipBonus / 100)
     * (1 + (getLocalCompassBonus(upgrades, 137)
       + (getLocalCompassBonus(upgrades, 138)
@@ -496,7 +509,7 @@ export const getCompassStats = (character: any, account: any) => {
     + (getLocalCompassBonus(upgrades, 141)
       + getLocalCompassBonus(upgrades, 62)));
 
-  const multiShopPct = getLocalCompassBonus(upgrades, 18)
+  const multiShotPct = getLocalCompassBonus(upgrades, 18)
     + (getLocalCompassBonus(upgrades, 125)
       + getLocalCompassBonus(upgrades, 73)
       + multiTalent
@@ -514,12 +527,34 @@ export const getCompassStats = (character: any, account: any) => {
     invulnerableTime,
     range,
     moveSpeed,
-    multiShopPct
+    multiShotPct
   }
 }
 
 export const getCompassBonus = (account: any, index: number) => {
   return account?.compass?.upgrades?.[index]?.bonus || 0;
+}
+
+// A few descriptions carry a "$" placeholder that the game fills with a per-upgrade total, computed
+// separately from the "{" / "}" per-level bonus. Indices without an entry here keep the raw "$".
+const getTotalBonusText = (index: number, bonus: number, accountData: any): string | null => {
+  const dustOwned = (dustIndex: number) => lavaLog(accountData?.accountOptions?.[357 + dustIndex] ?? 0);
+  switch (index) {
+    case 22:
+      return commaNotation(bonus * dustOwned(0));
+    case 23:
+      return commaNotation(bonus * dustOwned(3));
+    case 26:
+      return notateNumber(Math.pow(1 + bonus / 100, accountData?.accountOptions?.[232] ?? 0), 'MultiplierInfo') + 'x';
+    case 30:
+      return commaNotation(bonus * dustOwned(1));
+    case 34:
+      return commaNotation(bonus * dustOwned(2));
+    case 36:
+      return String(notateNumber(100 * (1 - 1 / (1 + bonus / 100)), 'Small'));
+    default:
+      return null;
+  }
 }
 
 const getCompassBonusAtLevel = (upgrades: any[], index: number, levelOverride: number) => {
@@ -544,7 +579,7 @@ export const getExtraDust = (character: any, account: any) => {
   const { value: equipBonus1 } = getStatsFromGear(character, 79, account);
   const dustTalent = getTalentBonus(character?.flatTalents, 'ETERNAL_HUNT');
   const compassTalent = getTalentBonus(character?.flatTalents, 'COMPASS');
-  const arcadeBonus = getArcadeBonus(account?.arcade?.shop, 'Windwalker_Dust')?.bonus;
+  const arcadeBonus = getArcadeBonus(account?.arcade?.shop, 'Windwalker_Dust')?.bonus ?? 0;
 
   const charmBonus = getCharmBonus(account, 'Twinkle_Taffy'); // Pristine charm 19
   const emperorBonus = getEmperorBonus(account, 4);
@@ -557,7 +592,7 @@ export const getExtraDust = (character: any, account: any) => {
   const { value: allMasterclassDropz, sources: amdSources } = getAllMasterclassDropz(character, account);
 
   const baseUpgrades = getLocalCompassBonus(upgrades, 31)
-    + getLocalCompassBonus(upgrades, 34) * lavaLog(account?.accountOptions?.[359])
+    + getLocalCompassBonus(upgrades, 34) * lavaLog(account?.accountOptions?.[359] ?? 0)
     + exoticBonus;
   const upgrade38 = getLocalCompassBonus(upgrades, 38);
   const gearBonus = equipBonus + equipBonus1;
@@ -682,7 +717,7 @@ const getUpgradeCost = (upgrades: any[], index: number, serverVars: any, account
   }
 
   // Final cost calculation
-  const dustCost = Math.max(serverVars?.DustCost, 6.2);
+  const dustCost = Math.max(serverVars?.DustCost ?? 0, 6.2);
   const bonusReduction = 1 + (
     getLocalCompassBonus(upgrades, 36) +
     getLocalCompassBonus(upgrades, 77)
@@ -730,6 +765,16 @@ export const getOptimizedUpgrades = (character: any, account: any, category: str
       if (resource) resource.value -= cost;
     },
     resourceNames: dustNames,
+    // Path upgrades unlock off their path's root upgrade level, so buying root levels opens new ones
+    getUnlockedIndices: (upgrades: any) => {
+      const levelByIndex = new Map(upgrades.map((upgrade: any) => [upgrade.index, upgrade?.level ?? 0]));
+      return new Set(upgrades
+        .filter((upgrade: any) => (upgrade?.pathRootIndex === undefined
+          ? !!upgrade.unlocked
+          : (upgrade?.unlocksAt ?? 0) <= (levelByIndex.get(upgrade.pathRootIndex) ?? 0)))
+        .map((upgrade: any) => upgrade.index));
+    },
+    heldResourceOptionBase: 357, // accountOptions[357 + color] = dust currently held
     extraArgs: options
   });
 }

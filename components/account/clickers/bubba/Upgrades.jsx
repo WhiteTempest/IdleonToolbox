@@ -13,14 +13,14 @@ const Upgrades = ({ upgrades }) => {
             <img src={`${prefix}etc/Bubbo_Upgrade_${index}.png`} alt={''} style={{ width: 32, height: 32, objectFit: 'contain' }} />
             <Typography>{cleanUnderscore(name)}</Typography>
           </Stack>
-          <Typography mt={1} variant={'body2'} color={'text.secondary'}>
+          <Typography mt={1} variant={'body2'} color={'text.secondary'} sx={{ whiteSpace: 'pre-line' }}>
             {cleanUnderscore(description)}
           </Typography>
           <Stack mt={1} direction={'row'} justifyContent={'space-between'} alignItems={'center'}>
             <Typography>Lv. {level}</Typography>
             <Stack direction={'row'} gap={1} alignItems={'center'}>
               <Typography>{cost < 9999999 ? commaNotation(Math.ceil(cost)) : notateNumber(cost, 'Big')}</Typography>
-              <img style={{ objectFit: 'contain', width: 20, height: 20 }} src={`${prefix}etc/Bubba_0.png`} alt={''} />
+              <img style={{ objectFit: 'contain', width: 20, height: 20 }} src={`${prefix}etc/Bubba_0.png`} alt="Bubba 0" />
             </Stack>
           </Stack>
         </CardContent>

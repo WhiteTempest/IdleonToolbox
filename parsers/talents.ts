@@ -1,4 +1,5 @@
 import { growth } from '@utility/helpers';
+import { isTalentBannedForAllLevels } from '@utility/talentBans';
 import { classes, classFamilyBonuses, talents } from '@website-data';
 import { getAchievementStatus } from './achievements';
 import { getHighestLevelOfClass, isCompanionBonusActive } from './misc';
@@ -8,7 +9,7 @@ import { getFamilyBonus, getFamilyBonusBonus } from '@parsers/family';
 import { getStampsBonusByEffect } from '@parsers/world-1/stamps';
 import { getGuildBonusBonus } from '@parsers/guild';
 import { getDungeonFlurboStatBonus } from '@parsers/dungeons';
-import { getCardBonusByEffect } from '@parsers/cards';
+import { getCardLevel } from '@parsers/cards';
 import { getSigilBonus } from '@parsers/world-2/alchemy';
 import { getShinyBonus } from '@parsers/world-4/breeding';
 import { getBribeBonus } from '@parsers/world-1/bribes';
@@ -58,69 +59,12 @@ export const getTalentBonusIfActive = (activeBuffs: any, tName: any, variant = '
     : growth(funcY, level, y1, y2, false) : res, 0) ?? 0;
 }
 
-export const CLASSES = {
-  'Beginner': 'Beginner',
-  'Journeyman': 'Journeyman',
-  'Maestro': 'Maestro',
-  'Voidwalker': 'Voidwalker',
-  'Warrior': 'Warrior',
-  'Barbarian': 'Barbarian',
-  'Blood_Berserker': 'Blood_Berserker',
-  'Death_Bringer': 'Death_Bringer',
-  'Squire': 'Squire',
-  'Divine_Knight': 'Divine_Knight',
-  'Archer': 'Archer',
-  'Bowman': 'Bowman',
-  'Siege_Breaker': 'Siege_Breaker',
-  'Hunter': 'Hunter',
-  'Beast_Master': 'Beast_Master',
-  'Wind_Walker': 'Wind_Walker',
-  'Mage': 'Mage',
-  'Shaman': 'Shaman',
-  'Bubonic_Conjuror': 'Bubonic_Conjuror',
-  'Arcane_Cultist': 'Arcane_Cultist',
-  'Wizard': 'Wizard',
-  'Elemental_Sorcerer': 'Elemental_Sorcerer'
-}
+import { CLASSES, talentPagesMap, getBaseClass } from './classDefinitions';
 
-export const talentPagesMap = {
-  [CLASSES.Beginner]: [CLASSES.Beginner],
-  [CLASSES.Journeyman]: [CLASSES.Beginner, CLASSES.Journeyman],
-  [CLASSES.Maestro]: [CLASSES.Beginner, CLASSES.Journeyman, CLASSES.Maestro],
-  [CLASSES.Voidwalker]: [CLASSES.Beginner, CLASSES.Journeyman, CLASSES.Maestro, CLASSES.Voidwalker],
-  //
-  [CLASSES.Warrior]: ['Rage_Basics', CLASSES.Warrior],
-  [CLASSES.Barbarian]: ['Rage_Basics', CLASSES.Warrior, CLASSES.Barbarian],
-  [CLASSES.Blood_Berserker]: ['Rage_Basics', CLASSES.Warrior, CLASSES.Barbarian, CLASSES.Blood_Berserker],
-  [CLASSES.Death_Bringer]: ['Rage_Basics', CLASSES.Warrior, CLASSES.Barbarian, CLASSES.Blood_Berserker,
-    CLASSES.Death_Bringer],
-  [CLASSES.Squire]: ['Rage_Basics', CLASSES.Warrior, CLASSES.Squire],
-  [CLASSES.Divine_Knight]: ['Rage_Basics', CLASSES.Warrior, CLASSES.Squire, CLASSES.Divine_Knight],
-  //
-  [CLASSES.Archer]: ['Calm_Basics', CLASSES.Archer],
-  [CLASSES.Bowman]: ['Calm_Basics', CLASSES.Archer, CLASSES.Bowman],
-  [CLASSES.Siege_Breaker]: ['Calm_Basics', CLASSES.Archer, CLASSES.Bowman, CLASSES.Siege_Breaker],
-  [CLASSES.Hunter]: ['Calm_Basics', CLASSES.Archer, CLASSES.Hunter],
-  [CLASSES.Beast_Master]: ['Calm_Basics', CLASSES.Archer, CLASSES.Hunter, CLASSES.Beast_Master],
-  [CLASSES.Wind_Walker]: ['Calm_Basics', CLASSES.Archer, CLASSES.Hunter, CLASSES.Beast_Master, CLASSES.Wind_Walker],
-  //
-  [CLASSES.Mage]: ['Savvy_Basics', CLASSES.Mage],
-  [CLASSES.Shaman]: ['Savvy_Basics', CLASSES.Mage, CLASSES.Shaman],
-  [CLASSES.Bubonic_Conjuror]: ['Savvy_Basics', CLASSES.Mage, CLASSES.Shaman, CLASSES.Bubonic_Conjuror],
-  [CLASSES.Arcane_Cultist]: ['Savvy_Basics', CLASSES.Mage, CLASSES.Shaman, CLASSES.Bubonic_Conjuror,
-    CLASSES.Arcane_Cultist],
-  [CLASSES.Wizard]: ['Savvy_Basics', CLASSES.Mage, CLASSES.Wizard],
-  [CLASSES.Elemental_Sorcerer]: ['Savvy_Basics', CLASSES.Mage, CLASSES.Wizard, CLASSES.Elemental_Sorcerer]
-};
-
-export function getBaseClass(className: any) {
-  const path = talentPagesMap[className];
-  if (!path) return null; // not found
-
-  if (className === CLASSES.Beginner) return CLASSES.Beginner;
-  if (path[0] === CLASSES.Beginner) return CLASSES.Beginner;
-  return path[1];
-}
+// Re-exported so the many modules importing these from talents.ts keep working. Modules that
+// need ONLY these should import from ./classDefinitions instead, to avoid pulling this file
+// and its 18 parser imports into their bundle.
+export { CLASSES, talentPagesMap, getBaseClass };
 
 // { 0: 'strength', 1: 'agility', 2: 'wisdom', 3: 'luck', 4: 'level' }
 export const mainStatMap = {
@@ -184,23 +128,85 @@ export const getActiveBuffs = (activeBuffs: any, talents: any) => {
   return activeBuffs?.map(([talentId]: any) => talents?.find(({ talentId: tId }: any) => talentId === tId))?.filter((talent: any) => talent);
 }
 
+export const getAllTalentAddedLevels = (baseLevel: number, activeCharacter: any) => {
+  // AllTalentLVz returns 0 for banned ids, and getbonus2 hands it the talent's LEVEL where a talent
+  // id belongs, so a talent whose base level lands on a banned id gets no added levels at all.
+  if (isTalentBannedForAllLevels(baseLevel)) return 0;
+  const addedLevels = activeCharacter?.addedLevels ?? 0;
+  // Same level-as-id mix-up: the super talent list is searched for the base LEVEL, so a talent
+  // sitting on a level that happens to be one of the active character's super talent ids collects
+  // the per-talent super bonus on top.
+  const isSuper = activeCharacter?.superTalentsInfo?.talents?.some(({ talentIndex }: any) => talentIndex === baseLevel);
+  return isSuper ? addedLevels + (activeCharacter?.superTalentsInfo?.bonus ?? 0) : addedLevels;
+};
+
+// getbonus2 reads the added levels off whichever character is being played, so an account-wide
+// bonus has no single value. The save never names that character, but PTimeAway identifies it:
+// the played character's stamp tracks the clock while every other one stays frozen at the moment
+// it was left, so the newest stamp is the one that was active when the save was taken.
+// Characters that have never been played carry no stamp; if that's all of them, fall back to the
+// highest added levels, which is the ceiling of the range.
+export const getBestActiveCharacter = (characters: any) => {
+  const mostRecent = characters?.reduce((best: any, character: any) => (
+    Number.isFinite(character?.afkTime) && character.afkTime > 0 && character.afkTime > (best?.afkTime ?? 0)
+      ? character
+      : best
+  ), null);
+  return mostRecent ?? characters?.reduce((best: any, character: any) => (
+    (character?.addedLevels ?? 0) > (best?.addedLevels ?? -1) ? character : best
+  ), null);
+};
+
+// getbonus2(1, id, -1) walks every character and never looks at class - filtering by class only
+// matches it because most talent ids belong to a single class. THE_FAMILY_GUY is id 144 on six
+// different class pages, so for that one the class filter throws away the real maximum. Pass a null
+// className to get the game's actual behaviour.
+export const getHighestTalentAcrossCharacters = (characters: any, talentName?: any, activeCharacter?: any, yBonus?: any) => {
+  return getHighestTalentByClass(characters, null, talentName, yBonus, false, false, false, activeCharacter);
+};
+
+// getbonus2 evaluates growth() for every character including the ones sitting at level 0, so a
+// talent nobody owns still answers with its level-0 value - 0 for add/decay, but 1 for decayMulti
+// and x1 for bigBase, which are the identity for a multiplier. Returning 0 there is the classic
+// empty-account bug: tesseract reads `100 * (talent - 1)` and would land on -100 instead of 0.
+const talentMetaByName: Record<string, any> = Object.values(talents as Record<string, any>)
+  .reduce((map: Record<string, any>, page: any) => {
+    Object.values(page as Record<string, any>).forEach((talent: any) => {
+      if (talent?.name && !map[talent.name]) map[talent.name] = talent;
+    });
+    return map;
+  }, {});
+
+const unownedTalentBonus = (talentName: any, yBonus: any) => {
+  const meta = talentMetaByName[talentName];
+  if (!meta) return 0;
+  return (yBonus
+    ? growth(meta.funcY, 0, meta.y1, meta.y2, false)
+    : growth(meta.funcX, 0, meta.x1, meta.x2, false)) ?? 0;
+};
+
 export const getHighestTalentByClass = (characters: any, className: any, talentName?: any, yBonus?: any, useMaxLevel?: any, reduceAddedLevels = false, excludeSuperTalent = false, activeCharacter?: any) => {
-  const classes = characters?.filter((character: any) => checkCharClass(character?.class, className));
+  const classes = className == null
+    ? (characters ?? [])
+    : characters?.filter((character: any) => checkCharClass(character?.class, className));
+  const seed = activeCharacter ? unownedTalentBonus(talentName, yBonus) : 0;
   return classes?.reduce((res: any, { flatTalents, addedLevels }: any) => {
     let subtractLevels: any = false;
     if (activeCharacter) {
       // Mimic game's getbonus2(1, id, -1):
-      // - talentIndex >= 100: growth(baseLevel + activeChar.addedLevels)
-      // - talentIndex < 100: growth(baseLevel) — no addedLevels adjustment
+      // - talentIndex >= 100: growth(baseLevel + AllTalentLVz(baseLevel))
+      // - talentIndex < 100: growth(baseLevel) - no addedLevels adjustment
+      // The y-variant is a separate branch in the game that reads SkillLevels straight, so added
+      // levels never reach it whatever the talent id.
       const talentObj = flatTalents?.find(({ name }: any) => name === talentName);
       if (talentObj) {
-        const level = talentObj.talentId >= 100
-          ? talentObj.baseLevel + activeCharacter.addedLevels
+        const level = talentObj.talentId >= 100 && !yBonus
+          ? talentObj.baseLevel + getAllTalentAddedLevels(talentObj.baseLevel, activeCharacter)
           : talentObj.baseLevel;
         const func = yBonus ? talentObj.funcY : talentObj.funcX;
         const p1 = yBonus ? talentObj.y1 : talentObj.x1;
         const p2 = yBonus ? talentObj.y2 : talentObj.x2;
-        const bonus = talentObj.baseLevel > 0 ? (growth(func, level, p1, p2, false) ?? 0) : 0;
+        const bonus = growth(func, level, p1, p2, false) ?? 0;
         return bonus > res ? bonus : res;
       }
       return res;
@@ -216,11 +222,15 @@ export const getHighestTalentByClass = (characters: any, className: any, talentN
       return talent
     }
     return res;
-  }, 0);
+  }, seed);
 }
 
+// A null className means every character, matching getHighestTalentByClass - callers that pair the
+// two must scope them the same way or they end up describing different characters.
 export const getCharacterByHighestTalent = (characters: any, className: any, talentName?: any, yBonus?: any, useMaxLevel?: any) => {
-  const classes = characters?.filter((character: any) => checkCharClass(character?.class, className));
+  const classes = className == null
+    ? (characters ?? [])
+    : characters?.filter((character: any) => checkCharClass(character?.class, className));
   return classes?.reduce((res: any, character: any) => {
     const { flatTalents } = character;
     const talent = getTalentBonus(flatTalents, talentName, yBonus, useMaxLevel);
@@ -376,7 +386,7 @@ export const applyTalentAddedLevels = (talents: any, flatTalents: any, addedLeve
 
       return {
         ...talent,
-        level: talent.level >= 1 && !isTalentExcluded(talent?.skillIndex)
+        level: talent.level >= 1 && !isTalentBannedForAllLevels(talent?.skillIndex)
           ? Math.floor(talent.level + addedLevels + superTalentBonus)
           : talent.level,
         baseLevel: talent.level,
@@ -392,7 +402,7 @@ export const applyTalentAddedLevels = (talents: any, flatTalents: any, addedLeve
 
       return {
         ...talent,
-        level: talent.level >= 1 && !isTalentExcluded(talent?.skillIndex)
+        level: talent.level >= 1 && !isTalentBannedForAllLevels(talent?.skillIndex)
           ? Math.floor(talent.level + addedLevels + superTalentBonus)
           : talent.level,
         baseLevel: talent.level,
@@ -409,13 +419,16 @@ export const applyTalentAddedLevels = (talents: any, flatTalents: any, addedLeve
   }, {} as any);
 }
 
-const isTalentExcluded = (skillIndex: any) => {
-  return 49 <= skillIndex && 59 >= skillIndex ||
-    149 === skillIndex ||
-    374 === skillIndex ||
-    539 === skillIndex ||
-    505 === skillIndex ||
-    614 < skillIndex;
+// Talent Book Library eligibility. Only main class talents (skillIndex < 615, star talents start
+// there) can be raised by books, EXCEPT the page 1 stat-allocation talents (STR/AGI/WIS/LUK) and
+// their paired Basics-tab talents, which the game excludes via CustomLists.RANDOlist[16] and shows
+// "This Book is not Available" for instead of a Book Lv Range.
+const BOOK_ELIGIBLE_MAX_INDEX = 615;
+export const BOOK_INELIGIBLE_INDICES = [10, 11, 12, 23, 75, 79, 86, 87, 266, 267, 446, 447];
+
+export const isBookEligibleTalent = (skillIndex: any) => {
+  const index = Number(skillIndex);
+  return index < BOOK_ELIGIBLE_MAX_INDEX && !BOOK_INELIGIBLE_INDICES.includes(index);
 }
 
 export const getFamilyBonusValue = function (e: any, t: any, n: any, a: any) {
@@ -496,7 +509,7 @@ export const getBubonicGreenTube = (character: any, characters: any, account: an
   if (!charCords || bubosCords?.length === 0) return 0;
   const affected = bubosCords?.some(({ x }: any) => x > charCords?.x);
   if (affected) {
-    return getHighestTalentByClass(characters, CLASSES.Bubonic_Conjuror, 'GREEN_TUBE')
+    return getHighestTalentAcrossCharacters(characters, 'GREEN_TUBE', character)
   }
   else {
     return 0;
@@ -542,7 +555,13 @@ export const calcTotalStarTalent = (characters: any, account: any) => {
     const stampBonus = getStampsBonusByEffect(account, 'Talent_Points_for_Star_Tab')
     const guildBonus = getGuildBonusBonus(account?.guild?.guildBonuses, 11);
     const flurboBonus = getDungeonFlurboStatBonus(account?.dungeons?.upgrades, 'Talent_Pts');
-    const cardPassiveBonus = getCardBonusByEffect(account?.cards, 'Star_Talent_Pts_(Passive)');
+    // Game: min(5 * CardLv("w4b2"), 50) + min(15 * CardLv("Boss2C"), 100) + min(4 * CardLv("fallEvent1"), 100)
+    // Each card is capped on its own, which a summed effect lookup cannot express.
+    const starTalentCardLv = (rawName: string) => getCardLevel(account?.cards, rawName);
+    const cardPassiveBonus =
+      Math.min(5 * starTalentCardLv('w4b2'), 50)
+      + Math.min(15 * starTalentCardLv('Boss2C'), 100)
+      + Math.min(4 * starTalentCardLv('fallEvent1'), 100);
     const sigilBonus = getSigilBonus(account?.alchemy?.p2w?.sigils, 'TWO_STARZ');
     const achievement = getAchievementStatus(account?.achievements, 212);
     const secondAchievement = getAchievementStatus(account?.achievements, 289);
@@ -568,7 +587,7 @@ export const calcTotalStarTalent = (characters: any, account: any) => {
       [character.name]: totalStarPoints
     };
   }, {});
-  return Math.max(...Object.values(levels) as number[]);
+  return Math.max(0, ...Object.values(levels) as number[]);
 }
 
 export const getCrystalCountdownSkills = () => {

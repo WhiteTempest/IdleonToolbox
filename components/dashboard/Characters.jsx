@@ -7,6 +7,7 @@ import HtmlTooltip from '../Tooltip';
 import {
   alchemyAlerts,
   anvilAlerts,
+  bagsAlerts,
   cardsAlert,
   classSpecificAlerts,
   crystalCountdownAlerts,
@@ -14,6 +15,7 @@ import {
   getEquipmentAlert,
   obolsAlerts,
   postOfficeAlerts,
+  questsAlerts,
   starSignsAlerts,
   talentsAlerts,
   toolsAlerts,
@@ -26,16 +28,28 @@ import { getAfkGain, getCashMulti, getDropRate, getRespawnRate } from '@parsers/
 import { getMaxDamage, notateDamage } from '@parsers/damage';
 import { differenceInMinutes } from 'date-fns';
 import { getTalentBonusIfActive } from '@parsers/talents';
+import { CLASSES, getBaseClass } from '@parsers/classDefinitions';
 
 const formMap = {
   'data/UISkillIcon195': 'Wraith Form',
   'data/UISkillIcon585': 'Arcanist Form',
   'data/UISkillIcon420': 'Tempest Form'
 }
+// Talent book per class line, named after the books in items.json: Beginner, Warrior, Archer and
+// Wizard. TalentBook1 is the Special (ALL classes) book, used when the class isn't recognized.
+const TALENT_BOOKS = {
+  [CLASSES.Beginner]: 'TalentBook2',
+  [CLASSES.Warrior]: 'TalentBook3',
+  [CLASSES.Archer]: 'TalentBook4',
+  [CLASSES.Mage]: 'TalentBook5'
+};
+const getTalentBookIcon = (className) => TALENT_BOOKS?.[getBaseClass(className)] || 'TalentBook1';
+
 const alertsMap = {
   anvil: anvilAlerts,
   worship: worshipAlerts,
   traps: trapsAlerts,
+  quests: questsAlerts,
   alchemy: alchemyAlerts,
   obols: obolsAlerts,
   postOffice: postOfficeAlerts,
@@ -46,6 +60,7 @@ const alertsMap = {
   cards: cardsAlert,
   divinityStyle: getDivinityAlert,
   equipment: getEquipmentAlert,
+  bags: bagsAlerts,
   classSpecific: classSpecificAlerts
 }
 
@@ -126,6 +141,9 @@ const Characters = ({ characters = [], account, lastUpdated, trackers }) => {
                 <Alert title={`${name} traps are overdue`} iconPath={'data/TrapBoxSet1'}/> : null}
               {trackers?.traps && alerts?.traps?.missingTraps ?
                 <Alert title={`${name} is missing a trap`} iconPath={'data/ClassIcons48'}/> : null}
+              {trackers?.quests && alerts?.quests?.picnicDaily ?
+                <Alert title={`${name} hasn't done the Picnic Stowaway daily quest today`}
+                       iconPath={'etc/Picnic_Stowaway'}/> : null}
               {trackers?.alchemy && alerts?.alchemy?.missingBubbles ?
                 <Alert title={`${name} is missing an active bubble`} iconPath={'data/aJarB0'}/> : null}
               {trackers?.alchemy && alerts?.alchemy?.noActivity ?
@@ -211,6 +229,12 @@ const Characters = ({ characters = [], account, lastUpdated, trackers }) => {
                                 }}/>}
                                 iconPath={`data/${rawName}`}/>;
                 }) : null}
+              {trackers?.equipment && alerts?.equipment?.emptyGearSlots?.length > 0 ?
+                <Alert title={`${name} has empty equipment slots: ${alerts?.equipment?.emptyGearSlots?.join(', ')}`}
+                       iconPath={'data/EquipmentTransparent1'}/> : null}
+              {trackers?.bags && alerts?.bags?.unmaxedBags?.length > 0 ?
+                <Alert title={<BagList name={name} bags={alerts?.bags?.unmaxedBags}/>}
+                       iconPath={'data/MaxCapBagM13'}/> : null}
               {trackers?.anvil && alerts?.anvil?.anvilOverdue?.length > 0 ?
                 alerts?.anvil?.anvilOverdue?.map(({ diff, name, rawName }) => {
                   const isFull = diff <= 0;
@@ -242,6 +266,16 @@ const Characters = ({ characters = [], account, lastUpdated, trackers }) => {
                     ? ''
                     : 's'}`}
                   iconPath={'data/LegendTalentIcon0'}/> : null}
+              {trackers?.talents && alerts?.talents?.unmaxedTalents?.length > 0 ?
+                <Alert
+                  title={<TalentList name={name} verb={'talents below max level'}
+                                     talents={alerts?.talents?.unmaxedTalents}/>}
+                  iconPath={`data/${getTalentBookIcon(character?.class)}`}/> : null}
+              {trackers?.talents && alerts?.talents?.libraryUpgradableTalents?.length > 0 ?
+                <Alert
+                  title={<TalentList name={name} verb={'talents the Library can raise'}
+                                     talents={alerts?.talents?.libraryUpgradableTalents}/>}
+                  iconPath={`data/${getTalentBookIcon(character?.class)}`}/> : null}
               {trackers?.tools?.checked && alerts?.tools?.length > 0 ? alerts?.tools?.map(({
                                                                                              rawName,
                                                                                              displayName
@@ -283,6 +317,39 @@ const Characters = ({ characters = [], account, lastUpdated, trackers }) => {
     </Stack>
   </>
 };
+
+const TALENT_LIST_LIMIT = 15;
+const TalentList = ({ name, verb, talents }) => {
+  const shown = talents?.slice(0, TALENT_LIST_LIMIT);
+  const rest = talents?.length - shown?.length;
+  return <Stack gap={.5}>
+    <Typography>{name} has {talents?.length} {verb}</Typography>
+    {shown?.map(({ name: talentName, skillIndex, level, target }, index) => (
+      <Stack key={`${skillIndex}-${index}`} direction={'row'} alignItems={'center'} gap={1}>
+        <IconImg src={`${prefix}data/UISkillIcon${skillIndex}.png`} alt="" style={{ width: 24, height: 24 }}/>
+        <Typography variant={'caption'}>
+          {cleanUnderscore(pascalCase(talentName))} {level} -&gt; {target}
+        </Typography>
+      </Stack>
+    ))}
+    {rest > 0 ? <Typography variant={'caption'}>and {rest} more</Typography> : null}
+  </Stack>
+}
+
+const BAG_TYPE_NAMES = { bCraft: 'Materials', Foods: 'Food' };
+const BagList = ({ name, bags }) => {
+  return <Stack gap={.5}>
+    <Typography>{name} has {bags?.length} unmaxed carry bag{bags?.length === 1 ? '' : 's'}</Typography>
+    {bags?.map(({ bagType, capacity, maxCapacity, rawName }, index) => (
+      <Stack key={`${bagType}-${index}`} direction={'row'} alignItems={'center'} gap={1}>
+        <IconImg src={`${prefix}data/${rawName}.png`} alt="" style={{ width: 24, height: 24 }}/>
+        <Typography variant={'caption'}>
+          {BAG_TYPE_NAMES[bagType] || bagType}: {notateNumber(capacity)} -&gt; {notateNumber(maxCapacity)}
+        </Typography>
+      </Stack>
+    ))}
+  </Stack>
+}
 
 const Alert = ({ title, iconPath, style = {}, extra }) => {
   return <Stack sx={{ position: 'relative' }}>
@@ -327,7 +394,8 @@ const CharacterInfo = ({ account, characters, character, lastUpdated }) => {
       <TitleAndValue title={'Cash multi'} value={`${notateNumber(cashMulti)}%`}/>
       <TitleAndValue title={'Drop rate'} value={`${notateNumber(dropRate, 'MultiplierInfo')}x`}/>
       <TitleAndValue title={'Respawn rate'} value={`${notateNumber(respawnRate, 'MultiplierInfo')}%`}/>
-      <TitleAndValue title={'Afk gains'} value={`${notateNumber(afkGains * 100, 'MultiplierInfo')}%`}/>
+      <TitleAndValue title={'Afk gains'}
+                     value={afkGains == null ? 'N/A' : `${notateNumber(afkGains * 100, 'MultiplierInfo')}%`}/>
       <TitleAndValue title={'Crystal Chance'} value={(1 / crystalSpawnChance?.value) < 100
         ?
         `${notateNumber(crystalSpawnChance?.value * 100, 'MultiplierInfo')?.replace('.00', '')}%`

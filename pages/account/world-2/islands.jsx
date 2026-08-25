@@ -31,12 +31,14 @@ const Islands = () => {
       title="Islands | Idleon Toolbox"
       description="Track your island exploration progress, available upgrades, and trash island bonuses in Legends of Idleon"
     />
-    <Stack direction={'row'} flexWrap={'wrap'} gap={2}>
+    <Stack mb={3} direction={'row'} flexWrap={'wrap'} gap={2}>
       <CardTitleAndValue title={'Bottles'} value={Math.round(islands?.bottles)}/>
       <CardTitleAndValue title={'Bottles/day'} value={islands?.bottlesPerDay || '0'}/>
       <CardTitleAndValue title={'Trash/day *'} value={islands?.trashPerDay}
                          tooltipTitle={trashDisclaimer}/>
       <CardTitleAndValue title={'Unclaimed days'} value={islands?.numberOfDaysAfk || '0'}/>
+      <CardTitleAndValue title={'Garbage to collect *'} value={islands?.trashPerDaysAfk || '0'}
+                         tooltipTitle={`${trashDisclaimer} A single collection is capped at 100 garbage.`}/>
     </Stack>
     <Stack direction={'row'} gap={2} flexWrap={'wrap'}>
       {islands?.list?.map((island, index) => {
@@ -64,14 +66,14 @@ const Islands = () => {
               <Divider/>
               {!unlocked ? <Typography>Cost: {cost}</Typography> : null}
               {unlocked && island.hasOwnProperty('trash') ? <CenteredStack>
-                <img src={`${prefix}etc/Trash_Currency.png`} alt={''}/>
+                <img src={`${prefix}etc/Trash_Currency.png`} alt="Trash Currency"/>
                 <Typography>{parseFloat(trash)?.toFixed(2)}</Typography>
               </CenteredStack> : null}
               {unlocked && currentTrial ? <Stack gap={1}>
                 <TitleAndValue title={'Current trial'} value={cleanUnderscore(currentTrial)}/>
                 <TitleAndValue title={'Best DPS ever'} value={cleanUnderscore(bestDpsEver)}/>
                 <CenteredStack>
-                  <img src={`${prefix}etc/Shimmer_Currency.png`} alt={''}/>
+                  <img src={`${prefix}etc/Shimmer_Currency.png`} alt="Shimmer Currency"/>
                   <Typography>{shimmerCurrency}</Typography>
                 </CenteredStack>
               </Stack> : null}

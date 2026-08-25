@@ -58,12 +58,12 @@ const parseCoralReef = (rawSpelunking: any, account: any, coralReefLevels: any, 
     'Reef_Coral',
     'Vibrant_Coral',
     'Glowing_Coral',
+    'Char_Coral',
     'Neon_Coral',
+    'Aegean_Coral',
+    'Gilded_Coral',
     'Twisted_Coral',
-    '6th_Coral',
-    '7th_Coral',
-    '8th_Coral',
-    '9th_Coral'
+    'Eternal_Coral'
   ];
   const dancingCoralDropResources = [
     'Generated_Daily_in_Town',
@@ -77,25 +77,30 @@ const parseCoralReef = (rawSpelunking: any, account: any, coralReefLevels: any, 
     'Dropped_by_RIPtide'
   ];
 
-  const dancingCoral = Array.from({ length: rawDancingCoral?.length || 0 }, (_, index) => {
+  const unlockedCorals = rawSpelunking?.[4]?.[6] ?? 0;
+  const dancingCoralCount = dancingCoralDescriptions.length;
+  const dancingCoral = Array.from({ length: dancingCoralCount }, (_, index) => {
     const level = rawDancingCoral?.[index] || 0;
     const baseDescription = dancingCoralDescriptions[index] || '';
     const description = getDancingCoralDescription(baseDescription, account, index);
+    const tower = account?.towers?.data?.slice(18)?.[index] || '';
     return {
       index,
       level,
+      unlocked: index < unlockedCorals,
       coralName: dancingCoralNames[index] || '',
       description,
       dropResource: dancingCoralDropResources[index] || '',
       cost: getDancingCoralCost(rawSpelunking, index),
       bonus: getDancingCoralBonus(account, index, 0),
-      tower: account?.towers?.data?.slice(18)?.[index] || ''
+      tower,
+      towerEffect: getShrineEffect(tower?.desc)
     };
-  }).filter((coral, index) => index < 6);
+  });
 
   const grindTimeDaily = getGrindTimeDaily(account, coralReefLevels);
-  const reefUpgrades = coralReefLevels?.map((level: any, index: any) => {
-    const reefData = coralReef?.[index];
+  const reefUpgrades = coralReef.map((reefData: any, index: any) => {
+    const level = coralReefLevels?.[index] ?? 0;
     let description = reefData?.name || '';
     if (index === 0) {
       description = description.replace('{', '' + Math.round(grindTimeDaily));
@@ -122,7 +127,7 @@ const parseCoralReef = (rawSpelunking: any, account: any, coralReefLevels: any, 
       cost: getReefCost(account, index, level || 0),
       bonus: index === 0 ? grindTimeDaily : index === 4 ? 0 : 0
     };
-  }) || [];
+  });
 
 
   return {
@@ -130,8 +135,8 @@ const parseCoralReef = (rawSpelunking: any, account: any, coralReefLevels: any, 
     dancingCoral,
     reefUpgrades,
     grindTimeDaily,
-    unlockedCorals: rawSpelunking?.[4]?.[6],
-    ownedCorals: rawSpelunking?.[4]?.[5],
+    unlockedCorals,
+    ownedCorals: rawSpelunking?.[4]?.[5] ?? 0,
     reefDayGains: getReefDayGains(account) // Default to first reef
   };
 }
@@ -167,7 +172,8 @@ export const getCoralKidUpgBonus = (account: any, index: any) => {
 
 export const getDancingCoralCost = (rawSpelunking: any, index: any) => {
   const baseCost = Number(generalSpelunky?.[22]?.[index]) || 0;
-  return baseCost / (1 + (10 * rawSpelunking?.[4]?.[7] + Math.pow(1.05, rawSpelunking?.[4]?.[7])) / 100);
+  const overstimLevel = rawSpelunking?.[4]?.[7] ?? 0;
+  return baseCost / (1 + (10 * overstimLevel + Math.pow(1.05, overstimLevel)) / 100);
 }
 
 // DancingCoralBonus from Thingies.js line 68-71
@@ -268,7 +274,7 @@ export const getReefDayGains = (account: any) => {
 
 // GrindTimeDaily from Thingies.js line 131-133
 export const getGrindTimeDaily = (account: any, coralReefLevels: any) => {
-  return Math.floor((10 * coralReefLevels?.[0]
+  return Math.floor((10 * (coralReefLevels?.[0] ?? 0)
     + 15 * getClamWorkBonus(account, 6)
     + getMineheadBonusQTY(account, 13))
     * (1 + getMeritocracyBonus(account, 24) / 100));
@@ -304,12 +310,23 @@ const getCoralKidDescription = (baseDescription: any, level: any, index: any, bo
 
   const bonus3 = getCoralKidUpgBonus(account, 3);
   const highestDivinityLevel = getHighestCharacterSkill(charactersData, 'divinity'); // TODO: possibly add char select
-  const divisor = 100;
+  const divisor = 60 + highestDivinityLevel;
   const hatValue = 1 + (1 + bonus3 / 100) * highestDivinityLevel / divisor;
   const hatNotation = notateNumber(hatValue, 'MultiplierInfo');
   description = description.replace('^', hatNotation);
 
   return description;
+}
+
+// The shrine's own effect, minus the "how to level it" tail and the current bonuses block.
+// The game does the same trim when it appends the coral line to a shrine's tooltip.
+const getShrineEffect = (desc: any) => {
+  if (!desc) return '';
+  return desc
+    .split('_@_')?.[0]
+    ?.replace('Level_it_up_by_claiming_AFK_Gains_on_the_same_map.', '')
+    ?.trim()
+    ?.replace(/_+$/, '') || '';
 }
 
 // Calculate Dancing Coral description based on game logic

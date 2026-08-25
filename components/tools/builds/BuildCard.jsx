@@ -1,10 +1,13 @@
 import React from 'react';
-import { Box, CardActionArea, Stack, Typography } from '@mui/material';
+import { Box, Stack, Typography } from '@mui/material';
+import { useRouter } from 'next/router';
 import Tooltip from '@components/Tooltip';
 import FavoriteIcon from '@mui/icons-material/Favorite';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import Link from 'next/link';
 import { cleanUnderscore, prefix } from '@utility/helpers';
+import { classToSlug } from '@utility/builds/class-paths.mjs';
+import { buildHref } from '@utility/builds/build-pages.mjs';
 import { classes } from '@website-data';
 import {
   TEXT_MUTED,
@@ -19,6 +22,11 @@ import { SurfaceCard, TagChip } from './styled';
 
 // Calm text-first card. Family color shows as a thin left accent bar plus a
 // subdued class breadcrumb — no gradient hero, no heavy uppercase labels.
+//
+// The card is a div with an onClick rather than one big <a>, because the breadcrumb inside it
+// links to the class pages and anchors cannot nest. The title stays a real <a> so the card is
+// still keyboard-reachable and middle-clickable. None of these reach the static export - that is
+// CrawlLinks' job - they are here for the hydrated page.
 
 const formatCount = (n) => {
   if (!n) return '0';
@@ -40,7 +48,27 @@ const Separator = () => (
   />
 );
 
-const BuildCard = ({ build }) => {
+const ClassCrumb = ({ classKey, children }) => (
+  <Typography
+    component={Link}
+    href={`/tools/builds/${classToSlug(classKey)}`}
+    // Class slugs and build slugs share one namespace; this names which kind this link is.
+    data-class-link=""
+    // The card's onClick would otherwise fire too and navigate to the build instead.
+    onClick={(e) => e.stopPropagation()}
+    sx={{
+      ...breadcrumbSx,
+      textDecoration: 'none',
+      '&:hover': { color: 'rgba(255,255,255,0.9)', textDecoration: 'underline' }
+    }}
+    noWrap
+  >
+    {children}
+  </Typography>
+);
+
+const BuildCard = ({ build, staticIds }) => {
+  const router = useRouter();
   if (!build) return null;
 
   const classKey = build.subclass || build.class;
@@ -49,6 +77,9 @@ const BuildCard = ({ build }) => {
   const iconIndex = classes.indexOf(classKey);
   const hasTags = Array.isArray(build.tags) && build.tags.length > 0;
   const views = build.viewCount || 0;
+  // The static page when this build has one, view?id= when it was published since the last
+  // deploy - fallback: false means there is no page to link it to yet.
+  const href = buildHref(build, staticIds);
 
   return (
     <SurfaceCard
@@ -64,16 +95,16 @@ const BuildCard = ({ build }) => {
         }
       }}
     >
-      <CardActionArea
-        component={Link}
-        href={`/tools/builds/view?id=${build.shortId}`}
+      <Box
+        onClick={() => router.push(href)}
         sx={{
           p: 1.75,
           pl: 2,
           height: '100%',
           display: 'flex',
           flexDirection: 'column',
-          alignItems: 'stretch'
+          alignItems: 'stretch',
+          cursor: 'pointer'
         }}
       >
         {/* Row 1: icon + title + likes/views */}
@@ -93,19 +124,27 @@ const BuildCard = ({ build }) => {
           </Box>
 
           <Box sx={{ flexGrow: 1, minWidth: 0 }}>
-            <Typography variant="body1" sx={titleSx} noWrap title={build.title}>
+            <Typography
+              variant="body1"
+              component={Link}
+              href={href}
+              onClick={(e) => e.stopPropagation()}
+              sx={{ ...titleSx, display: 'block', textDecoration: 'none' }}
+              noWrap
+              title={build.title}
+            >
               {build.title || '(untitled)'}
             </Typography>
             <Stack direction="row" alignItems="center" gap={0.75} sx={{ mt: 0.25 }}>
-              <Typography component="span" sx={breadcrumbSx}>
+              <ClassCrumb classKey={hierarchy.class}>
                 {cleanUnderscore(hierarchy.class)}
-              </Typography>
+              </ClassCrumb>
               {hierarchy.subclass && (
                 <>
                   <Separator/>
-                  <Typography component="span" sx={breadcrumbSx} noWrap>
+                  <ClassCrumb classKey={hierarchy.subclass}>
                     {cleanUnderscore(hierarchy.subclass)}
-                  </Typography>
+                  </ClassCrumb>
                 </>
               )}
             </Stack>
@@ -148,7 +187,7 @@ const BuildCard = ({ build }) => {
             </Box>
           </Stack>
         )}
-      </CardActionArea>
+      </Box>
     </SurfaceCard>
   );
 };
