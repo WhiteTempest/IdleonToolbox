@@ -24,7 +24,7 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'node',
-    include: ['__test__/**/*.test.{js,ts,jsx,tsx}'],
+    include: ['__test__/**/*.test.{js,ts,jsx,tsx}', '__scripts__/**/*.test.{js,ts,jsx,tsx}'],
     exclude: ['e2e/**'],
     isolate: false,
   },

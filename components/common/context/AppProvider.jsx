@@ -455,7 +455,8 @@ const AppProvider = ({ children }) => {
                 ? 'Google sign-in was cancelled.'
                 : user.error === 'expired_token'
                   ? 'The login code expired, please re-open this dialog.'
-                  : 'Could not reach Google, please check your connection and try again.';
+                  : `Could not reach Google, please check your connection and try again. [${user.error}${user.error_description ? ': ' + user.error_description : ''}]`;
+              console.error('[device-flow] raw token error:', user);
               setWaitingForAuth(false);
               dispatch({ type: ACTION_TYPES.LOGIN_ERROR, data: message });
               return;
