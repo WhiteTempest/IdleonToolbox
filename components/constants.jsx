@@ -2,7 +2,7 @@ export const drawerWidth = 240;
 export const navBarHeight = 70;
 export const profileBannerHeight = 40;
 export const simulatedCompanionsKey = 'simulatedCompanions';
-export const navItems = ['dashboard', 'characters', 'account', 'tools', 'guilds', 'statistics', 'leaderboards'];
+export const navItems = ['dashboard', 'characters', 'account', 'tools', 'guilds', 'statistics', 'leaderboards', 'wiki'];
 export const drawerPages = ['characters', 'account', 'tools'];
 
 export const PAGES = {
@@ -10,7 +10,8 @@ export const PAGES = {
     dashboard: { icon: 'data/GalleryBell' },
     characters: { icon: 'etc/Character' },
     guilds: { icon: 'etc/Guild' },
-    leaderboards: { icon: 'etc/Crown' }
+    leaderboards: { icon: 'etc/Crown' },
+    wiki: { icon: 'data/TalentBook1' }
   },
   ACCOUNT: {
     'misc': {
@@ -61,6 +62,15 @@ export const PAGES = {
           label: 'tesseract',
           icon: 'data/StatusArc0',
           tabs: ['Upgrades', 'Upgrade Optimizer', 'Maps']
+        },
+        {
+          // camelCase, not "royal guardian": AccountDrawer.jsx's sub-category label conversion
+          // (line ~81) only splits on capital letters, not spaces - every other multi-word
+          // category label here (friendsStats, randomEvents, eventShop, upgradeVault) follows the
+          // same convention so the drawer link and the /royal-guardian route agree.
+          label: 'royalGuardian',
+          icon: 'data/UISkillIcon226',
+          tabs: ['Armory', 'Outposts', 'Resources', 'Upgrade Optimizer', 'Royal Statues', 'Orblet Market']
         },
         { label: 'speedrun', icon: 'data/UISkillIcon45' }
       ]
@@ -162,7 +172,7 @@ export const PAGES = {
             { tab: 'Loot Pile', icon: 'data/SailT0' },
             { tab: 'Chests', icon: 'data/SailChest5' }]
         },
-        { label: 'divinity', icon: 'data/ClassIcons55', tabs: ['Gods', 'Coral Kid Upgrades'] },
+        { label: 'divinity', icon: 'data/ClassIcons55', tabs: ['Gods', 'Coral Kid Upgrades', 'Styles'] },
         {
           label: 'gaming',
           icon: 'data/ClassIcons56',

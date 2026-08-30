@@ -1473,6 +1473,86 @@ export const getWorld7Alerts = (account, fields, options, characters) => {
   if (Object.keys(gallery).length > 0) {
     alerts.gallery = gallery;
   }
+  if (fields?.royalGuardian?.checked && account?.royalGuardian?.unlocked) {
+    const royalGuardian = {};
+    const outposts = account?.royalGuardian?.outposts ?? [];
+    const rgOptions = options?.royalGuardian;
+
+    // A support camp collects nothing by design, so every collection alert skips mode 1.
+    const collectors = outposts.filter(({ mode }) => mode !== 1);
+
+    if (rgOptions?.idleOutposts?.checked) {
+      // Only worth telling the player about when a rewire is actually possible: an outpost whose
+      // resource is empty and whose reach holds nothing better has to wait for the daily restock.
+      const idle = collectors.filter(({ connectedNodes, freshNodeInReach }) => connectedNodes?.length > 0
+        && connectedNodes.every(({ exhausted }) => exhausted)
+        && freshNodeInReach);
+      if (idle.length > 0) {
+        royalGuardian.idleOutposts = idle.map(({ name, mapIndex }) => ({ name, mapIndex }));
+      }
+    }
+
+    if (rgOptions?.unwiredOutposts?.checked) {
+      // An outpost with nothing in range cannot be wired at all, so only the ones that could be
+      // connected right now are worth reporting.
+      const unwired = collectors.filter(({ connectedNodes, reachableNodes }) => !(connectedNodes?.length > 0)
+        && reachableNodes?.length > 0);
+      if (unwired.length > 0) {
+        royalGuardian.unwiredOutposts = unwired.map(({ name, mapIndex }) => ({ name, mapIndex }));
+      }
+    }
+
+    if (rgOptions?.idleSupportCamps?.checked) {
+      const idleCamps = outposts.filter(({ mode, supportLinks }) => mode === 1 && !(supportLinks?.length > 0));
+      if (idleCamps.length > 0) {
+        royalGuardian.idleSupportCamps = idleCamps.map(({ name, mapIndex }) => ({ name, mapIndex }));
+      }
+    }
+
+    if (rgOptions?.unspentPts?.checked) {
+      // PTS are spent per outpost, so an account-wide total says nothing about whether any single
+      // outpost can actually afford an upgrade.
+      const threshold = rgOptions?.unspentPts?.props?.value ?? 1;
+      const affordable = outposts.filter(({ ptsLeft }) => (ptsLeft || 0) >= threshold);
+      if (affordable.length > 0) {
+        royalGuardian.unspentPts = {
+          count: affordable.length,
+          threshold,
+          outposts: affordable.map(({ name, mapIndex, ptsLeft }) => ({ name, mapIndex, ptsLeft }))
+        };
+      }
+    }
+
+    if (rgOptions?.claimableMaps?.checked) {
+      const claimable = (account?.royalGuardian?.clearingMaps ?? []).filter(({ progress }) => progress >= 1);
+      if (claimable.length > 0) {
+        royalGuardian.claimableMaps = claimable.map(({ name, mapIndex }) => ({ name, mapIndex }));
+      }
+    }
+
+    if (rgOptions?.idleUnits?.checked) {
+      // A clearing unit on a claimed map earns nothing without Peacetime Militia, and only half
+      // rank EXP with it. Either way it would do more on a map that still needs clearing.
+      const deployments = account?.royalGuardian?.deployments ?? [];
+      const wasted = deployments.filter(({ idle, unassigned, hasClearableMap }) => (idle || unassigned)
+        && hasClearableMap);
+      if (wasted.length > 0) {
+        royalGuardian.idleUnits = {
+          count: wasted.length,
+          unassigned: wasted.filter(({ unassigned }) => unassigned).length,
+          discounted: account?.royalGuardian?.outpostStats?.peacetimeMilitia === true
+        };
+      }
+    }
+
+    if (rgOptions?.restockLocked?.checked && account?.royalGuardian?.outpostStats?.restockUnlocked === false) {
+      royalGuardian.restockLocked = true;
+    }
+
+    if (Object.keys(royalGuardian).length > 0) {
+      alerts.royalGuardian = royalGuardian;
+    }
+  }
   if (fields?.spelunking?.checked) {
     const spelunking = {};
     if (options?.spelunking?.pageReads?.checked) {

@@ -3,8 +3,9 @@ import { commaNotation, notateNumber } from '@utility/helpers';
 import { getUpgradeVaultBonus } from '@parsers/misc/upgradeVault';
 import { getGambitBonus } from '@parsers/world-5/caverns/gambit';
 import { getLegendTalentBonus } from '@parsers/world-7/legendTalents';
-import { isCompanionBonusActive } from '@parsers/misc';
+import { getEventShopBonus, isCompanionBonusActive } from '@parsers/misc';
 import { getFountainBonusTotal } from '@parsers/world-5/caverns/the-fountain';
+import { getMeritocracyBonus } from '@parsers/world-2/voteBallot';
 
 export const getKangaroo = (idleonData: any, accountData: any) => {
   return parseKangaroo(accountData);
@@ -36,10 +37,13 @@ const resetBonusesDesc = [
 const parseKangaroo = (account: any) => {
   const fish = account?.accountOptions?.[267] ?? 0;
   const progress = account?.accountOptions?.[280];
+  // Event shop 52 "Fishmaxxing" - one flag worth 5x fish and 75% off every Poppy upgrade.
+  const fishmaxxing = getEventShopBonus(account, 52);
   const upgrades = poppyBonuses.map((upgrade, i) => {
     const base = i === 0 ? 1 + (account?.accountOptions?.[268] ?? 0) : 1;
     const commonFactor = base
       * (1 / (1 + (10 * (account?.accountOptions?.[272] ?? 0)) / 100))
+      * (1 / (1 + 3 * fishmaxxing))
       * (1 / (1 + (15 * (account?.accountOptions?.[300] ?? 0)) / 100))
       * (1 / (1 + (5 * getMegaFish(account, 10)
         * (account?.accountOptions?.[304] ?? 0)) / 100));
@@ -72,6 +76,9 @@ const parseKangaroo = (account: any) => {
     * (1 + vaultUpgradeBonus / 100)
     * (1 + getGambitBonus(account, 8) / 100)
     * (1 + fountainPoppyBonus / 100)
+    // Meritocracy Bonus 12 (2.3.525 fix): was missing from Poppy's fish gain, only boosted Orion.
+    * (1 + getMeritocracyBonus(account, 12) / 100)
+    * (1 + 4 * fishmaxxing)
     * (10 * (account?.accountOptions?.[268] ?? 0) + (100 * (account?.accountOptions?.[297] ?? 0) +
       1e3 * (account?.accountOptions?.[304] ?? 0)) + (50 * (account?.accountOptions?.[273] ?? 0)
       + 200 * (account?.accountOptions?.[278] ?? 0))) * getShinyMulti(account, -1)
