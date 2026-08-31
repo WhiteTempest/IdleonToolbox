@@ -145,7 +145,13 @@ describe.skipIf(!process.env.DUMP_FIXTURES)('dump fixtures', () => {
 
     // Spelunking: feed chars with spelunking.level=0 (no char data in account accumulator)
     // and the real sailing.artifacts (chapter baseMultiplier reads artifacts[35].bonus).
-    const spelunkPartialAccount = { accountOptions, sailing: { artifacts: artifactsList } };
+    // totalSkillsLevels: {} -- getSkillMasteryBonusByIndex (new in the 2.3.527 upstream merge)
+    // does Object.entries() on it unguarded; {} keeps the mastery term at its base, stubbed
+    // like the other cross-deps here.
+    const spelunkPartialAccount = { accountOptions, sailing: { artifacts: artifactsList }, totalSkillsLevels: {},
+      // hole.holesObject: getSchematicBonus indexes into it unguarded; all-zero
+      // engineerSchematics makes every schematic read as locked -> bonus 0.
+      hole: { holesObject: { engineerSchematics: new Array(200).fill(0) } } };
     const spelunkChars = [{ skillsInfo: { spelunking: { level: 0 } } }];
     const spFull = getSpelunking(cs as any, spelunkPartialAccount as any, spelunkChars as any);
     const _spLoreBoss = (b: any) => ({
