@@ -77,8 +77,14 @@ const GenericUpgradeOptimizer = ({
   getUpgradeIconIndex,
   getResourceAmount,
   tooltipText,
+  // A map of resourceType -> resource per hour the consumer derived itself. Royal Guardian income is
+  // passive (outposts banking off nodes), so it can be computed; the other masterclasses can't and
+  // leave this null, keeping their manual "Set RPH" flow untouched.
+  autoResourcePerHour = null,
   defaultCategory = 'damage',
-  showMasterclassReduction = true,
+  // False for optimizers whose costs never read forceLegendTalent, so the Daily Shopping Spree
+  // allowance has nothing to say about them (Clam Work).
+  usesMasterclassReduction = true,
   showSplitByResource = true,
   statLabels
 }) => {
@@ -125,10 +131,24 @@ const GenericUpgradeOptimizer = ({
   const splitByResource = showSplitByResource && storedSplitByResource;
   const [AffordableCheckboxEl, onlyAffordable] = useCheckbox('Only affordable');
   // const [MasterclassReductionCheckbox, masterClassReduction] = useCheckbox('Masterclass reduction');
-  const [masterClassReduction, setMasterClassReduction] = useLocalStorage({
-    key: `${resourceKey}:genericUpgradeOptimizer:masterClassReduction`,
-    defaultValue: getLegendTalentBonus(account, 23) ?? 0
+  // The legend talent grants a fixed number of discounted masterclass purchases, and
+  // accountOptions[480] counts how many were already spent - the game only discounts while
+  // accountOptions[480] < getLegendTalentBonus(account, 23), so the leftovers are what the
+  // simulation may still spend, not the full grant.
+  const dailyReductionGrant = getLegendTalentBonus(account, 23) ?? 0;
+  const remainingReductions = Math.max(0, dailyReductionGrant - (account?.accountOptions?.[480] ?? 0));
+  // Only an explicit edit is stored. Seeding storage with the live count instead froze whatever it
+  // read on the first visit - wrong the moment the day rolled over or anything was bought - and it
+  // was that frozen seed, not the field itself, that made the field unsafe to show on Royal Guardian.
+  // No defaultValue, so "never edited" stays distinguishable and keeps following the live count.
+  const [reductionOverride, setReductionOverride] = useLocalStorage({
+    key: `${resourceKey}:genericUpgradeOptimizer:masterClassReductionOverride`
   });
+  // The allowance is per DAY, and it is one pool shared by every masterclass, so a plan spanning
+  // more than today gets its charges back - raising the field past today's leftovers is how you
+  // price that. Left at the live count, every step past the last charge is quoted at full price:
+  // 5x the number the game shows, 20x with the bonus bundle.
+  const masterClassReduction = reductionOverride ?? remainingReductions;
   const [resourcePerHour, setResourcePerHour] = useLocalStorage({
     key: `${resourceKey}:genericUpgradeOptimizer:resourcePerHour`,
     defaultValue: (() => {
@@ -157,10 +177,18 @@ const GenericUpgradeOptimizer = ({
     setResourcePerHourInput(obj);
   }, [resourcePerHour, resourceNames]);
   const [rphDialogOpen, setRphDialogOpen] = useState(false);
-  const [optimizationMethod, setOptimizationMethod] = useLocalStorage({
+  const autoRphAvailable = autoResourcePerHour != null;
+  const [storedOptimizationMethod, setOptimizationMethod] = useLocalStorage({
     key: `${resourceKey}:genericUpgradeOptimizer:optimizationMethod`,
-    defaultValue: 'rph'
+    defaultValue: autoRphAvailable ? 'rph-auto' : 'rph'
   });
+  // A stored 'rph-auto' left behind by an optimizer that no longer supplies computed rates would
+  // price every upgrade at zero hours, so it falls back to the manual rate instead.
+  const optimizationMethod = storedOptimizationMethod === 'rph-auto' && !autoRphAvailable
+    ? 'rph'
+    : storedOptimizationMethod;
+  const usesRph = optimizationMethod === 'rph' || optimizationMethod === 'rph-auto';
+  const effectiveResourcePerHour = optimizationMethod === 'rph-auto' ? autoResourcePerHour : resourcePerHour;
   const valueCommitDebouncersRef = useRef({});
 
   useEffect(() => () => {
@@ -174,7 +202,7 @@ const GenericUpgradeOptimizer = ({
     optimizedUpgrades = getOptimizedUpgradesFn(character, account, category, maxToUse, {
       onlyAffordable,
       masterClassReduction: isNaN(masterClassReduction) ? 0 : masterClassReduction,
-      resourcePerHour: optimizationMethod === 'rph' ? resourcePerHour : undefined,
+      resourcePerHour: usesRph ? effectiveResourcePerHour : undefined,
       getResourceType
     });
   }
@@ -219,9 +247,11 @@ const GenericUpgradeOptimizer = ({
       }
       const combinedStats = {};
       let totalCost = 0;
+      let discountedSteps = 0;
       const resourceType = getResourceType(upgrade);
       upgrade.sequence.forEach(seq => {
         totalCost += seq.cost;
+        if (seq.hadReduction) discountedSteps += 1;
         if (category !== 'all') {
           seq.statChanges.forEach(statChange => accumulateStatChange(combinedStats, statChange));
         }
@@ -230,6 +260,7 @@ const GenericUpgradeOptimizer = ({
         ...upgrade,
         combinedStatChanges: Object.values(combinedStats),
         totalCost,
+        discountedSteps,
         resourceType,
         startLevel: upgrade.startLevel,
         finalLevel: upgrade.finalLevel,
@@ -248,6 +279,7 @@ const GenericUpgradeOptimizer = ({
           finalLevel: upgrade.level,
           sequence: [],
           totalCost: 0,
+          discountedSteps: 0,
           combinedStatChanges: {}
         };
       }
@@ -256,6 +288,7 @@ const GenericUpgradeOptimizer = ({
       g.sequence.push(upgrade);
       g.finalLevel = Math.max(g.finalLevel, upgrade.level);
       g.totalCost += upgrade.cost;
+      if (upgrade.hadReduction) g.discountedSteps += 1;
 
       if (upgrade.statChanges) {
         upgrade.statChanges.forEach(statChange => accumulateStatChange(g.combinedStatChanges, statChange));
@@ -345,8 +378,8 @@ const GenericUpgradeOptimizer = ({
   };
   // Hours of farming needed to rebuild the resource this purchase spends
   const getRebuildTime = (upgrade) => {
-    if (optimizationMethod !== 'rph') return null;
-    const rph = resourcePerHour[getResourceType(upgrade)];
+    if (!usesRph) return null;
+    const rph = effectiveResourcePerHour[getResourceType(upgrade)];
     if (!rph || isNaN(rph) || rph <= 0) return null;
     const cost = upgrade.totalCost || upgrade.cost;
     return cost ? cost / rph : null;
@@ -408,8 +441,23 @@ const GenericUpgradeOptimizer = ({
             alt=""
           />
           <Typography variant="body2">Total Cost: {notateNumber(upgrade.totalCost)}</Typography>
+          {renderDiscountNote(upgrade)}
         </Stack>
       </>
+    );
+  };
+
+  // Which rows the Daily Shopping Spree allowance actually paid for. Without this the walk silently
+  // spends the charges on the cheapest rows at the head of the plan and everything after reads as
+  // inexplicably expensive.
+  const renderDiscountNote = (upgrade) => {
+    const steps = upgrade.sequence?.length ?? 1;
+    const discounted = upgrade.discountedSteps ?? (upgrade.hadReduction ? 1 : 0);
+    if (!discounted) return null;
+    return (
+      <Typography variant="caption" color="success.main" component="span">
+        {steps > 1 ? `-80% on ${discounted}/${steps}` : '-80%'}
+      </Typography>
     );
   };
 
@@ -462,8 +510,8 @@ const GenericUpgradeOptimizer = ({
   };
 
   const renderResourceSectionHeader = (section) => {
-    const rph = resourcePerHour[section.resourceType];
-    const hasRph = optimizationMethod === 'rph' && rph && !isNaN(rph) && rph > 0;
+    const rph = effectiveResourcePerHour[section.resourceType];
+    const hasRph = usesRph && rph && !isNaN(rph) && rph > 0;
     const farmingHours = hasRph ? section.cost / rph : null;
     return (
       <Stack direction="row" gap={1} alignItems="center">
@@ -530,6 +578,7 @@ const GenericUpgradeOptimizer = ({
                   <Typography variant="body2">
                     Cost: {notateNumber(upgrade.cost)}
                   </Typography>
+                  {renderDiscountNote(upgrade)}
                 </Stack>
               </>
             )
@@ -605,6 +654,7 @@ const GenericUpgradeOptimizer = ({
             {hasSequence && upgrade.totalCost
               ? notateNumber(upgrade.totalCost)
               : notateNumber(upgrade.cost)}
+            {renderDiscountNote(upgrade)}
           </Stack>
         </TableCell>
       </TableRow>
@@ -634,7 +684,8 @@ const GenericUpgradeOptimizer = ({
             label="Optimization Method"
             onChange={e => setOptimizationMethod(e.target.value)}
           >
-            <MenuItem value="rph">Resource per hour</MenuItem>
+            {autoRphAvailable && <MenuItem value="rph-auto">Resource per hour (auto)</MenuItem>}
+            <MenuItem value="rph">Resource per hour{autoRphAvailable ? ' (manual)' : ''}</MenuItem>
             <MenuItem value="cost">Cost only</MenuItem>
           </Select>
         </FormControl>
@@ -642,6 +693,29 @@ const GenericUpgradeOptimizer = ({
           <Button sx={{ width: 'fit-content' }} variant="outlined" onClick={() => setRphDialogOpen(true)}>
             Set RPH
           </Button>
+        )}
+        {optimizationMethod === 'rph-auto' && (
+          <Stack direction="row" alignItems="center">
+            <Tooltip title={<Stack gap={.5}>
+              <Typography variant="body2">Rates derived from your outposts and their connected nodes,
+                each capped by how much its node can give over the next 24 hours.</Typography>
+              {Object.entries(resourceNames).map(([key, name]) => (
+                <Stack key={key} direction="row" gap={1} alignItems="center">
+                  <img
+                    style={{ objectPosition: '0 -3px' }}
+                    src={`${prefix}data/${resourceImagePrefix}${key}${resourceImageSuffix}.png`}
+                    width={24}
+                    height={24}
+                    alt=""/>
+                  <Typography variant="body2">
+                    {name}: {autoResourcePerHour?.[key] > 0 ? notateNumber(autoResourcePerHour[key]) : 0}/hr
+                  </Typography>
+                </Stack>
+              ))}
+            </Stack>}>
+              <IconInfoCircleFilled size={16}/>
+            </Tooltip>
+          </Stack>
         )}
         <FormControl size="small" sx={{ width: 160 }}>
           <InputLabel>Max Upgrades</InputLabel>
@@ -707,24 +781,27 @@ const GenericUpgradeOptimizer = ({
             label="Split by resource"
           />
         )}
-        {showMasterclassReduction && (
-          <TextField
-            size="small"
-            type="number"
-            inputProps={{ min: 0 }}
-            sx={{ width: 160 }}
-            label="Masterclass reductions"
-            value={masterClassReduction}
-            onChange={(e) => {
-              const v = parseInt(e.target.value, 10);
-              if (isNaN(v)) {
-                setMasterClassReduction('');
-              }
-              else {
-                setMasterClassReduction(Math.max(0, v));
-              }
-            }}
-          />
+        {usesMasterclassReduction && (
+          <Stack direction="row" alignItems="center" gap={0.5}>
+            <TextField
+              size="small"
+              type="number"
+              inputProps={{ min: 0 }}
+              sx={{ width: 160 }}
+              label="Masterclass reductions"
+              // Clearing the field drops the override rather than meaning zero, so there is always
+              // a way back to the live remaining count.
+              value={masterClassReduction}
+              onChange={(e) => {
+                const v = parseInt(e.target.value, 10);
+                setReductionOverride(isNaN(v) ? null : Math.max(0, v));
+              }}
+            />
+            <Tooltip
+              title={`Daily Shopping Spree makes your first ${dailyReductionGrant} Masterclass purchases each day 80% cheaper, and the allowance resets every day. This starts at what today has left, so steps past it are priced at full rate - raise it to plan across several days, or clear the field to go back to the live count.`}>
+              <IconInfoCircleFilled size={16} />
+            </Tooltip>
+          </Stack>
         )}
         <Tooltip title={tooltipText}> <IconInfoCircleFilled size={16} /> </Tooltip>
         <Stack>
@@ -733,7 +810,7 @@ const GenericUpgradeOptimizer = ({
         <Divider sx={{ my: 1 }} flexItem orientation={'vertical'} />
         {resourceUsage.map((resource) => {
           const resourceTypeKey = Object.keys(resourceNames).find(key => resourceNames[key] === resource.name) || resource.name;
-          const resourcePerHourValue = resourcePerHour[resourceTypeKey];
+          const resourcePerHourValue = effectiveResourcePerHour[resourceTypeKey];
           const hasResourcePerHour = resourcePerHourValue && !isNaN(resourcePerHourValue) && resourcePerHourValue > 0;
           const timeEstimateHours = hasResourcePerHour ? resource.cost / resourcePerHourValue : null;
           // Only show time estimate if it's at least 1 minute (1/60 hour)
@@ -774,14 +851,16 @@ const GenericUpgradeOptimizer = ({
           <DialogTitle>Set Resource Per Hour</DialogTitle>
           <DialogContent>
             <Stack direction="column" gap={2}>
-              {Object.entries(resourceNames).map(([key, name], index) => (
+              {Object.entries(resourceNames).map(([key, name]) => (
                 <Stack direction="column" key={key}>
                   <Typography variant="caption">{name} per hour:</Typography>
                   <TextField
                     InputProps={{
+                      // The icon is keyed by resource type, not by position in the list: the Royal
+                      // Guardian's currency ids have gaps, so the two disagree.
                       startAdornment: <img
                         style={{ objectPosition: '0 -3px', marginLeft: -5, marginRight: 5 }}
-                        src={`${prefix}data/${resourceImagePrefix}${index}${resourceImageSuffix}.png`}
+                        src={`${prefix}data/${resourceImagePrefix}${key}${resourceImageSuffix}.png`}
                         width={24}
                         height={24} alt=""/>
                     }}

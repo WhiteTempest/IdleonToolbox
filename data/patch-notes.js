@@ -4,6 +4,38 @@ import React from 'react';
 /* eslint-disable react/jsx-key */
 export const patchNotes = [
   {
+    'ver': '3.3.73',
+    'gameVer': '2.3.527',
+    'date': '02/09/2026',
+    'features': [
+      'Dashboard: Royal Guardian alerts now name each map\'s world and the monster or resource found there, so you can place a map without knowing its name by heart',
+      'Dashboard: three new Royal Guardian alerts for units doing nothing - Workers an outpost no longer needs to empty its resource in time, Workers left on an outpost whose resources are all spent, and two outposts sharing a resource only one of them needs. Traders in those slots earn Trade rank EXP instead'
+    ],
+    'fixes': [
+      'Royal Guardian: outpost rank bars showed a time to next rank that ignored how many units feed the bar, so it was several times too long with a full outpost, and showed a countdown at all for a bar with no unit on it',
+      'Dashboard: the three new Royal Guardian unit alerts did not name the world of each map or show its monster icon, unlike every other Royal Guardian alert'
+    ]
+  },
+  {
+    'ver': '3.3.72',
+    'gameVer': '2.3.527',
+    'date': '01/09/2026',
+    'features': [
+      'Royal Guardian: the armory Upgrade Optimizer can now work out your resource per hour from your outposts and the nodes it collects from, instead of asking you to type it in',
+      'Dashboard: new alert for when you have not registered for the current Raid, next to the existing Pet Tournament one'
+    ],
+    'fixes': [
+      'Royal Guardian: outpost node fill times ignored node levels, so a node looked like it would last up to 2.5x longer than it does, and support camps showed a fill time even though they never drain their node',
+      'Royal Guardian: the Set RPH dialog listed a resource the armory never charges, and showed the wrong icon next to every resource',
+      'Dashboard: the better class-specific ring alert scored a ring on both its stats at once, so an Arcane Cultist ring could win on accuracy alone. You can now pick which stats count, and ring and weapon alerts say which bag the item is in',
+      'Upgrade Optimizer: the recommended sequence priced purchases with Masterclass cost reductions you had already used up, showing Royal Guardian armory and Clam Work upgrades as much as 5x cheaper than the game charges',
+      'Pets: upgraded pets were still counted at their base bonus in a few places. Rift Hivemind+ now gives its full 75% prisma multi, which was holding back Cooking Speed and Fire Speed on every prisma bubble, plus Rift Spooker+ its 4x Cooking Mastery EXP and Bloque+ its 30% Skill EXP',
+      'Dashboard: the Royal Guardian idle units alert counted towns, minigame screens and other maps that can never hold an outpost as maps left to clear, so it kept firing for worlds you had fully claimed',
+      'Free pet: the claim timer was reading the wrong timestamp, so it was stuck on "Go claim!" and its dashboard alert never cleared. It now counts down the real 23 hour window',
+      'Upgrade Optimizer: steps past your daily Masterclass discount were priced up to 5x too high with nothing saying why. Discounted steps are now marked, and the reductions field tracks your live count. Royal Guardian gets the field too'
+    ]
+  },
+  {
     'ver': '3.3.71',
     'gameVer': '2.3.527',
     'date': '31/08/2026',

@@ -18,7 +18,7 @@ import { getCrystalCountdownSkills } from '@parsers/talents';
 import { MINE_CURRENCY_UPGRADE_INDICES } from '@parsers/world-7/minehead';
 
 const baseTrackers = {
-  version: 71,
+  version: 74,
   account: {
     General: {
       tasks: {
@@ -60,6 +60,11 @@ const baseTrackers = {
             name: 'tournamentRegister',
             checked: true,
             helperText: 'Alert when you have not registered for the current Pet Tournament'
+          },
+          {
+            name: 'raidRegister',
+            checked: true,
+            helperText: 'Alert when you have not registered for the current Raid'
           },
           {
             name: 'dailyCrystals',
@@ -569,6 +574,30 @@ const baseTrackers = {
             helperText: 'Alert when units are clearing a map you have already claimed, or aren\'t assigned anywhere, while their world still has a map left to clear'
           },
           {
+            name: 'overkillWorkers',
+            type: 'input',
+            props: { label: 'Hours to empty within', value: 24, minValue: 1 },
+            checked: true,
+            helperText: 'Alert when an outpost has more Workers than it needs to empty its resource within this many hours. Workers only add collection rate, so the spare ones could be Traders and earn Trade rank EXP instead'
+          },
+          {
+            name: 'overkillBeforeReset',
+            checked: true,
+            helperText: 'Measure that alert against the time left until the daily reset instead of the hours above. A resource only restocks and gains a level if it is already empty when the reset lands, so this is the deadline that actually matters. Falls back to the hours above if your save is older than the reset'
+          },
+          {
+            name: 'strandedWorkers',
+            checked: true,
+            helperText: 'Alert when an outpost\'s resources are all empty and nothing better is in range, while Workers are still assigned to it. They add collection rate to a resource that has none left, so Traders would earn Trade rank EXP instead'
+          },
+          {
+            name: 'sharedNodes',
+            type: 'input',
+            props: { label: 'Hours to empty within', value: 24, minValue: 1 },
+            checked: true,
+            helperText: 'Alert when two outposts are wired to the same resource and one of them empties it within this many hours on its own, so the other is spending a connection slot for nothing'
+          },
+          {
             name: 'restockLocked',
             checked: true,
             helperText: 'Alert until you buy Resource Replenish in the armory, the one-time upgrade that refills empty resources every day. It goes away once bought'
@@ -808,8 +837,11 @@ const baseTrackers = {
         },
         {
           name: 'betterRing',
+          type: 'array',
+          category: 'betterRing',
           checked: true,
-          helperText: 'Alert when there\'s a better form class-specific ring (higher stats, same type) in your inventory'
+          helperText: 'Alert when there\'s a better form class-specific ring (same type) in your inventory. Only the checked stats count towards "better" - Wind Walker rings roll a single stat and are always compared on it',
+          props: { value: { arcanistAccuracy: true, extraTachyons: true } }
         }
       ]
     }

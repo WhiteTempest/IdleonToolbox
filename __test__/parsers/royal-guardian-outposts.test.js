@@ -1,6 +1,11 @@
 import '../../polyfills';
 import { describe, expect, it } from 'vitest';
-import { getRoyalGuardian } from '@parsers/class-specific/royalGuardian';
+import {
+  getRoyalGuardian,
+  getRoyalResourcePerHour,
+  getSpareWorkers,
+  RESOURCE_PER_HOUR_WINDOW_HOURS
+} from '@parsers/class-specific/royalGuardian';
 
 // The outpost formulas here were verified against the running game (patch 2.3.525) on the account
 // in data/raw.json, over the debug server: OutpostResourceRate on Froggy Fields returned
@@ -68,6 +73,12 @@ const buildRoyalMaps = () => {
 
 const parse = () => getRoyalGuardian(
   { RoyalG: JSON.stringify(buildRoyalG()), RoyalMaps: JSON.stringify(buildRoyalMaps()) },
+  { bundles: [] },
+  []
+);
+
+const parseWith = (royalG, royalMaps) => getRoyalGuardian(
+  { RoyalG: JSON.stringify(royalG), RoyalMaps: JSON.stringify(royalMaps) },
   { bundles: [] },
   []
 );
@@ -179,6 +190,84 @@ describe('royal guardian outposts', () => {
     close(outpostOn(parsed, 1).resourceRate, 125);
   });
 
+  it('prices each node at the outpost rate times its own node level bonus', () => {
+    const royalG = buildRoyalG();
+    royalG[5][0] = 2; // game: ResNodes_LVUPbon is 25 per level, so node 0 collects at 1.5x
+    const parsed = parseWith(royalG, buildRoyalMaps());
+    const froggy = outpostOn(parsed, 2);
+    const [node0, node1] = froggy.connectedNodes;
+
+    close(node0.collectionRate, froggy.resourceRate * 1.5);
+    close(node1.collectionRate, froggy.resourceRate);
+    // A Resource Depot takes out exactly what it banks.
+    close(node0.drainRate, node0.collectionRate);
+    close(froggy.hoursToNodeCap, Math.min(...froggy.connectedNodes
+      .map(({ maxQuantity, collected, drainRate }) => (maxQuantity - collected) / drainRate)));
+  });
+
+  it('banks nothing from a support camp or a savage stronghold', () => {
+    const royalMaps = buildRoyalMaps();
+    royalMaps[1] = [1, 0, 0, 0, 0, 0, 0, 0, 3, 1002, 1, 111111111, 0]; // support camp wired to node 3
+    const parsed = parseWith(buildRoyalG(), royalMaps);
+    const support = outpostOn(parsed, 1);
+    const savage = outpostOn(parsed, 0);
+
+    // game: CollectAll's outer guard skips a support camp, so its node is neither banked nor drained.
+    expect(support.connectedNodes[0].collectionRate).toBe(0);
+    expect(support.connectedNodes[0].drainRate).toBe(0);
+    expect(support.hoursToNodeCap).toBe(null);
+    // A Savage Stronghold drains at savageMulti and banks none of it.
+    expect(savage.connectedNodes[0].collectionRate).toBe(0);
+    close(savage.connectedNodes[0].drainRate, savage.resourceRate * parsed.outpostStats.savageMulti);
+  });
+
+  it('averages resource per hour over what each node still has to give', () => {
+    const royalG = buildRoyalG();
+    const parsed = parseWith(royalG, buildRoyalMaps());
+    const froggy = outpostOn(parsed, 2);
+    const [node0, node1] = froggy.connectedNodes;
+
+    // Fresh nodes here hold far more than a day of collection, so the rate itself is the cap.
+    close(parsed.resourcePerHour[node0.resourceIndex],
+      node0.resourceIndex === node1.resourceIndex
+        ? node0.collectionRate + node1.collectionRate
+        : node0.collectionRate);
+    expect(getRoyalResourcePerHour({ royalGuardian: parsed })).toEqual(parsed.resourcePerHour);
+
+    // Node 0 one hour from capping pays only that hour's worth, averaged over the window.
+    const nearlySpent = buildRoyalG();
+    nearlySpent[4][0] = node0.maxQuantity - node0.collectionRate;
+    const spentParsed = parseWith(nearlySpent, buildRoyalMaps());
+    const spentFroggy = outpostOn(spentParsed, 2);
+    const [spentNode0, spentNode1] = spentFroggy.connectedNodes;
+    close(spentParsed.resourcePerHour[spentNode0.resourceIndex],
+      spentNode0.collectionRate / RESOURCE_PER_HOUR_WINDOW_HOURS
+      + (spentNode1.resourceIndex === spentNode0.resourceIndex ? spentNode1.collectionRate : 0));
+
+    // An exhausted node (RoyalG[4] = -1) pays nothing without Resource Replenish to refill it.
+    const exhausted = buildRoyalG();
+    exhausted[4][0] = -1;
+    exhausted[4][1] = -1;
+    const exhaustedParsed = parseWith(exhausted, buildRoyalMaps());
+    expect(exhaustedParsed.outpostStats.restockUnlocked).toBe(false);
+    expect(exhaustedParsed.resourcePerHour[node0.resourceIndex] ?? 0).toBe(0);
+
+    // game: "RestockRes" refills every spent node on the daily reset, so with armory 70 the node is
+    // worth its whole capacity again over the window instead of nothing.
+    const restocked = buildRoyalG();
+    restocked[4][0] = -1;
+    restocked[4][1] = -1;
+    restocked[2][70] = 1;
+    const restockedParsed = parseWith(restocked, buildRoyalMaps());
+    const restockedFroggy = outpostOn(restockedParsed, 2);
+    expect(restockedParsed.outpostStats.restockUnlocked).toBe(true);
+    close(restockedParsed.resourcePerHour[node0.resourceIndex],
+      restockedFroggy.connectedNodes
+        .filter(({ resourceIndex }) => resourceIndex === node0.resourceIndex)
+        .reduce((sum, { collectionRate, maxQuantity }) =>
+          sum + Math.min(collectionRate, maxQuantity / RESOURCE_PER_HOUR_WINDOW_HOURS), 0));
+  });
+
   it('computes the connection range off the soft Advanced Logistics curve', () => {
     const parsed = parse();
 
@@ -254,9 +343,20 @@ describe('royal guardian outposts', () => {
     // Trade reads armory 20, unlevelled here, so the base is 1.
     // Then Intel rank 2 * ArmoryUpgBonus(72) (unlevelled) leaves 1, and 2 support camps at
     // SupportEXP = 200 * (1 + armory 43 / 100) = 400 give (1 + 400 * 2 / 100) = 9.
-    close(froggy.rankBars[0].expPerHour, 9);
+    close(froggy.rankBars[0].expPerUnit, 9);
+    // The game pays that rate ONCE PER UNIT feeding the bar: the Trade bar runs on Traders, and
+    // Froggy Fields packs two plus one passive from Command rank 5.
+    expect(froggy.rankBars[0].units).toBe(3);
+    close(froggy.rankBars[0].expPerHour, 27);
     // Time to next rank is the gap to the threshold over that rate.
-    close(froggy.rankBars[0].hoursToNextRank, (25 * Math.pow(1.3, 3) - 40) / 9);
+    close(froggy.rankBars[0].hoursToNextRank, (25 * Math.pow(1.3, 3) - 40) / 27);
+
+    // The Intel bar runs on Surveyors, and this outpost has none - so it does not move at all,
+    // however high BarExpRate(1) is.
+    close(froggy.rankBars[1].expPerUnit, 9);
+    expect(froggy.rankBars[1].units).toBe(0);
+    expect(froggy.rankBars[1].expPerHour).toBe(0);
+    expect(froggy.rankBars[1].hoursToNextRank).toBe(0);
 
     // QUIRK: the game passes the RANK TYPE to isMapPurified, which expects a MAP, so the 200%
     // purity term reads maps 0-4. Map 0 is the Savage Stronghold in this fixture and is not
@@ -269,18 +369,20 @@ describe('royal guardian outposts', () => {
       { bundles: [] },
       []
     );
+    // Compared per unit, so the rate formula is read on its own rather than through whatever
+    // units happen to be posted to the bar.
     const quirkFroggy = outpostOn(quirk, 2);
-    close(quirkFroggy.rankBars[3].expPerHour, froggy.rankBars[3].expPerHour * 3);
-    close(quirkFroggy.rankBars[0].expPerHour, froggy.rankBars[0].expPerHour);
+    close(quirkFroggy.rankBars[3].expPerUnit, froggy.rankBars[3].expPerUnit * 3);
+    close(quirkFroggy.rankBars[0].expPerUnit, froggy.rankBars[0].expPerUnit);
     // And Froggy itself is not purified, so an outpost-keyed reading would have moved nothing.
     expect(quirkFroggy.purified).toBe(false);
 
     // The Glorified 2x used to be dead code: it doubled rBarXPdn, which BarExpRate_Base then
     // reassigned. 2.3.527 moved it onto rBarXPdn2, so map 50 (RoyalMaps[50][12] === 1) really
     // does earn double rank EXP now.
-    close(outpostOn(parsed, 50).rankBars[0].expPerHour, 2);
+    close(outpostOn(parsed, 50).rankBars[0].expPerUnit, 2);
     // A map without the flag is untouched, so the doubling is keyed off the outpost, not global.
-    close(outpostOn(parsed, 0).rankBars[0].expPerHour, 1);
+    close(outpostOn(parsed, 0).rankBars[0].expPerUnit, 1);
   });
 
   it('caps outpost types per world, not per account', () => {
@@ -315,6 +417,52 @@ describe('royal guardian outposts', () => {
     expect(parsed.outpostStats.unitsUnlocked).toBe(4);
     expect(parsed.outpostStats.barsUnlocked).toEqual([true, true, true, true, true]);
     expect(parsed.outpostStats.worldsUnlocked).toBe(1);
+  });
+
+  it('counts the Workers a node could give up and still cap in time', () => {
+    const parsed = parse();
+    const froggy = outpostOn(parsed, 2);
+    const workerBonus = parsed.outpostStats.workerRateBonus;
+
+    // game: "UnitSpecEffect"(0) = 50 + ArmoryUpgBonus(19), and armory 19 is at 2 * 10% here.
+    expect(workerBonus).toBe(70);
+    // Three slots (1 + Expanded Barracks 2), packed Worker / Trader / Trader.
+    expect(froggy.unitSlots).toEqual([0, 1, 1]);
+
+    // The answer has to be exact at the boundary, so rather than restate the drain arithmetic the
+    // test replays it: dropping that many Workers must still cap every node inside the horizon,
+    // and dropping one more must not.
+    const capsWithin = (workersDropped, horizon) => {
+      const totalWorkers = froggy.unitCounts[0];
+      const scale = (1 + (workerBonus * (totalWorkers - workersDropped)) / 100)
+        / (1 + (workerBonus * totalWorkers) / 100);
+      return froggy.connectedNodes
+        .filter(({ exhausted, drainRate }) => !exhausted && drainRate > 0)
+        .every(({ collected, maxQuantity, drainRate }) =>
+          drainRate * scale * horizon >= maxQuantity - collected);
+    };
+
+    // A horizon short enough that even every Worker cannot cap the node in time leaves nothing
+    // spare; past that, the answer is the largest drop that still caps.
+    const horizons = [1, 24, 500];
+    expect(horizons.some((horizon) => capsWithin(0, horizon))).toBe(true);
+    expect(horizons.some((horizon) => !capsWithin(0, horizon))).toBe(true);
+
+    horizons.forEach((horizon) => {
+      const spare = getSpareWorkers(froggy, horizon, workerBonus);
+      expect(spare).toBeLessThanOrEqual(1); // only one of the three slots holds a Worker
+      if (!capsWithin(0, horizon)) {
+        expect(spare).toBe(0);
+        return;
+      }
+      expect(capsWithin(spare, horizon)).toBe(true);
+      if (spare < 1) expect(capsWithin(spare + 1, horizon)).toBe(false);
+    });
+
+    // A Support Camp drains nothing, so it can never be told to shed Workers on this argument.
+    expect(getSpareWorkers(outpostOn(parsed, 1), 24, workerBonus)).toBe(0);
+    // And an outpost with no Worker in a slot has nothing to give up either way.
+    expect(getSpareWorkers(outpostOn(parsed, 50), 24, workerBonus)).toBe(0);
   });
 
   it('degrades to an empty kingdom rather than NaN', () => {

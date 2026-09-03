@@ -2,7 +2,7 @@ import { getMaxClaimTime, getSecPerBall } from '@parsers/dungeons';
 import { getBuildCost } from '@parsers/world-3/construction';
 import { CAULDRON_INFO, CAULDRONS_MAX_LEVELS, LIQUID_INFO, MAX_VIAL_LEVEL, vialCostsArray } from '@parsers/world-2/alchemy';
 import { getChipsAndJewels, maxNumberOfSpiceClicks } from '@parsers/world-4/cooking';
-import { cleanUnderscore, getDuration, getNextCompanionClaim, notateNumber, totalHoursBetweenDates, tryToParse } from '../helpers';
+import { cleanUnderscore, getDuration, getNextCompanionClaim, hoursUntilDailyReset, notateNumber, totalHoursBetweenDates, tryToParse } from '../helpers';
 import { isRiftBonusUnlocked } from '@parsers/world-4/rift';
 import { items, liquidsShop, ninjaExtraInfo } from '@website-data';
 import { getPowerPerCycle, getRefineryCycleTimes, getSaltMatsTimeLeft, getSaltsBalance, hasMissingMats } from '@parsers/world-3/refinery';
@@ -28,6 +28,7 @@ import { isHatRackEligible } from '@parsers/world-3/hatRack';
 import { getGoldCostToMaxLevel, getStampsPerDay } from '@parsers/world-1/stamps';
 import { getTomeWishPity } from '@parsers/world-4/tome';
 import { getTesseractBonus } from '@parsers/class-specific/tesseract';
+import { getSpareWorkers } from '@parsers/class-specific/royalGuardian';
 import { getCompassBonus } from '@parsers/class-specific/compass';
 
 // The game hard caps Arcanist weapon and ring drops at 100 each per day.
@@ -255,6 +256,18 @@ export const getGeneralAlerts = (account, fields, options, characters) => {
       const registeredThrough = account?.accountOptions?.[511] ?? 0;
       if (currentTournamentDay >= 1 && registeredThrough <= currentTournamentDay) {
         etc.tournamentRegister = true;
+      }
+    }
+    if (options?.etc?.raidRegister?.checked && account?.companions?.list?.some((companion) => companion?.acquired)) {
+      // The W7 raid is the tournament's sibling event, same registration shape:
+      // accountOptions[611] = raid-day registered-through (registering sets it to day + 1).
+      // The save's own current-raid-day mirror (613) only updates when the player opens the
+      // tournament UI, so it goes stale - the global doc's RD is refetched on every snapshot.
+      // RC is the raid's registration-closed flag, nothing to register for while it's set.
+      const currentRaidDay = account?.tournament?.global?.RD ?? 0;
+      const registeredThrough = account?.accountOptions?.[611] ?? 0;
+      if (currentRaidDay >= 1 && account?.tournament?.global?.RC !== true && registeredThrough <= currentRaidDay) {
+        etc.raidRegister = true;
       }
     }
     if (options?.etc?.glimmerwickCandle?.checked && account?.accountOptions?.[491] !== 1) {
@@ -1415,6 +1428,16 @@ export const getWorld6Alerts = (account, fields, options, characters) => {
   return alerts;
 };
 
+// Every Royal Guardian alert lists outposts the same way, and each one only needs enough of the
+// outpost to name it: the map, its world, and the monster or resource that map is known for.
+const pickOutpostEntry = ({ name, mapIndex, world, monsterRawName, monsterName }) => ({
+  name,
+  mapIndex,
+  world,
+  monsterRawName,
+  monsterName
+});
+
 export const getWorld7Alerts = (account, fields, options, characters) => {
   const alerts = {};
   if (!account?.finishedWorlds?.World6) return alerts;
@@ -1488,7 +1511,7 @@ export const getWorld7Alerts = (account, fields, options, characters) => {
         && connectedNodes.every(({ exhausted }) => exhausted)
         && freshNodeInReach);
       if (idle.length > 0) {
-        royalGuardian.idleOutposts = idle.map(({ name, mapIndex }) => ({ name, mapIndex }));
+        royalGuardian.idleOutposts = idle.map(pickOutpostEntry);
       }
     }
 
@@ -1498,14 +1521,14 @@ export const getWorld7Alerts = (account, fields, options, characters) => {
       const unwired = collectors.filter(({ connectedNodes, reachableNodes }) => !(connectedNodes?.length > 0)
         && reachableNodes?.length > 0);
       if (unwired.length > 0) {
-        royalGuardian.unwiredOutposts = unwired.map(({ name, mapIndex }) => ({ name, mapIndex }));
+        royalGuardian.unwiredOutposts = unwired.map(pickOutpostEntry);
       }
     }
 
     if (rgOptions?.idleSupportCamps?.checked) {
       const idleCamps = outposts.filter(({ mode, supportLinks }) => mode === 1 && !(supportLinks?.length > 0));
       if (idleCamps.length > 0) {
-        royalGuardian.idleSupportCamps = idleCamps.map(({ name, mapIndex }) => ({ name, mapIndex }));
+        royalGuardian.idleSupportCamps = idleCamps.map(pickOutpostEntry);
       }
     }
 
@@ -1518,7 +1541,7 @@ export const getWorld7Alerts = (account, fields, options, characters) => {
         royalGuardian.unspentPts = {
           count: affordable.length,
           threshold,
-          outposts: affordable.map(({ name, mapIndex, ptsLeft }) => ({ name, mapIndex, ptsLeft }))
+          outposts: affordable.map((outpost) => ({ ...pickOutpostEntry(outpost), ptsLeft: outpost.ptsLeft }))
         };
       }
     }
@@ -1526,7 +1549,7 @@ export const getWorld7Alerts = (account, fields, options, characters) => {
     if (rgOptions?.claimableMaps?.checked) {
       const claimable = (account?.royalGuardian?.clearingMaps ?? []).filter(({ progress }) => progress >= 1);
       if (claimable.length > 0) {
-        royalGuardian.claimableMaps = claimable.map(({ name, mapIndex }) => ({ name, mapIndex }));
+        royalGuardian.claimableMaps = claimable.map(pickOutpostEntry);
       }
     }
 
@@ -1542,6 +1565,76 @@ export const getWorld7Alerts = (account, fields, options, characters) => {
           unassigned: wasted.filter(({ unassigned }) => unassigned).length,
           discounted: account?.royalGuardian?.outpostStats?.peacetimeMilitia === true
         };
+      }
+    }
+
+    // A Worker is the only unit in the collection rate, so it is worth nothing beyond the point the
+    // node caps. A Trader in its place feeds the Trade rank bar, which is where outpost PTS come
+    // from, so the three checks below all end in "make it a Trader".
+    const workerRateBonus = account?.royalGuardian?.outpostStats?.workerRateBonus ?? 0;
+    const slotWorkersOf = ({ unitSlots }) => (unitSlots ?? []).filter((unit) => unit === 0).length;
+
+    if (rgOptions?.overkillWorkers?.checked) {
+      // game: "RestockRes" only refills a node, and only levels it up, when that node is ALREADY
+      // spent at the daily reset. So the deadline deciding whether a Worker is really spare is the
+      // reset itself, not a rolling window: a node that misses it by an hour loses the level up.
+      // The fixed hour count stays for anyone who wants it, and is the fallback when the save is
+      // too old to say when the next reset lands.
+      const resetHorizon = rgOptions?.overkillBeforeReset?.checked ? hoursUntilDailyReset(account) : null;
+      const horizon = resetHorizon ?? (rgOptions?.overkillWorkers?.props?.value ?? 24);
+      const overkill = collectors
+        .map((outpost) => ({ outpost, workers: getSpareWorkers(outpost, horizon, workerRateBonus) }))
+        .filter(({ workers }) => workers > 0)
+        .map(({ outpost, workers }) => ({
+          ...pickOutpostEntry(outpost),
+          workers,
+          expPerHour: (outpost.rankBars?.[0]?.expPerUnit ?? 0) * workers
+        }));
+      if (overkill.length > 0) {
+        royalGuardian.overkillWorkers = { count: overkill.length, horizon, beforeReset: resetHorizon != null, outposts: overkill };
+      }
+    }
+
+    if (rgOptions?.strandedWorkers?.checked) {
+      // Only where a rewire is not on the table: with a fresh node in reach, idleOutposts already
+      // says the better thing, and moving the connection beats retraining the Workers.
+      const stranded = collectors
+        .filter(({ connectedNodes, freshNodeInReach }) => !freshNodeInReach
+          && (!(connectedNodes?.length > 0) || connectedNodes.every(({ exhausted }) => exhausted)))
+        .map((outpost) => ({ ...pickOutpostEntry(outpost), workers: slotWorkersOf(outpost) }))
+        .filter(({ workers }) => workers > 0);
+      if (stranded.length > 0) {
+        royalGuardian.strandedWorkers = { count: stranded.length, outposts: stranded };
+      }
+    }
+
+    if (rgOptions?.sharedNodes?.checked) {
+      const horizon = rgOptions?.sharedNodes?.props?.value ?? 24;
+      // A node takes at most two connections, and both spend a slot on it. If either outpost drains
+      // it to its cap alone inside the horizon, the second one is buying nothing with that slot.
+      const byNode = new Map();
+      collectors.forEach((outpost) => (outpost.connectedNodes ?? []).forEach((node) => {
+        if (node.exhausted || !(node.drainRate > 0)) return;
+        byNode.set(node.index, [...(byNode.get(node.index) ?? []), { outpost, node }]);
+      }));
+      // Nodes have no readable name of their own (rawName is the sprite id), so the report names
+      // the outposts holding the spare link - an outpost has two slots at most, and its own panel
+      // shows which one to drop. Kept per outpost so a doubly-redundant one is listed once.
+      const redundant = new Map();
+      byNode.forEach((links) => {
+        if (links.length < 2) return;
+        const { node } = links[0];
+        const remaining = Math.max(0, node.maxQuantity - node.collected);
+        const soloCapable = links.filter(({ node: linked }) => linked.drainRate * horizon >= remaining);
+        if (soloCapable.length === 0) return;
+        // Keep the fastest of the outposts that can finish it alone; every other link is spare.
+        const keeper = soloCapable.reduce((best, link) =>
+          (link.node.drainRate > best.node.drainRate ? link : best), soloCapable[0]);
+        links.filter((link) => link !== keeper)
+          .forEach(({ outpost }) => redundant.set(outpost.mapIndex, pickOutpostEntry(outpost)));
+      });
+      if (redundant.size > 0) {
+        royalGuardian.sharedNodes = { count: redundant.size, horizon, outposts: [...redundant.values()] };
       }
     }
 

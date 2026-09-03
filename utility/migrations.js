@@ -1298,6 +1298,7 @@ const ensureDashboardOptions = (dashboardConfig) => {
     }
   };
   ensure(dashboardConfig?.account?.General?.etc?.options, 'tournamentRegister');
+  ensure(dashboardConfig?.account?.General?.etc?.options, 'raidRegister');
   ensure(dashboardConfig?.account?.['World 2']?.arcade?.options, 'unmaxedRotation');
   ensure(dashboardConfig?.account?.['World 2']?.arcade?.options, 'includeSuper', { checked: false });
   ensure(dashboardConfig?.characters?.classSpecific?.options, 'betterRing');
@@ -1859,6 +1860,87 @@ const migration71 = (dashboardConfig) => {
   return dashboardConfig;
 };
 
+const migration72 = (dashboardConfig) => {
+  ensureDashboardOptions(dashboardConfig);
+  const classSpecificOptions = dashboardConfig?.characters?.classSpecific?.options;
+  const betterRing = Array.isArray(classSpecificOptions)
+    ? classSpecificOptions.find((option) => option?.name === 'betterRing')
+    : null;
+  if (betterRing) {
+    // The alert used to score a ring on the sum of both its unique stats, which let an Arcane
+    // Cultist ring win on accuracy alone. Each stat is now opt-in, and both start on so the
+    // alert keeps behaving as it did until the user says otherwise.
+    betterRing.type = 'array';
+    betterRing.category = 'betterRing';
+    betterRing.helperText = 'Alert when there\'s a better form class-specific ring (same type) in your inventory. Only the checked stats count towards "better" - Wind Walker rings roll a single stat and are always compared on it';
+    betterRing.props = {
+      ...betterRing.props,
+      value: { arcanistAccuracy: true, extraTachyons: true, ...(betterRing.props?.value || {}) }
+    };
+  }
+
+  dashboardConfig.version = 72;
+  return dashboardConfig;
+};
+
+const migration73 = (dashboardConfig) => {
+  ensureDashboardOptions(dashboardConfig);
+  const royalGuardian = dashboardConfig?.account?.['World 7']?.royalGuardian;
+  const rgOptions = royalGuardian?.options;
+  if (Array.isArray(rgOptions)) {
+    // Three alerts on the same fact: a Worker only adds collection rate, so past the point its
+    // resource caps it earns nothing, while a Trader in that slot feeds the Trade rank bar the
+    // outpost's PTS come from. Inserted before restockLocked, which is the group's closing entry.
+    const added = [
+      {
+        name: 'overkillWorkers',
+        type: 'input',
+        props: { label: 'Hours to empty within', value: 24, minValue: 1 },
+        checked: true,
+        helperText: 'Alert when an outpost has more Workers than it needs to empty its resource within this many hours. Workers only add collection rate, so the spare ones could be Traders and earn Trade rank EXP instead'
+      },
+      {
+        name: 'strandedWorkers',
+        checked: true,
+        helperText: 'Alert when an outpost\'s resources are all empty and nothing better is in range, while Workers are still assigned to it. They add collection rate to a resource that has none left, so Traders would earn Trade rank EXP instead'
+      },
+      {
+        name: 'sharedNodes',
+        type: 'input',
+        props: { label: 'Hours to empty within', value: 24, minValue: 1 },
+        checked: true,
+        helperText: 'Alert when two outposts are wired to the same resource and one of them empties it within this many hours on its own, so the other is spending a connection slot for nothing'
+      }
+    ].filter(({ name }) => !rgOptions.some((option) => option?.name === name));
+
+    if (added.length > 0) {
+      const restockIndex = rgOptions.findIndex((option) => option?.name === 'restockLocked');
+      rgOptions.splice(restockIndex >= 0 ? restockIndex : rgOptions.length, 0, ...added);
+    }
+  }
+
+  dashboardConfig.version = 73;
+  return dashboardConfig;
+};
+
+const migration74 = (dashboardConfig) => {
+  ensureDashboardOptions(dashboardConfig);
+  const rgOptions = dashboardConfig?.account?.['World 7']?.royalGuardian?.options;
+  if (Array.isArray(rgOptions) && !rgOptions.some((option) => option?.name === 'overkillBeforeReset')) {
+    // Sits directly under the alert it modifies. On by default because it is the deadline the game
+    // actually enforces - a node only restocks and levels up if it is already empty at the reset.
+    const overkillIndex = rgOptions.findIndex((option) => option?.name === 'overkillWorkers');
+    rgOptions.splice(overkillIndex >= 0 ? overkillIndex + 1 : rgOptions.length, 0, {
+      name: 'overkillBeforeReset',
+      checked: true,
+      helperText: 'Measure that alert against the time left until the daily reset instead of the hours above. A resource only restocks and gains a level if it is already empty when the reset lands, so this is the deadline that actually matters. Falls back to the hours above if your save is older than the reset'
+    });
+  }
+
+  dashboardConfig.version = 74;
+  return dashboardConfig;
+};
+
 const migrations = {
   2: migrateToVersion2,
   3: migrateToVersion3,
@@ -1930,6 +2012,9 @@ const migrations = {
   69: migration69,
   70: migration70,
   71: migration71,
+  72: migration72,
+  73: migration73,
+  74: migration74,
 };
 
 export const migrateConfig = (baseTrackers, userConfig) => {

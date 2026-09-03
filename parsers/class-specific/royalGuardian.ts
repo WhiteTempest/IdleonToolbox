@@ -2,7 +2,9 @@ import { commaNotation, lavaLog, notateNumber, tryToParse } from '@utility/helpe
 import {
   armoryUpgrades as armoryUpgradesCatalog,
   mapDetails,
+  mapEnemiesArray,
   mapNames,
+  monsters,
   orbletMarket as orbletMarketCatalog,
   research,
   royalKillRequirements,
@@ -37,6 +39,14 @@ const ROYAL_STATUE_FIRST_ODDS = [25, 50, 100, 250, 500, 1000, 2500, 10000];
 
 // game: "SF_maxLV"
 const STATUE_FLAIR_MAX_LEVEL = 3;
+
+// game: "ResNodes_LVUPbon" - a flat 25% collection rate per node level. CollectAll applies it per
+// node, on top of the outpost's own OutpostResourceRate.
+const NODE_LEVEL_RATE_BONUS = 25;
+
+// The window the auto resource-per-hour averages a node's remaining capacity over: a node that caps
+// pays nothing until the daily restock, so a nearly spent one must not price as if it ran forever.
+export const RESOURCE_PER_HOUR_WINDOW_HOURS = 24;
 
 // game: "MarbleDrop" is called with floor(CurrentMap / 50), so its tier is the world the player is
 // standing in, and MARBLE_LORE_CAVE is the Spelunk[0] cave whose lore ("DoWeHaveLoreN1") pays +50%.
@@ -97,6 +107,10 @@ export const ROYAL_UNIT_JOB_NAMES: Record<number, string> = {
   7: 'Purity rank EXP'
 };
 const UNIT_JOB_CLEAR = 4;
+// A job of 5 and up is a rank-EXP posting, and the game credits RoyalMaps[job] directly - so the
+// job number is the rank bar's own RoyalMaps slot, and the rank type is 3 less.
+const UNIT_JOB_BAR_BASE = 5;
+const UNIT_JOB_BAR_OFFSET = 3;
 const UNITS_PER_WORLD = 20;
 const UNIT_WORLDS = 8;
 
@@ -109,6 +123,39 @@ const NODE_ANCHOR = [28, 26];
 const REACH_SLACK = 15;
 // MapDetails[map][2] is (9999, 9999) for every map the kingdom screen does not draw.
 const OFF_KINGDOM_MAP = 9999;
+
+// game: "HasOutpost" - a map can only hold an outpost when it is drawn on the kingdom screen AND is
+// none of: a hand-picked blacklist, the first map of a world (the town), or a NonAFKscreens entry.
+// The blacklist is inline literals in the game, and CustomMaps.NonAFKscreens is not part of
+// website-data, so both are mirrored here.
+const NON_OUTPOST_MAPS = new Set([8, 9, 39, 41, 43, 120, 216, 306]);
+// game: "CustomMaps.NonAFKscreens" - screens with nothing to idle on (towns, shops, minigames).
+const NON_AFK_SCREENS = new Set([
+  29, 36, 37, 39, 40, 66, 68, 69, 70, 71,
+  114, 115, 118, 119, 164, 165, 214, 215, 265, 266
+]);
+
+const isOutpostSlot = (mapIndex: number): boolean => {
+  if (NON_OUTPOST_MAPS.has(mapIndex)) return false;
+  if (mapIndex % MAPS_PER_WORLD === 0) return false;
+  if (NON_AFK_SCREENS.has(mapIndex)) return false;
+  return toNum((mapDetails as any)?.[mapIndex]?.[2]?.[0]) !== OFF_KINGDOM_MAP;
+};
+
+// A map name on its own ("Hell Hath Frozen Over") tells a player nothing about where the map is,
+// but its native AFK target does. That target is a monster on most outpost slots and a mining /
+// fishing / catching node on the rest, and both live in the same mapEnemiesArray -> monsters
+// lookup, so one call covers "Bloodbone" and "Plat" alike.
+const getMapMonster = (mapIndex: number): { monsterRawName: string | null; monsterName: string | null } => {
+  const monsterRawName = (mapEnemiesArray as any)?.[mapIndex];
+  const rawMonsterName = `${(monsters as any)?.[monsterRawName]?.Name ?? ''}`;
+  // Towns and the few outpost slots with nothing to idle on report "Nothing" / "_". The check has
+  // to run before underscores are swapped for spaces, or the "_" placeholder becomes a blank name.
+  if (!monsterRawName || !rawMonsterName || rawMonsterName === '_') {
+    return { monsterRawName: null, monsterName: null };
+  }
+  return { monsterRawName, monsterName: rawMonsterName.replace(/_/g, ' ') };
+};
 
 // game: "GuardianRoyalRadius" - a flat constant, not derived from anything.
 const ROYAL_RADIUS = 180;
@@ -216,14 +263,23 @@ export interface OutpostNode {
   index: number;
   resourceIndex: number;
   rawName: string;
+  nodeLevel: number;
   collected: number;
   maxQuantity: number;
   fillPercent: number;
   exhausted: boolean;
+  // What the outpost banks out of this node per hour, and what it takes out of the node per hour -
+  // the two differ on every mode but Resource Depot.
+  collectionRate: number;
+  drainRate: number;
 }
 
 export interface Outpost extends OutpostBase {
   name: string;
+  // The map's native AFK target, so a map name can be shown alongside something the player
+  // recognises. Null on the handful of outpost slots with nothing to idle on.
+  monsterRawName: string | null;
+  monsterName: string | null;
   world: number;
   mode: number;
   modeName: string;
@@ -279,6 +335,10 @@ export interface OutpostRankBar {
   required: number;
   previous: number;
   progress: number;
+  // How many units actually feed this bar, and what one of them is worth per hour. The bar earns
+  // expPerUnit * units - nothing at all while no unit is posted to it.
+  units: number;
+  expPerUnit: number;
   expPerHour: number;
   hoursToNextRank: number;
 }
@@ -377,6 +437,42 @@ const applyBonusTokens = (description: string, bonus: number, dollarValue?: stri
   return result;
 };
 
+// What the kingdom banks per hour, per resource index: RG income is passive, so the armory Upgrade
+// Optimizer can price upgrades off this instead of a hand-typed rate. A node pays its full rate only
+// until it caps, so each one is also capped by what it can still give over `windowHours`.
+const computeResourcePerHour = (
+  outposts: Outpost[],
+  windowHours: number,
+  restockUnlocked: boolean
+): Record<number, number> => {
+  const totals: Record<number, number> = {};
+  outposts.forEach(({ connectedNodes }) => {
+    connectedNodes.forEach(({ resourceIndex, collectionRate, collected, maxQuantity, exhausted }) => {
+      if (resourceIndex < 0 || !(collectionRate > 0)) return;
+      // game: "RestockRes" refills every spent node on the daily reset once armory 70 is bought, so
+      // over a day the node is worth its whole capacity again. Without it, a spent node is just dead.
+      const available = restockUnlocked ? maxQuantity : Math.max(0, maxQuantity - collected);
+      if (!restockUnlocked && exhausted) return;
+      const sustained = windowHours > 0
+        ? Math.min(collectionRate, available / windowHours)
+        : collectionRate;
+      totals[resourceIndex] = (totals[resourceIndex] ?? 0) + sustained;
+    });
+  });
+  return totals;
+};
+
+// The optimizer's entry point, so a caller can ask for a different averaging window than the one
+// baked into the parsed account.
+export const getRoyalResourcePerHour = (
+  account: Account,
+  windowHours: number = RESOURCE_PER_HOUR_WINDOW_HOURS
+): Record<number, number> => computeResourcePerHour(
+  (account as any)?.royalGuardian?.outposts ?? [],
+  windowHours,
+  (account as any)?.royalGuardian?.outpostStats?.restockUnlocked === true
+);
+
 export const getRoyalGuardian = (idleonData: IdleonData, account: Account, characters?: any[]) => {
   const raw = tryToParse((idleonData as any)?.RoyalG) || (idleonData as any)?.RoyalG || [];
   const rawMaps = tryToParse((idleonData as any)?.RoyalMaps) || (idleonData as any)?.RoyalMaps || [];
@@ -455,6 +551,7 @@ export const getRoyalGuardian = (idleonData: IdleonData, account: Account, chara
       return {
         mapIndex,
         name: `${(mapNames as any)?.[`${mapIndex}`] ?? ''}`.replace(/_/g, ' '),
+        ...getMapMonster(mapIndex),
         world: 1 + Math.floor(mapIndex / 50),
         kills,
         killsRequired,
@@ -834,6 +931,37 @@ export const getRoyalGuardian = (idleonData: IdleonData, account: Account, chara
   // game: "UnitSpecEffect" - only the four indices the outpost panel itself reads.
   const unitSpecEffect = [50 + armoryBonus(19), armoryBonus(20), 25 + armoryBonus(21), armoryBonus(22)];
 
+  // game: the CollectAll loop walks RoyalG[6 + 2*w] / RoyalG[7 + 2*w] for all 8 worlds, so a
+  // deployment can point at any map, including one that is already claimed.
+  const claimedMaps = new Set(outposts.map(({ mapIndex }) => mapIndex));
+
+  // game: the deployment tick credits the bar its unit's job names - 5/6/7 are Command/Military/
+  // Purity - on the map that unit is sent at, while a clearing unit (4) standing on an already
+  // claimed map falls through to Peacetime Militia instead. Counted here so an outpost below can
+  // price its own rank bars; the per-unit RoyalDeployment list repeats the walk further down.
+  const deployedBarUnits: Record<number, number[]> = {};
+  const militiaUnitsByMap: Record<number, number> = {};
+  for (let unitWorld = 0; unitWorld < UNIT_WORLDS; unitWorld++) {
+    const jobs = raw?.[6 + 2 * unitWorld];
+    const targets = raw?.[7 + 2 * unitWorld];
+    if (!Array.isArray(jobs)) continue;
+    for (let slot = 0; slot < Math.min(UNITS_PER_WORLD, jobs.length); slot++) {
+      const job = Math.round(toNum(jobs?.[slot]));
+      const targetMap = Math.round(toNum(targets?.[slot]));
+      if (!(targetMap >= 0)) continue;
+      if (job >= UNIT_JOB_BAR_BASE) {
+        const rankType = job - UNIT_JOB_BAR_OFFSET;
+        if (rankType >= OUTPOST_RANK_NAMES.length) continue;
+        const counts = deployedBarUnits[targetMap] ?? OUTPOST_RANK_NAMES.map(() => 0);
+        counts[rankType] += 1;
+        deployedBarUnits[targetMap] = counts;
+      } else if (job === UNIT_JOB_CLEAR && claimedMaps.has(targetMap)) {
+        militiaUnitsByMap[targetMap] = (militiaUnitsByMap[targetMap] ?? 0) + 1;
+      }
+    }
+  }
+  const peacetimeMilitia = armoryBonus(17) >= 1;
+
   const companion141 = isCompanionBonusActive(account, 141)
     ? toNum(account?.companions?.list?.at(141)?.bonus)
     : 0;
@@ -860,21 +988,33 @@ export const getRoyalGuardian = (idleonData: IdleonData, account: Account, chara
     * (1 + (totalStatz[3] * armoryBonus(53)) / 100)
     * (1 + getZenithBonus(account, 10) / 100);
 
+  // game: "SavageCollection" - what a Savage Stronghold piles into its node instead of banking.
+  const savageMulti = 5 * (1 + armoryBonus(69) / 100);
+
   const nodeAt = (nodeIndex: number) => resources.find(({ index }) => index === nodeIndex);
-  const outpostNodes = (mapRaw: any): OutpostNode[] => CONNECTION_SLOTS
+  const outpostNodes = (mapRaw: any, resourceRate: number, mode: number): OutpostNode[] => CONNECTION_SLOTS
     .map((slot) => Math.round(toNum(mapRaw?.[slot])))
     .filter((link) => link >= 0 && link <= MAX_NODE_LINK)
     .map((link) => nodeAt(link))
     .filter((node): node is RoyalResource => node != null && !node.empty)
-    .map(({ index, resourceIndex, rawName, collected, maxQuantity, fillPercent, exhausted }) => ({
-      index,
-      resourceIndex,
-      rawName,
-      collected,
-      maxQuantity,
-      fillPercent,
-      exhausted
-    }));
+    .map(({ index, resourceIndex, rawName, nodeLevel, collected, maxQuantity, fillPercent, exhausted }) => {
+      // game: CollectAll prices each node at the outpost's rate times the node's own level bonus.
+      const rate = resourceRate * (1 + (NODE_LEVEL_RATE_BONUS * nodeLevel) / 100);
+      return {
+        index,
+        resourceIndex,
+        rawName,
+        nodeLevel,
+        collected,
+        maxQuantity,
+        fillPercent,
+        exhausted,
+        // Only a Resource Depot banks: CollectAll's outer guard skips a Support Camp entirely, and a
+        // Savage Stronghold pours savageMulti times what it pulls straight back into the node.
+        collectionRate: mode === 0 ? rate : 0,
+        drainRate: mode === 1 ? 0 : mode === 2 ? rate * savageMulti : rate
+      };
+    });
 
   const detailedOutposts: Outpost[] = outposts.map((outpost) => {
     const { mapIndex, raw: mapRaw, ranks, expandedBarracks, advancedLogistics, greaterEducation } = outpost;
@@ -928,13 +1068,30 @@ export const getRoyalGuardian = (idleonData: IdleonData, account: Account, chara
       + unitSpecEffect[2] * unitCounts[2]
       + ranks[3] * armoryBonus(74)));
 
+    // game: the outpost tick pays a bar BarExpRate ONCE PER UNIT feeding it, so a bar with nothing
+    // behind it never moves at all. The Trade bar runs on this outpost's own Traders and the Intel
+    // bar on its Surveyors; Command/Military/Purity run on the units deployed at this map.
+    const deployedBars = deployedBarUnits[mapIndex] ?? [];
+    const rankUnits = OUTPOST_RANK_NAMES.map((_, type) => type === 0
+      ? unitCounts[1]
+      : type === 1 ? unitCounts[3] : (deployedBars[type] ?? 0));
+    // game: Peacetime Militia pays an idle clearing unit half of the Military rate, and dumps it on
+    // whichever bar has the highest rank. The game's scan starts at Trade and compares with a
+    // strict >, so a tie goes to the earliest bar.
+    const militiaUnits = peacetimeMilitia ? (militiaUnitsByMap[mapIndex] ?? 0) : 0;
+    const militiaBarType = ranks.reduce((best, rank, type) => (rank > ranks[best] ? type : best), 0);
+
     const rankBars = OUTPOST_RANK_NAMES.map((name, type) => {
       const exp = outpost.rankExp[type];
       const rank = ranks[type];
       // game: "OutpostEXPreq" / "OutpostEXPreqPREV" - the bar runs between two adjacent thresholds.
       const required = getOutpostExpFormula(rank, type);
       const previous = rank === 0 ? 0 : getOutpostExpFormula(rank - 1, type);
-      const expPerHour = getBarExpRate(type, mapIndex);
+      // What one more unit on this bar is worth per hour - the whole rate is this times its units.
+      const expPerUnit = getBarExpRate(type, mapIndex);
+      const units = rankUnits[type];
+      const expPerHour = expPerUnit * units
+        + (type === militiaBarType ? (getBarExpRate(3, mapIndex) / 2) * militiaUnits : 0);
       return {
         type,
         name,
@@ -946,6 +1103,8 @@ export const getRoyalGuardian = (idleonData: IdleonData, account: Account, chara
         progress: required > previous
           ? Math.min(1, Math.max(0, (exp - previous) / (required - previous)))
           : 0,
+        units,
+        expPerUnit,
         expPerHour,
         hoursToNextRank: expPerHour > 0 ? Math.max(0, required - exp) / expPerHour : 0
       };
@@ -991,12 +1150,12 @@ export const getRoyalGuardian = (idleonData: IdleonData, account: Account, chara
       : [];
 
     // A Savage Stronghold pours savageMulti times what it collects into its own node, so its node
-    // fills that much faster.
-    const connectedNodes = outpostNodes(mapRaw);
-    const nodeRate = resourceRate * (mode === 2 ? 5 * (1 + armoryBonus(69) / 100) : 1);
+    // fills that much faster, while a Support Camp never touches its nodes at all.
+    const connectedNodes = outpostNodes(mapRaw, resourceRate, mode);
     const nodeHours = connectedNodes
       .filter(({ exhausted }) => !exhausted)
-      .map(({ collected, maxQuantity }) => (nodeRate > 0 ? (maxQuantity - collected) / nodeRate : Infinity))
+      .map(({ collected, maxQuantity, drainRate }) =>
+        (drainRate > 0 ? (maxQuantity - collected) / drainRate : Infinity))
       .filter((hours) => Number.isFinite(hours));
     const freshNodeInReach = reachableNodes
       .some((nodeIndex) => resources.find(({ index }) => index === nodeIndex)?.exhausted === false);
@@ -1004,6 +1163,7 @@ export const getRoyalGuardian = (idleonData: IdleonData, account: Account, chara
     return {
       ...outpost,
       name: `${(mapNames as any)?.[`${mapIndex}`] ?? ''}`.replace(/_/g, ' '),
+      ...getMapMonster(mapIndex),
       world: outpostWorld,
       mode,
       modeName: OUTPOST_MODE_NAMES[mode] ?? OUTPOST_MODE_NAMES[0],
@@ -1029,17 +1189,13 @@ export const getRoyalGuardian = (idleonData: IdleonData, account: Account, chara
     };
   });
 
-  // game: the CollectAll loop walks RoyalG[6 + 2*w] / RoyalG[7 + 2*w] for all 8 worlds, so a
-  // deployment can point at any map, including one that is already claimed.
-  const claimedMaps = new Set(detailedOutposts.map(({ mapIndex }) => mapIndex));
-
-  // A unit can only be sent at a map its own world holds on the kingdom screen, so once every one
-  // of them carries an outpost the unit has nowhere better to stand and is not worth reporting.
+  // A unit can only be sent at a map its own world can hold an outpost on, so once every one of
+  // them carries an outpost the unit has nowhere better to stand and is not worth reporting.
   const clearableMapsByWorld: Record<number, number> = {};
   Object.keys(mapDetails as any).forEach((key) => {
     const mapIndex = Number(key);
     if (!Number.isFinite(mapIndex)) return;
-    if (!(toNum((mapDetails as any)?.[key]?.[2]?.[0]) < OFF_KINGDOM_MAP)) return;
+    if (!isOutpostSlot(mapIndex)) return;
     if (claimedMaps.has(mapIndex)) return;
     const mapWorld = 1 + Math.floor(mapIndex / 50);
     clearableMapsByWorld[mapWorld] = (clearableMapsByWorld[mapWorld] ?? 0) + 1;
@@ -1116,10 +1272,11 @@ export const getRoyalGuardian = (idleonData: IdleonData, account: Account, chara
     resources,
     clearingMaps,
     outposts: detailedOutposts,
+    resourcePerHour: computeResourcePerHour(detailedOutposts, RESOURCE_PER_HOUR_WINDOW_HOURS,
+      armoryBonus(70) >= 1),
     outpostStats: {
       built: totalStatz[4],
-      // game: "SavageCollection" - what a Savage Stronghold piles into its node instead of banking.
-      savageMulti: 5 * (1 + armoryBonus(69) / 100),
+      savageMulti,
       // game: "OutpostTypesUnlocked" / "OutpostTypesAllowed" - index 0 (Resource Depot) is
       // uncapped, the other two are bought with armory 42 and 44. The game counts against the cap
       // by walking the 50 maps of ONE world (50 * floor(map / 50) + t), so both the allowance and
@@ -1134,6 +1291,9 @@ export const getRoyalGuardian = (idleonData: IdleonData, account: Account, chara
         ])),
       unitsUnlocked,
       unitNames: ROYAL_UNIT_NAMES,
+      // game: "UnitSpecEffect"(0) - the only unit effect that touches collection, so it is also the
+      // lever the "how many Workers does this node actually need" check works against.
+      workerRateBonus: unitSpecEffect[0],
       // game: "Peacetime_Milita" pays a clearing unit half rank EXP on an already claimed map;
       // without it such a unit earns nothing. "Resource_Replenish" is what refills spent nodes on
       // the daily reset, so an account without it never gets a node back.
@@ -1161,6 +1321,31 @@ const getRoyalStatueOdds = (index: number, level: number): number => {
 // game: "ArmoryUpgCost" - indexed by display slot; only the level and the two per-upgrade cost
 // factors come from the upgrade id behind that slot. Exported so the Upgrade Optimizer (task C2)
 // can re-price a slot at a hypothetical level without duplicating this formula.
+// How many of an outpost's slot Workers could be swapped for a Trader while every node it is wired
+// to still empties inside `horizonHours`. Workers are the only unit in the collection rate (game:
+// "OutpostResourceRate" multiplies by UnitSpecEffect(0) * TotalUnitsz(map, 0)), so dropping k of
+// them scales every drain rate by (1 + bonus*(W - k)/100) / (1 + bonus*W/100). Passive Workers are
+// excluded from the answer: they occupy no slot, so they cannot be traded away.
+export const getSpareWorkers = (outpost: Outpost, horizonHours: number, workerBonus: number): number => {
+  const slotWorkers = (outpost?.unitSlots ?? []).filter((unit) => unit === 0).length;
+  if (slotWorkers <= 0 || !(workerBonus > 0) || !(horizonHours > 0)) return 0;
+  // A Support Camp drains nothing, and an outpost with no live node is the stranded case instead.
+  const live = (outpost?.connectedNodes ?? [])
+    .filter(({ exhausted, drainRate }) => !exhausted && drainRate > 0);
+  if (live.length === 0) return 0;
+
+  const totalWorkers = outpost?.unitCounts?.[0] ?? 0;
+  const current = 1 + (workerBonus * totalWorkers) / 100;
+  // The tightest node sets the floor: all of them still have to cap inside the horizon.
+  const needed = Math.max(...live.map(({ collected, maxQuantity, drainRate }) =>
+    (Math.max(0, maxQuantity - collected) / horizonHours) / drainRate));
+  // Already too slow to cap in time, so every Worker on it is pulling its weight.
+  if (!(needed > 0) || needed > 1) return 0;
+
+  const minWorkers = Math.max(0, Math.ceil(((current * needed - 1) * 100) / workerBonus - 1e-9));
+  return Math.max(0, Math.min(slotWorkers, totalWorkers - minWorkers));
+};
+
 export const getArmoryUpgradeCost = (slot: number, slotToId: number[], armoryLevels: any[], costReduction: number): number => {
   if (slot < 0) return 0;
   const id = toNum(slotToId?.[slot]);
@@ -1284,10 +1469,16 @@ export const getOptimizedArmoryUpgrades = (character: any, account: Account, cat
 
 // RGres{n}.png is the game's own icon for each currency; no text name exists anywhere in the
 // data (see task C2 report). Labelled positionally so the optimizer's resource list has
-// *something* to key its display off of. Derived from the catalog: only the currencies the
-// armory actually charges get a row, so the dialog cannot list slots the game never spends.
+// *something* to key its display off of.
+// The game reads the currency off ArmoryUpg[slot][3], and there are only as many shelves as the
+// slot order lists, so catalog rows past the last shelf (69-82) never charge anything: their
+// costResourceIndex is a placeholder 9 that no node produces and that has a blank icon. Keying off
+// the shelves instead leaves exactly the 27 currencies the kingdom's nodes actually pay out.
+const ARMORY_SHELF_COUNT = ((research as any)?.[RESEARCH_ARMORY_SLOT_TO_ID] ?? []).length;
+
 export const ROYAL_RESOURCE_NAMES: Record<number, string> = Object.fromEntries(
   Array.from(new Set(liveEntries<any>(armoryUpgradesCatalog as any[])
+    .filter(({ index }) => index < ARMORY_SHELF_COUNT)
     .map(({ entry }) => toNum(entry?.costResourceIndex))))
     .sort((a, b) => a - b)
     .map((index) => [index, `Resource ${index}`])

@@ -29,6 +29,7 @@ import {
   getWorld7Alerts
 } from '@utility/dashboard/account';
 import useAlerts from '@hooks/useAlerts';
+import { monsterImage } from '@utility/spriteImages';
 import { useOpenDashboardSettings } from '@components/common/context/DashboardSettingsProvider';
 
 // Every refinery alert draws the same salt icon, and one salt can raise several of them at once,
@@ -88,6 +89,9 @@ const Account = ({ account, characters, trackers, lastUpdated }) => {
               {alerts?.General?.etc?.tournamentRegister ?
                 <Alert target={'General.etc.tournamentRegister'} title={'You have not registered for the current Pet Tournament'}
                        iconPath={'data/TournyRank0'}/> : null}
+              {alerts?.General?.etc?.raidRegister ?
+                <Alert target={'General.etc.raidRegister'} title={'You have not registered for the current Raid'}
+                       iconPath={'data/TournyRankR0'}/> : null}
               {alerts?.General?.etc?.glimmerwickCandle ?
                 <Alert target={'General.etc.glimmerwickCandle'}
                   title={`You haven't used the Glimmerwick Candle today (${alerts?.General?.etc?.glimmerwickCandle?.attempts}/${alerts?.General?.etc?.glimmerwickCandle?.pity} wishes until guaranteed)`}
@@ -660,7 +664,7 @@ const Account = ({ account, characters, trackers, lastUpdated }) => {
                       ? ' is'
                       : 's are'} connected to an empty resource, and could switch to one in range that still has some`}
                     entries={alerts?.['World 7']?.royalGuardian?.idleOutposts}/>}
-                  iconPath={'etc/Royal_Outpost'}/> : null}
+                  iconPath={'etc/Royal_Outpost'} maxWidth={RG_LIST_TOOLTIP_WIDTH}/> : null}
               {alerts?.['World 7']?.royalGuardian?.unwiredOutposts?.length > 0 ?
                 <Alert target={'World 7.royalGuardian.unwiredOutposts'}
                   title={<RoyalGuardianList
@@ -668,7 +672,7 @@ const Account = ({ account, characters, trackers, lastUpdated }) => {
                       ? ' has'
                       : 's have'} no resource connected`}
                     entries={alerts?.['World 7']?.royalGuardian?.unwiredOutposts}/>}
-                  iconPath={'data/RGresB5'}/> : null}
+                  iconPath={'data/RGresB5'} maxWidth={RG_LIST_TOOLTIP_WIDTH}/> : null}
               {alerts?.['World 7']?.royalGuardian?.idleSupportCamps?.length > 0 ?
                 <Alert target={'World 7.royalGuardian.idleSupportCamps'}
                   title={<RoyalGuardianList
@@ -676,18 +680,18 @@ const Account = ({ account, characters, trackers, lastUpdated }) => {
                       ? ' is'
                       : 's are'} boosting nothing`}
                     entries={alerts?.['World 7']?.royalGuardian?.idleSupportCamps}/>}
-                  iconPath={'data/UISkillIcon226'}/> : null}
+                  iconPath={'data/UISkillIcon226'} maxWidth={RG_LIST_TOOLTIP_WIDTH}/> : null}
               {alerts?.['World 7']?.royalGuardian?.unspentPts ?
                 <Alert target={'World 7.royalGuardian.unspentPts'}
                   title={<RoyalGuardianList
                     headline={`${alerts?.['World 7']?.royalGuardian?.unspentPts?.count} outpost${alerts?.['World 7']?.royalGuardian?.unspentPts?.count === 1
                       ? ' has'
                       : 's have'} ${alerts?.['World 7']?.royalGuardian?.unspentPts?.threshold}+ unspent PTS`}
-                    entries={alerts?.['World 7']?.royalGuardian?.unspentPts?.outposts?.map(({ name, mapIndex, ptsLeft }) => ({
-                      name: `${name} (${ptsLeft} PTS)`,
-                      mapIndex
+                    entries={alerts?.['World 7']?.royalGuardian?.unspentPts?.outposts?.map((outpost) => ({
+                      ...outpost,
+                      name: `${outpost?.name} (${outpost?.ptsLeft} PTS)`
                     }))}/>}
-                  iconPath={'etc/Royal_Cost'} imgStyle={{ width: 18, height: 18 }} /> : null}
+                  iconPath={'etc/Royal_Cost'} imgStyle={{ width: 18, height: 18 }} maxWidth={RG_LIST_TOOLTIP_WIDTH}/> : null}
               {alerts?.['World 7']?.royalGuardian?.claimableMaps?.length > 0 ?
                 <Alert target={'World 7.royalGuardian.claimableMaps'}
                   title={<RoyalGuardianList
@@ -695,7 +699,7 @@ const Account = ({ account, characters, trackers, lastUpdated }) => {
                       ? ' is'
                       : 's are'} cleared and ready to claim an outpost`}
                     entries={alerts?.['World 7']?.royalGuardian?.claimableMaps}/>}
-                  iconPath={'etc/RGglyphCheck'} imgStyle={{ width: 18, height: 18 }}/> : null}
+                  iconPath={'etc/RGglyphCheck'} imgStyle={{ width: 18, height: 18 }} maxWidth={RG_LIST_TOOLTIP_WIDTH}/> : null}
               {alerts?.['World 7']?.royalGuardian?.idleUnits ?
                 <Alert target={'World 7.royalGuardian.idleUnits'}
                   title={`${alerts?.['World 7']?.royalGuardian?.idleUnits?.count} unit${alerts?.['World 7']?.royalGuardian?.idleUnits?.count === 1 ? ' is' : 's are'} ${alerts?.['World 7']?.royalGuardian?.idleUnits?.unassigned > 0
@@ -704,6 +708,38 @@ const Account = ({ account, characters, trackers, lastUpdated }) => {
                     ? ', earning half rank EXP instead of clearing a new one'
                     : ', earning nothing'}`}
                   iconPath={'etc/RGmilitia'}/> : null}
+              {alerts?.['World 7']?.royalGuardian?.overkillWorkers ?
+                <Alert target={'World 7.royalGuardian.overkillWorkers'}
+                  title={<RoyalGuardianList
+                    headline={`${alerts?.['World 7']?.royalGuardian?.overkillWorkers?.count} outpost${alerts?.['World 7']?.royalGuardian?.overkillWorkers?.count === 1
+                      ? ' has'
+                      : 's have'} more Workers than they need to empty their resource ${alerts?.['World 7']?.royalGuardian?.overkillWorkers?.beforeReset
+                      ? "before today's reset"
+                      : `within ${alerts?.['World 7']?.royalGuardian?.overkillWorkers?.horizon}h`} - the spare ones would earn Trade rank EXP as Traders`}
+                    entries={alerts?.['World 7']?.royalGuardian?.overkillWorkers?.outposts?.map((outpost) => ({
+                      ...outpost,
+                      name: `${outpost?.name} (${outpost?.workers} Worker${outpost?.workers === 1 ? '' : 's'}, +${notateNumber(outpost?.expPerHour, 'Big')} EXP/hr)`
+                    }))}/>}
+                  iconPath={'etc/RGunit0'} maxWidth={RG_LIST_TOOLTIP_WIDTH}/> : null}
+              {alerts?.['World 7']?.royalGuardian?.strandedWorkers ?
+                <Alert target={'World 7.royalGuardian.strandedWorkers'}
+                  title={<RoyalGuardianList
+                    headline={`${alerts?.['World 7']?.royalGuardian?.strandedWorkers?.count} outpost${alerts?.['World 7']?.royalGuardian?.strandedWorkers?.count === 1
+                      ? ' has'
+                      : 's have'} Workers on an empty resource with nothing better in range - Traders would earn Trade rank EXP instead`}
+                    entries={alerts?.['World 7']?.royalGuardian?.strandedWorkers?.outposts?.map((outpost) => ({
+                      ...outpost,
+                      name: `${outpost?.name} (${outpost?.workers} Worker${outpost?.workers === 1 ? '' : 's'})`
+                    }))}/>}
+                  iconPath={'etc/RGunit1'} maxWidth={RG_LIST_TOOLTIP_WIDTH}/> : null}
+              {alerts?.['World 7']?.royalGuardian?.sharedNodes ?
+                <Alert target={'World 7.royalGuardian.sharedNodes'}
+                  title={<RoyalGuardianList
+                    headline={`${alerts?.['World 7']?.royalGuardian?.sharedNodes?.count} outpost${alerts?.['World 7']?.royalGuardian?.sharedNodes?.count === 1
+                      ? ' is'
+                      : 's are'} sharing a resource the other outpost empties within ${alerts?.['World 7']?.royalGuardian?.sharedNodes?.horizon}h on its own, so the connection is spare`}
+                    entries={alerts?.['World 7']?.royalGuardian?.sharedNodes?.outposts}/>}
+                  iconPath={'data/RGresB5'} maxWidth={RG_LIST_TOOLTIP_WIDTH}/> : null}
               {alerts?.['World 7']?.royalGuardian?.restockLocked ?
                 <Alert target={'World 7.royalGuardian.restockLocked'}
                   title={'Resource Replenish is unbought, so your empty resources never refill'}
@@ -837,13 +873,30 @@ const MAX_LISTED_STAMPS = 4;
 // state, and a comma-joined line of eighteen map names is unreadable.
 const MAX_LISTED_OUTPOSTS = 6;
 
+// Each line carries a map name, its world, and the map's monster, which the 320px default
+// tooltip wraps into a ragged second line for most entries.
+const RG_LIST_TOOLTIP_WIDTH = 460;
+
 const RoyalGuardianList = ({ headline, entries = [] }) => {
   const listed = entries.slice(0, MAX_LISTED_OUTPOSTS);
   const others = entries.length - listed.length;
   return <Stack gap={.5}>
     <Typography>{headline}{listed.length > 0 ? ':' : ''}</Typography>
     {listed.length > 0 ? <Stack component={'ul'} sx={{ m: 0, pl: 2.5 }}>
-      {listed.map(({ name, mapIndex }) => <Typography component={'li'} key={mapIndex}>{name}</Typography>)}
+      {listed.map(({ name, mapIndex, world, monsterRawName, monsterName }) => <Typography component={'li'}
+                                                                                          key={mapIndex}>
+        {/* The map name and the PTS count belong together on one line - only the monster label
+            after them is allowed to wrap, and it wraps whole rather than splitting in two. */}
+        <span style={{ whiteSpace: 'nowrap' }}>{world > 0 ? `W${world} ` : ''}{name}</span>
+        {/* Map names alone ("Hell Hath Frozen Over") place nothing for most players, so the map's
+            native monster or resource rides along as the thing they actually recognise. */}
+        {monsterName ? <span style={{ opacity: .7, marginLeft: 6, whiteSpace: 'nowrap' }}>
+          <img src={monsterImage(monsterRawName)}
+               alt={''}
+               style={{ width: 18, height: 18, objectFit: 'contain', verticalAlign: 'middle', marginRight: 4 }}/>
+          {monsterName}
+        </span> : null}
+      </Typography>)}
       {others > 0 ? <Typography component={'li'} sx={{ opacity: .7 }}>
         and {others} more
       </Typography> : null}
@@ -884,12 +937,14 @@ const Alert = ({
                  onError = () => { },
                  badge,
                  extra,
-                 target
+                 target,
+                 // Lists of map names need more room than the 320px default before they wrap.
+                 maxWidth
                }) => {
   const openSettings = useOpenDashboardSettings();
   const { Icon: BadgeIcon, color: badgeColor, border: badgeBorder, size: badgeSize } = alertBadges[badge] || {};
   const badgeImgStyle = badgeBorder ? { border: '1px solid', borderColor: badgeBorder } : {};
-  return <HtmlTooltip title={title}>
+  return <HtmlTooltip title={title} maxWidth={maxWidth}>
     <Stack onClick={target ? () => openSettings('account', target) : undefined}
            sx={{
              position: 'relative', ...style, alignItems: 'center', justifyContent: 'center',

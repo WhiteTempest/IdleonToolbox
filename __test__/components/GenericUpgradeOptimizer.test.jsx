@@ -204,3 +204,168 @@ describe('GenericUpgradeOptimizer unlock marker', () => {
     expect(container.textContent).not.toContain('Locked now');
   });
 });
+
+const buildReductionAccount = ({ bonus, spent }) => ({
+  tesseract: { tachyons: [{ name: 'Purple', value: 1e9 }, { name: 'Brown', value: 1e9 }] },
+  legendTalents: { talents: [{ originalIndex: 23, bonus }] },
+  accountOptions: { 480: spent }
+});
+
+const renderWithReductions = ({ bonus, spent, usesMasterclassReduction = true }) => {
+  const calls = [];
+  render(
+    <ThemeProvider theme={darkTheme}>
+      <GenericUpgradeOptimizer
+        character={{ name: 'Tester' }}
+        account={buildReductionAccount({ bonus, spent })}
+        getOptimizedUpgradesFn={(character, account, category, max, options) => {
+          calls.push(options);
+          return [];
+        }}
+        upgradeCategories={{ damage: { name: 'Damage', stats: ['damage'], upgradeIndices: [6] } }}
+        resourceNames={resourceNames}
+        resourceKey="tesseract.tachyons"
+        resourceImagePrefix="Tach"
+        upgradeImagePrefix="ArcaneUpg"
+        getResourceType={(upgrade) => upgrade.x3}
+        usesMasterclassReduction={usesMasterclassReduction}
+        tooltipText="test tooltip"
+      />
+    </ThemeProvider>
+  );
+  return calls;
+};
+
+describe('GenericUpgradeOptimizer masterclass reductions', () => {
+  beforeEach(() => {
+    window.localStorage.clear();
+  });
+
+  it('only offers the reductions the legend talent has left', () => {
+    // the game discounts while accountOptions[480] < the talent bonus, so 8 granted and 12
+    // already spent means nothing is left to discount
+    const calls = renderWithReductions({ bonus: 8, spent: 12 });
+    expect(calls.at(-1).masterClassReduction).toBe(0);
+  });
+
+  it('counts the unspent grant when purchases remain', () => {
+    const calls = renderWithReductions({ bonus: 8, spent: 3 });
+    expect(calls.at(-1).masterClassReduction).toBe(5);
+  });
+
+  it('ignores the seed the old build froze into storage', () => {
+    // the pre-override key was written on first render and never followed the day rolling over
+    seedSetting('masterClassReduction', 8);
+    const calls = renderWithReductions({ bonus: 8, spent: 12 });
+    expect(calls.at(-1).masterClassReduction).toBe(0);
+  });
+
+  it('still honours an explicit manual override', () => {
+    seedSetting('masterClassReductionOverride', 4);
+    const calls = renderWithReductions({ bonus: 8, spent: 12 });
+    expect(calls.at(-1).masterClassReduction).toBe(4);
+  });
+
+  it('treats a cleared override as "follow the live count"', () => {
+    seedSetting('masterClassReductionOverride', null);
+    const calls = renderWithReductions({ bonus: 8, spent: 3 });
+    expect(calls.at(-1).masterClassReduction).toBe(5);
+  });
+
+  it('lets the override reach past today, for a plan that spans days', () => {
+    // the grant is per day and shared by every masterclass, so a plan spanning days gets it back -
+    // capping at today's leftovers quotes every later step 5x above what the game charges
+    seedSetting('masterClassReductionOverride', 200);
+    const calls = renderWithReductions({ bonus: 8, spent: 12 });
+    expect(calls.at(-1).masterClassReduction).toBe(200);
+  });
+
+  it('never invents an allowance for an account without the legend talent', () => {
+    const calls = renderWithReductions({ bonus: 0, spent: 0 });
+    expect(calls.at(-1).masterClassReduction).toBe(0);
+  });
+});
+
+const buildDiscountRow = (overrides) => ({ ...buildRow({}), ...overrides });
+
+describe('GenericUpgradeOptimizer discount marker', () => {
+  beforeEach(() => {
+    window.localStorage.clear();
+  });
+
+  it('marks the rows the daily allowance actually paid for', () => {
+    const { container } = renderOptimizer([buildDiscountRow({ hadReduction: true })]);
+    expect(container.textContent).toContain('-80%');
+  });
+
+  it('leaves full-price rows unmarked', () => {
+    const { container } = renderOptimizer([buildDiscountRow({ hadReduction: false })]);
+    expect(container.textContent).not.toContain('-80%');
+  });
+
+  it('counts how many steps of a grouped row were discounted', () => {
+    seedSetting('groupMode', 'Upgrade');
+    const { container } = renderOptimizer([
+      buildDiscountRow({ hadReduction: true, level: 10 }),
+      buildDiscountRow({ hadReduction: true, level: 11 }),
+      buildDiscountRow({ hadReduction: false, level: 12 })
+    ]);
+    expect(container.textContent).toContain('-80% on 2/3');
+  });
+});
+
+const renderWithAutoRph = (autoResourcePerHour, rows = []) => {
+  const calls = [];
+  const view = render(
+    <ThemeProvider theme={darkTheme}>
+      <GenericUpgradeOptimizer
+        character={{ name: 'Tester' }}
+        account={{ tesseract: { tachyons: [{ name: 'Purple', value: 1e9 }, { name: 'Brown', value: 1e9 }] } }}
+        getOptimizedUpgradesFn={(character, account, category, max, options) => {
+          calls.push(options);
+          return rows;
+        }}
+        upgradeCategories={{ damage: { name: 'Damage', stats: ['damage'], upgradeIndices: [6] } }}
+        resourceNames={resourceNames}
+        resourceKey="tesseract.tachyons"
+        resourceImagePrefix="Tach"
+        upgradeImagePrefix="ArcaneUpg"
+        getResourceType={(upgrade) => upgrade.x3}
+        autoResourcePerHour={autoResourcePerHour}
+        tooltipText="test tooltip"
+      />
+    </ThemeProvider>
+  );
+  return { calls, view };
+};
+
+describe('GenericUpgradeOptimizer auto resource per hour', () => {
+  beforeEach(() => {
+    window.localStorage.clear();
+  });
+
+  it('prices upgrades off the computed rates and hides the manual dialog', () => {
+    const { calls, view } = renderWithAutoRph({ 0: 2500, 1: 500 });
+
+    expect(calls.at(-1).resourcePerHour).toEqual({ 0: 2500, 1: 500 });
+    expect(view.container.textContent).not.toContain('Set RPH');
+  });
+
+  it('keeps the manual rates when the user picks the manual method', () => {
+    seedSetting('optimizationMethod', 'rph');
+    seedSetting('resourcePerHour', { 0: 7, 1: 9 });
+    const { calls, view } = renderWithAutoRph({ 0: 2500, 1: 500 });
+
+    expect(calls.at(-1).resourcePerHour).toEqual({ 0: 7, 1: 9 });
+    expect(view.container.textContent).toContain('Set RPH');
+  });
+
+  it('falls back to manual for an optimizer that has no computed rates', () => {
+    seedSetting('optimizationMethod', 'rph-auto');
+    seedSetting('resourcePerHour', { 0: 7, 1: 9 });
+    const { calls, view } = renderWithAutoRph(null);
+
+    expect(calls.at(-1).resourcePerHour).toEqual({ 0: 7, 1: 9 });
+    expect(view.container.textContent).toContain('Set RPH');
+  });
+});

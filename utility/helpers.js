@@ -705,6 +705,19 @@ export const getDuration = (start, end) => {
   }
 };
 
+// Hours left before the game's daily reset. timeAway.ShopRestock is a countdown in seconds, captured
+// at the moment the save was taken, so a stale save has to have the elapsed time taken back off it
+// (timeAway.GlobalTime is when that snapshot happened). Null once the save is older than the reset
+// it was counting down to, because then there is nothing left to read a deadline off.
+export const hoursUntilDailyReset = (account, now = Date.now()) => {
+  const restock = account?.timeAway?.ShopRestock;
+  const savedAt = account?.timeAway?.GlobalTime;
+  if (!Number.isFinite(restock) || !Number.isFinite(savedAt)) return null;
+  const elapsed = Math.max(0, now / 1000 - savedAt);
+  const remaining = restock - elapsed;
+  return remaining > 0 ? remaining / 3600 : null;
+};
+
 export const totalHoursBetweenDates = (start, end) => {
   try {
     const duration = intervalToDuration({ start, end });
@@ -1205,11 +1218,15 @@ export function parseShorthandNumber(input) {
 
 export const worldColor = ['#64b564', '#f1ac45', '#00bcd4', '#864ede', '#de4e4e', '#5FF1B4FF', '#40e0d0'];
 // The free pet claim went weekly -> daily ("The weekly 'Free Pet' chance is now daily. FOREVER.").
-// The game now computes this server-side (getFreeCompanionRemainingTimeDaily); its body isn't in
-// the client, so 24h is the best observable window, not a value read out of game code.
-const FREE_COMPANION_CLAIM_INTERVAL_MS = 86400000;
+// The game computes this server-side (getFreeCompanionRemainingTimeDaily), so the window was probed
+// against a live account: the server returns max(0, lastFreeClaim + 82800000 - now), i.e. 23h rolling
+// from the last claim, and `lastFreeClaim` is the companion save's `d` field (`t` is a different
+// timestamp - using it left the timer permanently on "Go claim!").
+const FREE_COMPANION_CLAIM_INTERVAL_MS = 82800000;
 export const getNextCompanionClaim = (account) => {
-  const globalTime = account?.timeAway?.GlobalTime ?? 0;
+  // The claim time is absolute, so it's compared against the browser clock rather than GlobalTime -
+  // GlobalTime is the save snapshot's clock and drifts behind real time between uploads.
   const lastFreeClaim = account?.companions?.lastFreeClaim ?? 0;
-  return new Date().getTime() + Math.max(0, FREE_COMPANION_CLAIM_INTERVAL_MS - (1e3 * globalTime - lastFreeClaim));
+  if (!isFinite(lastFreeClaim)) return new Date().getTime();
+  return lastFreeClaim + FREE_COMPANION_CLAIM_INTERVAL_MS;
 };
