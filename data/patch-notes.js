@@ -4,6 +4,18 @@ import React from 'react';
 /* eslint-disable react/jsx-key */
 export const patchNotes = [
   {
+    'ver': '3.3.74',
+    'gameVer': '2.3.527',
+    'date': '04/09/2026',
+    'features': [
+      'Dashboard: new option in Configure alerts (Character tab) to hide characters that have no alerts, leaving only the ones that need attention'
+    ],
+    'fixes': [
+      'Royal Guardian talents showed the account-wide added levels on top of every talent, which the game only grants up to your Talent Reattainment armory upgrade - so talents you put a single point into read as if they had hundreds, and every bonus they feed was too high',
+      'Characters: "Total Points Spent" on the talents tab counted added levels as points you had invested'
+    ]
+  },
+  {
     'ver': '3.3.73',
     'gameVer': '2.3.527',
     'date': '02/09/2026',
