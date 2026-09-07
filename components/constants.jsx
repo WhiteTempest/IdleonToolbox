@@ -64,11 +64,17 @@ export const PAGES = {
           tabs: ['Upgrades', 'Upgrade Optimizer', 'Maps']
         },
         {
-          // camelCase, not "royal guardian": AccountDrawer.jsx's sub-category label conversion
+          // The skill is the Royal Armory; Royal Guardian is the class that unlocks it. Every other
+          // entry here is named after its skill, so this one used to be the odd one out and players
+          // hunting for "Compass" or "Grimoire" equivalents couldn't place it. The old
+          // /royal-guardian route still resolves - pages/account/class-specific/royal-guardian.jsx
+          // is a redirect stub.
+          //
+          // camelCase, not "royal armory": AccountDrawer.jsx's sub-category label conversion
           // (line ~81) only splits on capital letters, not spaces - every other multi-word
           // category label here (friendsStats, randomEvents, eventShop, upgradeVault) follows the
-          // same convention so the drawer link and the /royal-guardian route agree.
-          label: 'royalGuardian',
+          // same convention so the drawer link and the /royal-armory route agree.
+          label: 'royalArmory',
           icon: 'data/UISkillIcon226',
           tabs: ['Armory', 'Outposts', 'Resources', 'Upgrade Optimizer', 'Royal Statues', 'Orblet Market']
         },
@@ -140,7 +146,7 @@ export const PAGES = {
     'world 4': {
       icon: 'data/Ladle',
       categories: [
-        { label: 'cooking', icon: 'data/ClassIcons51', tabs: ['Meals', 'Kitchens', 'Mastery'] },
+        { label: 'cooking', icon: 'data/ClassIcons51', tabs: ['Meals', 'Kitchens', 'Ribbons', 'Mastery'] },
         {
           label: 'breeding', icon: 'data/ClassIcons52',
           tabs: ['Mobs', 'Territory', 'Upgrades', 'Arena'],
@@ -298,6 +304,9 @@ export const PAGES = {
     },
     'boneJoeCalculator': {
       icon: 'data/BoneJoePickle'
+    },
+    'wardrobe': {
+      icon: 'data/EquipmentHats1'
     }
   }
 }

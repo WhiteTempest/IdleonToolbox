@@ -4,6 +4,45 @@ import React from 'react';
 /* eslint-disable react/jsx-key */
 export const patchNotes = [
   {
+    'ver': '3.3.76',
+    'gameVer': '2.3.530',
+    'date': '07/09/2026',
+    'features': [
+      'World 7 tasks and merits: the task board now covers Wavey Wayne\'s tasks and the five World 7 merit upgrades',
+      'Sushi Station: new Combo Meter card showing your best combo and the permanent Bucks multiplier it earns',
+      'Bundles: new Pet Mart tab with all 18 pet packs, each showing the pet it grants, its price, gems and pet crystals',
+      'Wiki: Pet Mart packs now have their own pages, listed apart from the gem shop bundles, each showing the version it arrived in'
+    ],
+    'fixes': [
+      'World 7 merits now count toward Spelunking power and stamina, research points, Minehead currency and Shimmerfin mob respawn',
+      'Royal Guardian: Greater Education now boosts outpost rank EXP, and Glorified outposts double the boosted rate',
+      'Spelunking: Amber Supply Swap now reads 15x amber and 10x fewer drops, matching this patch\'s rebalance',
+      'Spelunking: the Glowfish companion now adds its max stamina',
+      'Royal Guardian: maxed armory and orblet market upgrades now say "Maxed" in place of the cost, matching the other class specific pages',
+      'Royal Guardian\'s page is now called Royal Armory, matching the skill name like the other class specific pages. Old links still work',
+      'Lab: souped up tubes went to the wrong characters. The bonus follows the order of who is idling in the lab, so characters could show a shorter line than they have in game and leave connected nodes looking inactive'
+    ]
+  },
+  {
+    'ver': '3.3.75',
+    'gameVer': '2.3.527',
+    'date': '06/09/2026',
+    'features': [
+      'Construction: Optimize now comes back with several plans instead of one - a handful of swaps up to the full board - and shows what each is worth, so you can take most of the gain without dragging cogs around all day',
+      <Typography component={'span'}>New tool: <Link href={'/tools/wardrobe'}>Wardrobe</Link>. Dress a character in any hat, weapon, cape, costume, trophy, nametag or companion and watch it move the way the game draws it, with shareable links and PNG download</Typography>,
+      'Cooking: new Ribbons tab with your total, highest and lowest ribbon ranks, the contents of your ribbon shelf, and what every rank from 1 to 25 is worth as a meal multiplier',
+      'Cooking Mastery: added a time until next level',
+      'Royal Guardian: armory upgrades now show their shelf number and the total armory levels that unlock that shelf',
+      'Royal Guardian: Glorified outposts are marked with a green border, and grouping by world shows how many outposts you own in each world (21 / 22), so a map you never claimed stands out'
+    ],
+    'fixes': [
+      'Royal Guardian: picking a world on the Outposts tab changed the Support Camp and Savage Stronghold counts above it, which read like account totals. Those now always show the allowance, and per world usage stays in the world headers',
+      'With an ad blocker on, leaving the home page left a blank screen until you refreshed',
+      'Slab: the four dungeon tier 4 armor pieces were listed as unobtainable, so they never showed up as missing',
+      'Lab: jewel tooltips showed a broken multiplier once Spelunker Obol boosted them, like a 1.25.6x meal bonus instead of 1.256x'
+    ]
+  },
+  {
     'ver': '3.3.74',
     'gameVer': '2.3.527',
     'date': '04/09/2026',
