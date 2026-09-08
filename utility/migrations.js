@@ -1909,7 +1909,7 @@ const migration73 = (dashboardConfig) => {
         type: 'input',
         props: { label: 'Hours to empty within', value: 24, minValue: 1 },
         checked: true,
-        helperText: 'Alert when two outposts are wired to the same resource and one of them empties it within this many hours on its own, so the other is spending a connection slot for nothing'
+        helperText: 'Alert when two outposts are wired to the same resource and one of them empties it within this many hours on its own, so the other is spending a connection slot for nothing. Only when that outpost has another resource with something left in range to move the slot to'
       }
     ].filter(({ name }) => !rgOptions.some((option) => option?.name === name));
 
@@ -1938,6 +1938,33 @@ const migration74 = (dashboardConfig) => {
   }
 
   dashboardConfig.version = 74;
+  return dashboardConfig;
+};
+
+// Finished Plots counted in days, which can't express the waits players actually act on - the
+// first stall worth collecting is often well under a day, and 1 was the smallest whole day the
+// input would offer. Same threshold, finer unit: every stored value carries over as its own
+// number of hours.
+const migration75 = (dashboardConfig) => {
+  ensureDashboardOptions(dashboardConfig);
+  const farmingOptions = dashboardConfig?.account?.['World 6']?.farming?.options;
+  const finishedPlots = Array.isArray(farmingOptions)
+    ? farmingOptions.find((option) => option?.name === 'finishedPlots')
+    : null;
+  if (finishedPlots?.props?.label === 'Days') {
+    // The input stores whatever was typed, so a string here is normal and a blank one falls back
+    // to the old seven day default rather than migrating to zero hours.
+    const days = parseFloat(finishedPlots.props.value);
+    finishedPlots.props = {
+      ...finishedPlots.props,
+      label: 'Hours',
+      value: Math.round((Number.isFinite(days) ? days : 7) * 24),
+      minValue: 1,
+      maxValue: 8760
+    };
+  }
+
+  dashboardConfig.version = 75;
   return dashboardConfig;
 };
 
@@ -2015,6 +2042,7 @@ const migrations = {
   72: migration72,
   73: migration73,
   74: migration74,
+  75: migration75,
 };
 
 export const migrateConfig = (baseTrackers, userConfig) => {

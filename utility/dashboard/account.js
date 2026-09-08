@@ -861,10 +861,10 @@ export const getWorld3Alerts = (account, fields, options, characters) => {
   }
   if (fields?.atomCollider?.checked) {
     const atomCollider = {};
-    const stampReducer = account?.atoms?.stampReducer >= options?.atomCollider?.stampReducer?.props?.value;
-    const stampReducerValue = options?.atomCollider?.stampReducer?.props?.value;
-    if (stampReducer) {
-      atomCollider.stampReducer = stampReducer;
+    const { stampReducer: stampReducerOption } = options?.atomCollider || {};
+    const stampReducerValue = stampReducerOption?.props?.value;
+    if (stampReducerOption?.checked && account?.atoms?.stampReducer >= stampReducerValue) {
+      atomCollider.stampReducer = true;
       atomCollider.stampReducerValue = stampReducerValue;
     }
     if (Object.keys(atomCollider).length > 0) {
@@ -1342,15 +1342,17 @@ export const getWorld6Alerts = (account, fields, options, characters) => {
     if (finishedPlots?.checked) {
       // A plot that has stopped doubling earns nothing at all - its crop quantity was fixed when the
       // crop first grew, so only the OG multiplier can still add value. Collecting resets it to x1.
-      const days = finishedPlots?.props?.value ?? 7;
+      const hours = finishedPlots?.props?.value ?? 168;
       // A null eta means the plot isn't rolling for OGs yet (empty, or still growing its first
       // crop), not that it never will - those aren't waiting on anything, so they aren't flagged.
-      const donePlots = (account?.farming?.plot ?? []).filter(({ isLocked, nextOGEta }) => {
-        if (isLocked || nextOGEta === null) return false;
-        return nextOGEta > days * 86400;
+      // A plot's lock is deliberately not consulted: it only freezes the crop type, so a locked
+      // plot grows, rolls for OGs and collects like any other, and stalls the same way too.
+      const donePlots = (account?.farming?.plot ?? []).filter(({ nextOGEta }) => {
+        if (nextOGEta === null) return false;
+        return nextOGEta > hours * 3600;
       });
       if (donePlots.length > 0) {
-        farming.finishedPlots = { plots: donePlots, days };
+        farming.finishedPlots = { plots: donePlots, hours };
       }
     }
     if (totalCrops?.checked) {
@@ -1630,7 +1632,9 @@ export const getWorld7Alerts = (account, fields, options, characters) => {
         // Keep the fastest of the outposts that can finish it alone; every other link is spare.
         const keeper = soloCapable.reduce((best, link) =>
           (link.node.drainRate > best.node.drainRate ? link : best), soloCapable[0]);
-        links.filter((link) => link !== keeper)
+        // Spare only if the slot can go somewhere better: with nothing live in reach, dropping the
+        // link buys the outpost nothing, so the same rule as idleOutposts/strandedWorkers applies.
+        links.filter((link) => link !== keeper && link.outpost.freshNodeInReach)
           .forEach(({ outpost }) => redundant.set(outpost.mapIndex, pickOutpostEntry(outpost)));
       });
       if (redundant.size > 0) {

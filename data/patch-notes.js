@@ -4,6 +4,20 @@ import React from 'react';
 /* eslint-disable react/jsx-key */
 export const patchNotes = [
   {
+    'ver': '3.3.77',
+    'gameVer': '2.3.530',
+    'date': '08/09/2026',
+    'features': [
+      'Dashboard: the Finished Plots threshold is now set in hours instead of days. Your current setting carries over'
+    ],
+    'fixes': [
+      'Dashboard: unchecking Stamp Reducer now hides its alert, without having to turn off Atom Collider',
+      'Pets: Tokens Available now counts both Pet Bonus Tokens instead of capping at one',
+      'Dashboard: Finished Plots skipped locked plots. Locking only freezes a plot\'s crop type, so those plots stall like any other',
+      'Farming: a locked plot no longer shows a crop evolution chance, since locking stops evolution'
+    ]
+  },
+  {
     'ver': '3.3.76',
     'gameVer': '2.3.530',
     'date': '07/09/2026',
@@ -20,7 +34,9 @@ export const patchNotes = [
       'Spelunking: the Glowfish companion now adds its max stamina',
       'Royal Guardian: maxed armory and orblet market upgrades now say "Maxed" in place of the cost, matching the other class specific pages',
       'Royal Guardian\'s page is now called Royal Armory, matching the skill name like the other class specific pages. Old links still work',
-      'Lab: souped up tubes went to the wrong characters. The bonus follows the order of who is idling in the lab, so characters could show a shorter line than they have in game and leave connected nodes looking inactive'
+      'Lab: souped up tubes went to the wrong characters. The bonus follows the order of who is idling in the lab, so characters could show a shorter line than they have in game and leave connected nodes looking inactive',
+      'Spelunking: Overstim Rate showed 0 whenever your max stamina had gone up, like from the new World 7 merit. It now counts every character, since a character below max only has to fill that stamina before it feeds overstim again',
+      'Dashboard: the Royal Guardian shared resource alert no longer flags an outpost with no other resource in range, since there is nowhere to move the spare connection to'
     ]
   },
   {
