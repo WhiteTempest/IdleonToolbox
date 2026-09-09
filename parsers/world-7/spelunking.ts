@@ -249,9 +249,7 @@ const parseSpelunking = (account: any, characters: any, rawSpelunking: any, rawT
   const shopUpg6 = getSpelunkingBonus(account, 6);
 
   // Snapshot count, for display only - see why it can't gate the rate right below.
-  const charactersAtMaxStamina = charactersStamina.filter(({ characterStamina, currentStamina }: any) =>
-    currentStamina >= characterStamina
-  ).length;
+  const charactersAtMaxStamina = charactersStamina.filter(({ isFull }: any) => isFull).length;
 
   // Overstim rate = every character's stamina regen, once the meter is unlocked (shop upgrade 6).
   //
@@ -263,6 +261,23 @@ const parseSpelunking = (account: any, characters: any, rawSpelunking: any, rawT
   // short of max forever, even though the game tops them up the moment spelunking is opened and
   // pays the overflow to overstim regardless. Gating on the snapshot therefore reported 0 for
   // whole accounts; a deficit only delays a character's contribution, it never removes it.
+  // The meter only spends what it banked while the spelunking UI is drawing: that loop subtracts
+  // OverstimQtyREQ from Spelunk[4][2] and adds a level, once per pass. Away time only ever adds to
+  // [4][2], so anyone who has not walked into spelunking lately carries a backlog that levels the
+  // meter the moment they do, and the stored level/progress read far behind. Replay that drain to
+  // get what the meter will actually show, and keep the raw pair for anything comparing to the save.
+  let overstimEffectiveLevel = overstimLevel;
+  let overstimEffectiveCurrent = overstimCurrent;
+  let overstimEffectiveReq = 100 * Math.pow(1.3, overstimEffectiveLevel);
+  // Each level costs 1.3x the last, so a real backlog clears in a few dozen steps; the cap is only
+  // there so a corrupt save cannot spin here.
+  for (let i = 0; i < 1000 && overstimEffectiveCurrent >= overstimEffectiveReq; i++) {
+    overstimEffectiveCurrent -= overstimEffectiveReq;
+    overstimEffectiveLevel += 1;
+    overstimEffectiveReq = 100 * Math.pow(1.3, overstimEffectiveLevel);
+  }
+  const overstimPendingLevels = overstimEffectiveLevel - overstimLevel;
+
   const overstimRate = shopUpg6 >= 1
     ? (charactersStamina?.length ?? 0) * staminaRegenRate.value * (1 + overstimFillRate / 100)
     : 0;
@@ -295,6 +310,10 @@ const parseSpelunking = (account: any, characters: any, rawSpelunking: any, rawT
     overstimLevel,
     overstimCurrent,
     overstimReq: 100 * Math.pow(1.3, overstimLevel),
+    overstimEffectiveLevel,
+    overstimEffectiveCurrent,
+    overstimEffectiveReq,
+    overstimPendingLevels,
     overstimFillRate,
     overstimRate,
     charactersAtMaxStamina,
@@ -324,6 +343,10 @@ const parseSpelunking = (account: any, characters: any, rawSpelunking: any, rawT
     spelunkingEfficiency
   }
 }
+
+// Stamina the game's cached max can lag ours by: one per stale overstim stack step, plus the
+// fraction a stale artifact tier costs the chapter lore bonus. Three leaves room for two steps.
+const STALE_MAX_STAMINA_TOLERANCE = 3;
 
 const getCharacterStamina = (account: any, characters: any, upgrades: any, rawCurrentStamina: any, staminaRegenRate: any) => {
   const updatedAccount = { ...account, spelunking: { ...account?.spelunking, upgrades } };
@@ -367,10 +390,25 @@ const getCharacterStamina = (account: any, characters: any, upgrades: any, rawCu
       ? missingStamina / staminaRegenRate
       : 0;
 
+    // A character sitting at the cap is only ever exactly at it in the save because the game clamps
+    // (Spelunk[3][s] = StaminaMax) on the tick it overshoots. That equality breaks whenever our max
+    // is a hair above the game's - the game caches its own bonus tables (DNSM.SpelunkyUpgTOT,
+    // DNSM.SailzArtiBonusL) and keeps clamping to a stale max after an overstim stack or artifact
+    // tier goes up, so the save records the old cap. Reported by two accounts whose idle characters
+    // sat 1-2 stamina under our max forever.
+    //
+    // One minute of regen covers that on a developed account, but the gap is a whole stamina per
+    // stale stack step while a minute of regen is only half of one early on, so it also needs a
+    // small absolute floor. Either way it stays far under what a draining character is missing -
+    // the reported account's were 232 to 1039 short - so it can't swallow a real one.
+    const fullStaminaTolerance = Math.max(staminaRegenRate / 60, STALE_MAX_STAMINA_TOLERANCE);
+    const isFull = currentStamina >= characterStamina || missingStamina <= fullStaminaTolerance;
+
     return {
       characterStamina,
       currentStamina, // Show actual current stamina (may exceed max if overstim is active)
-      timeToFull
+      timeToFull,
+      isFull
     }
   })
 }
@@ -1177,10 +1215,17 @@ export const isEtherealBonusUnlocked = (account: any) => {
   return account?.spelunking?.loreBosses?.[6]?.defeated;
 }
 
-// Power-affecting upgrade indices: 0 (basePower), 1, 2, 3, 14, 15, 16, 17 (powerMulti)
-const POWER_UPGRADE_INDICES = [0, 1, 2, 3, 14, 15, 16, 17, 46];
-// Amber gain-affecting upgrade indices: 6, 7, 8, 9, 10, 20, 21, 41, 44, 51
-const AMBER_GAIN_UPGRADE_INDICES = [6, 7, 8, 9, 10, 20, 21, 41, 44, 51];
+// Every shop upgrade getPower reads: 0 (basePower), then the powerMulti factors.
+const POWER_UPGRADE_INDICES = [0, 1, 2, 3, 14, 15, 16, 17, 46, 54];
+// Every shop upgrade getAmberGain reads, except two the optimizer deliberately leaves out.
+// 67 (Amber Supply Swap) is a tradeoff: 15x amber gain against a 10x worse drop chance
+// (getAmberDropChance). The metric here is amber gain alone, so including 67 would score it as
+// a flat 15x win and pin it to the top of every recommendation. It stays out until the metric
+// accounts for drop chance too.
+// 35 (Jobs_All_Done) is "ShopUpgBonus(35) * GenINFO[90]" in the game, where GenINFO[90] counts
+// the depths fully cleared in the CURRENT delve - live actor state the save doesn't carry. It
+// is always 0 here, so 35 could only ever be recommended as a zero-gain purchase.
+const AMBER_GAIN_UPGRADE_INDICES = [6, 7, 8, 9, 10, 20, 21, 41, 44, 51, 60];
 
 // Generic optimization function that works for both power and amber gain
 const getOptimizedSpelunkingUpgrades = (character: any, account: any, maxUpgrades: any, options: any, {

@@ -4,17 +4,35 @@ import React from 'react';
 /* eslint-disable react/jsx-key */
 export const patchNotes = [
   {
+    'ver': '3.3.78',
+    'gameVer': '2.3.530',
+    'date': '09/09/2026',
+    'features': [],
+    'fixes': [
+      'Spelunking: the upgrade optimizer never offered Manic POW or Amber-Track, so its plans left out two real upgrades',
+      'Slab: Unrealistic greenstacks now also covers items reported by players: Crude and Eco Friendly Oil, Dense Water, Cranberry Jam, Small and Decent EXP Potion, pearls, Gems, time candies, Giftmas foods, Sub Class Swap Token, Post Office Box Reseto, Googley Eyes, Dootjat Eye, Anvil Tabs 4 to 6, Smolderin Card Pack and the other event boxes'
+    ]
+  },
+  {
     'ver': '3.3.77',
     'gameVer': '2.3.530',
     'date': '08/09/2026',
     'features': [
-      'Dashboard: the Finished Plots threshold is now set in hours instead of days. Your current setting carries over'
+      'Dashboard: the Finished Plots threshold is now set in hours instead of days. Your current setting carries over',
+      'Dashboard: World 7 timers now include an Overstim level up countdown. The tooltip shows the meter, plus any levels waiting to apply the next time you open Spelunking',
+      'Slab: new Unrealistic greenstacks tab for items nobody can reasonably reach 10M of: one off quest items, shop items with a stock of 1 to 30 a day, gem shop only items, event boxes, and boss key drops. The list was checked against 3,600 uploaded profiles, so anything real players have actually greenstacked stays in the count'
     ],
     'fixes': [
       'Dashboard: unchecking Stamp Reducer now hides its alert, without having to turn off Atom Collider',
       'Pets: Tokens Available now counts both Pet Bonus Tokens instead of capping at one',
       'Dashboard: Finished Plots skipped locked plots. Locking only freezes a plot\'s crop type, so those plots stall like any other',
-      'Farming: a locked plot no longer shows a crop evolution chance, since locking stops evolution'
+      'Farming: a locked plot no longer shows a crop evolution chance, since locking stops evolution',
+      'Farming: the Land Rank optimizer found nothing for the All category while no crop was growing. Land ranks are permanent, so the plan no longer depends on what is planted right now',
+      'Free pet: the claim timer read a timestamp the game deliberately stores days behind the real claim, so it was stuck on "Go claim!" or showed a date months in the past. It now counts down the real 23 hour window',
+      'Talent bonuses taken from the best character on your account now follow the 2.3.530 rules for bonus talent levels. Most visible in the Spelunking shop, where upgrade costs read a few percent under the real price',
+      'Slab: Missing greenstacks and the greenstack total no longer include items you can never greenstack, such as NPC tokens, talent point tabs and unobtainable items, so 100% is reachable',
+      'Spelunking: the Full Stamina alert never fired on some accounts, and the same count made Overstim Rate say nobody was at max. The game tops characters up to a cap it takes from its own cached bonuses, which lags behind an overstim stack or artifact upgrade, so idle characters sat a point or two under the real max forever',
+      'Dashboard: the Royal Guardian shared resource alert no longer flags an outpost with no other resource in range, since there is nowhere to move the spare connection to'
     ]
   },
   {
@@ -36,7 +54,6 @@ export const patchNotes = [
       'Royal Guardian\'s page is now called Royal Armory, matching the skill name like the other class specific pages. Old links still work',
       'Lab: souped up tubes went to the wrong characters. The bonus follows the order of who is idling in the lab, so characters could show a shorter line than they have in game and leave connected nodes looking inactive',
       'Spelunking: Overstim Rate showed 0 whenever your max stamina had gone up, like from the new World 7 merit. It now counts every character, since a character below max only has to fill that stamina before it feeds overstim again',
-      'Dashboard: the Royal Guardian shared resource alert no longer flags an outpost with no other resource in range, since there is nowhere to move the spare connection to'
     ]
   },
   {

@@ -1,5 +1,5 @@
 import { createRange, lavaLog, notateNumber, number2letter, tryToParse } from '@utility/helpers';
-import { filteredGemShopItems, filteredLootyItems, keysMap } from './parseMaps';
+import { filteredGemShopItems, filteredLootyItems, keysMap, unrealisticGreenstackItems } from './parseMaps';
 import {
   bonuses,
   bundles as bundlesData,
@@ -427,10 +427,12 @@ export const getSlab = (idleonData: any) => {
     greenStacked: greenStacksSet.has(name),
     greenstackable: isGreenstackable(allItems?.[name]),
     onRotation: filteredGemShopItems?.[name],
-    unobtainable: filteredLootyItems?.[name]
+    unobtainable: filteredLootyItems?.[name],
+    unrealisticGreenstack: unrealisticGreenstackItems?.[name]
   }));
   const missingItems = slabItems?.filter(({ obtained, unobtainable }) => !obtained && !unobtainable)?.length;
-  const greenstackableItems = slabItems?.filter(({ greenstackable }) => greenstackable);
+  const greenstackableItems = slabItems?.filter(({ greenstackable, unobtainable, unrealisticGreenstack }) =>
+    greenstackable && !unobtainable && !unrealisticGreenstack);
   const greenstackableCount = greenstackableItems?.length ?? 0;
   const greenstackableStackedCount = greenstackableItems?.filter(({ greenStacked }) => greenStacked)?.length ?? 0;
 
@@ -1395,7 +1397,13 @@ export const getCompanions = (companionObject: any = {}, accountOptions: any = [
     totalBoxesOpened: companionObject?.x,
     currentCompanion: companion,
     list: updatedCompanions,
-    lastFreeClaim: companionObject?.d,
+    // NOT the last claim time. The free pet went weekly -> daily server-side without changing the
+    // deadline formula: the server still answers getFreeCompanionRemainingTime with
+    // max(0, `t` + 594000000 - now), and on claim it writes `t` = claimTime - 511200000 so that
+    // deadline lands 23h out. So `t` reads ~5.9 days stale by design - do not "correct" it, and do
+    // not use `d` (a dead legacy field that a real claim leaves untouched). Verified live: claiming
+    // moved `t` to now - 511200000 and the server deadline to that + 594000000, i.e. now + 23h.
+    freeClaimAnchor: companionObject?.t,
     petCrystals: companionObject?.s,
     maxStorage,
     tokens: {
