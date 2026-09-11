@@ -56,7 +56,7 @@ React Compiler handles routine memoization; do not add `useMemo` or `useCallback
 
 ## Preserve search metadata and static export
 
-Never edit generated `data/page-seo.js`. After changing `<NextSeo>`, run `node utility/generate-page-seo.mjs`. `_app` emits title, description, and canonical above `<WaitForRouter>` so they exist before JavaScript runs.
+Never edit generated `data/page-seo.js`. After changing `<NextSeo>`, run `node utility/generate-page-seo.mjs`. `_app`'s `<Head>` emits title, description, and canonical so they exist before JavaScript runs; a data page exports its loader, so its own `<NextSeo>` never runs during the export and the title must not blank during hydration.
 
 - Never emit head tags from `_document`; Next cannot deduplicate them against `<NextSeo>`.
 - Keep `key="canonical"` so Next deduplicates canonical links.
@@ -68,7 +68,15 @@ Never edit generated `data/page-seo.js`. After changing `<NextSeo>`, run `node u
 
 Next permits only one dynamic parameter name per directory. Branch inside one route instead of adding sibling `[class].jsx` and `[build].jsx`. Lowercase filesystem slugs because Windows exports case-insensitively. With `fallback: false`, newly published builds use `/tools/builds/view?id=`; keep that route `noindex`.
 
-Content below `<WaitForRouter>` does not enter static output. Return `crawlLinks` from `getStaticProps` and render `CrawlLinks` above the gate when crawlers need links. Keep `PreHydrationLoader` as a spinner only; do not restore page content that flashes before hydration.
+There is no router gate; every page renders at build time under `AppProvider` `DEFAULT_STATE`, so data pages export `DataLoadingWrapper`'s loader and static pages export their body. A page that throws under `DEFAULT_STATE` fails `next build` on purpose.
+
+The first render must match on the build machine and the client. Keep `localStorage`, `typeof window`, `Date`, `Math.random`, and timezone or locale formatting out of render and out of `useState` initializers; read them in an effect or gate on `useHydrated()`. Never use `useMediaQuery(..., { noSsr: true })`; `__test__/no-nossr.test.js` fails on any. `e2e/hydration.spec.js` gates React errors #418, #423, and #425.
+
+`router.query` is empty on the first render of any page whose URL carries a query string. Derive from the router during render with `router.isReady ? router.query.x : fallback`, or read it in an effect. Never seed a `useState` initializer from it.
+
+Crawlers need real anchors; `<Link component="button">` ships no `href`. Wiki listings render an anchor per row, including rows a collapsed band hides.
+
+Firebase and game data load on demand. `firebase/lazy.js` is the only importer of `firebase/index.js`, and the `authHint` local storage value lets a known-anonymous visitor skip it. Pure helpers the wiki needs live in data-free modules such as `parsers/cardMath.ts` and `parsers/powerTypes.ts`, never beside a `@website-data` import. `e2e/chunk-audit.spec.js` is the gate.
 
 ## Write patch notes
 

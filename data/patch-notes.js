@@ -4,6 +4,32 @@ import React from 'react';
 /* eslint-disable react/jsx-key */
 export const patchNotes = [
   {
+    'ver': '3.3.80',
+    'gameVer': '2.3.530',
+    'date': '11/09/2026',
+    'features': [
+      'Hole: new "Show only scaling schematics" filter on the Engineer tab, isolating the schematics whose bonus grows with other hole stats along with their current total bonus',
+      'Leaderboards: added Total Button Presses, Total Fountain Upgrades, Total Sushi Perfectos, Total Spelunking Depths, Total Manic Spelunking Depths, Cooking Mastery Level, Total Advice Fish Upgrades, Total Equinox Upgrades, Total Royal Armory Upgrades, Total Royal Resource Grades and Total Royal Statue Levels',
+      'Exotic Market: every upgrade card now shows when it next returns to rotation, and Off Rotation is sorted by soonest return',
+      'Pet Mart+ upgrade cost (Pet Crystals) is now shown on the Pets page, on wiki pet pages, and in a new Pet Mart tab on the Tournament page showing the current rotation and every other pet off rotation'
+    ],
+    'fixes': [
+      'Active Stuff Calculator and Royal Armory now count Orblets still in character inventories, not just the Storage Chest',
+      'Royal Guardian dashboard alerts: outpost lists no longer overflow the tooltip, and worker/PTS counts sit in their own aligned column'
+    ]
+  },
+  {
+    'ver': '3.3.79',
+    'gameVer': '2.3.530',
+    'date': '10/09/2026',
+    'features': [
+      'Pages should now load faster both for desktop and mobile'
+    ],
+    'fixes': [
+      'Extra Dust, Extra Bones and Extra Tachyons: the alchemy bubble bonus now uses the Windwalker, Deathbringer and Arcane Cultist bubbles instead of the talent point bubbles, which inflated the numbers'
+    ]
+  },
+  {
     'ver': '3.3.78',
     'gameVer': '2.3.530',
     'date': '09/09/2026',
