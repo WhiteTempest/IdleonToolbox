@@ -50,8 +50,15 @@ describe('account builder', () => {
     );
     const elapsed = (performance.now() - t0).toFixed(1);
 
-    const { account } = result ?? {};
+    const { account, characters } = result ?? {};
     if (!account) throw new Error('parseData returned no account');
+
+    // Per-character worship limits for ClaimAFK's full-charge gate. Python
+    // estimates the current charge itself, because it runs long after this build.
+    account.characterWorship = (characters ?? []).map((character: any) => ({
+      maxCharge: character?.worship?.maxCharge ?? null,
+      chargeRate: character?.worship?.chargeRate ?? null,
+    }));
 
     // Inject current-week chip/jewel rotation into account.lab so Python can
     // detect unclaimed state by comparing against currentRotation (labRaw[13]).
