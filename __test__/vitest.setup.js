@@ -1,6 +1,4 @@
-// With vitest's isolate:false the module cache is shared, so @testing-library's own
-// afterEach(cleanup) registers against whichever file imported it first and every later file
-// leaves its render mounted for the next one to trip over.
+// Clear rendered components after each test so UI state cannot leak between tests.
 import { afterEach } from 'vitest';
 
 afterEach(async () => {

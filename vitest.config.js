@@ -27,11 +27,7 @@ export default defineConfig({
     include: ['__test__/**/*.test.{js,ts,jsx,tsx}', '__scripts__/**/*.test.{js,ts,jsx,tsx}'],
     exclude: ['e2e/**'],
     setupFiles: ['./__test__/vitest.setup.js'],
-    isolate: false,
-    // Parser tests parse the full ~4MB website-data fixtures, and with isolate:false they all
-    // share one environment under parallel load. Several sit near a second on their own and
-    // were intermittently blowing the 5s default, failing a different file on every run. The
-    // timeout is here to catch a genuine hang, which 20s still does.
+    // Fixture-heavy parser tests can exceed Vitest's 5s default under parallel load.
     testTimeout: 20000,
   },
 });
