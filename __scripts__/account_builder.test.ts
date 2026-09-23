@@ -3,7 +3,7 @@
 //
 // Run:  cd ../IdleonToolbox && node_modules/.bin/vitest run __scripts__/account_builder.test.ts
 import '../polyfills.js';
-import { describe, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
 import { parseData } from '@parsers/index';
@@ -28,7 +28,7 @@ describe('account builder', () => {
     if (fs.existsSync(OUT_PATH)) {
       try {
         const existing = JSON.parse(fs.readFileSync(OUT_PATH, 'utf-8'));
-        if (existing.GlobalTime === currentGlobalTime) {
+        if (process.env.FORCE_ACCOUNT_BUILD !== '1' && existing.GlobalTime === currentGlobalTime) {
           console.log(`[account_builder] fresh (GlobalTime=${currentGlobalTime}), skipping`);
           return;
         }
@@ -36,7 +36,7 @@ describe('account builder', () => {
     }
 
     const charCount = Object.keys(cs).filter(k => /^CharSAVED_\d+$/.test(k)).length;
-    const charNames = Array.from({ length: charCount }, (_, i) => i);
+    const charNames = Array.from({ length: charCount }, (_, i) => save.char_names?.[i] ?? String(i + 1));
 
     const t0 = performance.now();
     const result = parseData(
@@ -52,6 +52,7 @@ describe('account builder', () => {
 
     const { account, characters } = result ?? {};
     if (!account) throw new Error('parseData returned no account');
+    expect(account.lab.playersCords).toHaveLength(charCount);
 
     // Per-character worship limits for ClaimAFK's full-charge gate. Python
     // estimates the current charge itself, because it runs long after this build.
