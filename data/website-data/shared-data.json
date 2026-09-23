@@ -35113,7 +35113,8 @@
       "Wasomber_Nigiri",
       "Leek_Nigiri",
       "Atomiroll",
-      "Octolingo"
+      "Octolingo",
+      "Chromatic_Nigiri"
     ],
     [
       "lol"
@@ -35315,7 +35316,8 @@
       "+{%_chance_for_an_additional_Orblet_stack_to_drop_on_Royal_Guardians!",
       "+{%_Resource_Collection_Rate_for_all_your_Royal_Guardian_outposts!",
       "Regal_Intervention_spawns_+{_more_Regal_Mobs_than_normal_when_triggered",
-      "+{%_drop_chance_for_Marble_for_your_Royal_Guardian"
+      "+{%_drop_chance_for_Marble_for_your_Royal_Guardian",
+      "Organelle_cell_in_Jelly_Operator_boosts_adjacent_cell_SPD_by_+0.{x_more_than_before"
     ],
     [
       "100",
@@ -35380,6 +35382,7 @@
       "10",
       "30",
       "2",
+      "10",
       "10"
     ],
     [
