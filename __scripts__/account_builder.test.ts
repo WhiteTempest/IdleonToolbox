@@ -8,6 +8,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { parseData } from '@parsers/index';
 import { getChipsAndJewels } from '@parsers/world-4/cooking';
+import { talentsAlerts } from '@utility/dashboard/characters';
 
 // parseData error handler references window.gtag — stub it for Node
 (globalThis as any).window = (globalThis as any).window ?? {};
@@ -60,6 +61,12 @@ describe('account builder', () => {
       maxCharge: character?.worship?.maxCharge ?? null,
       chargeRate: character?.worship?.chargeRate ?? null,
     }));
+
+    // Per-character talents below max level, from the dashboard alert, for
+    // IdleonTalents.TabDeficits: [{name, skillIndex, level, target}].
+    const unmaxedOptions = { talents: { unmaxedTalents: { checked: true } } };
+    account.characterUnmaxedTalents = (characters ?? []).map((character: any) =>
+      talentsAlerts(account, characters, character, 0, unmaxedOptions)?.unmaxedTalents ?? []);
 
     // Inject current-week chip/jewel rotation into account.lab so Python can
     // detect unclaimed state by comparing against currentRotation (labRaw[13]).
