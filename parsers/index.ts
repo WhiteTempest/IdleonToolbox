@@ -13,7 +13,7 @@ import { getShrineExpBonus, getShrines } from './world-3/shrines';
 import { getHighscores } from './highScores';
 import { getGemShop } from './gemShop';
 import { getShops } from './shops';
-import { applyArtifactBonusOnSigil, getAlchemy, getEquippedBubbles, getLiquidCauldrons, updateVials } from './world-2/alchemy';
+import { applyArtifactBonusOnSigil, applyNewBubbleChances, getAlchemy, getEquippedBubbles, getLiquidCauldrons, updateVials } from './world-2/alchemy';
 import { getStorage } from './storage';
 import { getBribes } from './world-1/bribes';
 import { getConstellations, getStarSigns } from './starSigns';
@@ -62,7 +62,7 @@ import { getPostOfficeShipments } from './world-3/postoffice';
 import { getIslands } from './world-2/islands';
 import { getEquinox, getLockedEquinox } from './world-3/equinox';
 import { getTotalizerBonuses, getTotems } from './world-3/worship';
-import { getSneaking } from '@parsers/world-6/sneaking';
+import { getSneaking, getSneakingDetection } from '@parsers/world-6/sneaking';
 import { getFarming, updateFarming } from '@parsers/world-6/farming';
 import { getSummoning } from '@parsers/world-6/summoning';
 import { getTome } from '@parsers/world-4/tome';
@@ -87,6 +87,7 @@ import { getMinehead } from '@parsers/world-7/minehead';
 import { getButton } from '@parsers/world-7/button';
 import { getTournament } from '@parsers/world-7/tournament';
 import { getSushiStation } from '@parsers/world-7/sushiStation';
+import { getJellyOperator } from '@parsers/world-7/jellyOperator';
 import { getAdviceFish } from '@parsers/misc';
 import { getBubba } from '@parsers/clickers/bubba';
 import { getHatRack } from '@parsers/world-3/hatRack';
@@ -277,6 +278,7 @@ const serializeData = (idleonData: IdleonData, serverVars: ServerVars, staticDat
   }
   if (accountData.alchemy) {
     accountData.alchemy.liquidCauldrons = safeSection<any>('alchemy.liquidCauldrons', [], () => getLiquidCauldrons(accountData));
+    accountData.alchemy.cauldrons = safeSection<any>('alchemy.cauldrons', accountData.alchemy.cauldrons, () => applyNewBubbleChances(accountData, charactersData));
   }
   accountData.spelunking = safeSection<any>('spelunking', {}, () => getSpelunking(idleonData, accountData, charactersData));
   accountData.hatRack = safeSection<any>('hatRack', {}, () => getHatRack(idleonData, accountData));
@@ -310,6 +312,7 @@ const serializeData = (idleonData: IdleonData, serverVars: ServerVars, staticDat
   }, 0);
   const money = bankMoney + playersMoney;
   accountData.currencies.rawMoney = money;
+  accountData.currencies.bankMoney = bankMoney;
   accountData.currencies.money = getCoinsArray(money);
   accountData.currencies.gems = idleonData?.GemsOwned ?? 0;
   accountData.currencies.KeysAll = safeSection<any>('currencies.KeysAll', [], () => enhanceKeysObject(accountData?.currencies?.KeysAll, charactersData, accountData));
@@ -364,8 +367,11 @@ const serializeData = (idleonData: IdleonData, serverVars: ServerVars, staticDat
   accountData.research = safeSection<any>('research', {}, () => getResearch(idleonData, accountData, charactersData));
   accountData.button = safeSection<any>('button', {}, () => getButton(accountData, charactersData));
   accountData.sushiStation = safeSection<any>('sushiStation', {}, () => getSushiStation(idleonData, accountData));
+  (accountData as any).jellyOperator = safeSection<any>('jellyOperator', {}, () => getJellyOperator(idleonData, accountData));
   accountData.bubba = safeSection<any>('bubba', {}, () => getBubba(idleonData, accountData));
   accountData.friendBonusStats = safeSection<any>('friendBonusStats', {}, () => getFriendBonusStats(accountData));
+  // Last: stealth reads emperor, sushi, jelly, tome and caverns, all parsed above.
+  accountData.sneaking.detection = safeSection<any>('sneakingDetection', null, () => getSneakingDetection(idleonData, accountData, charactersData));
 
   return { accountData, charactersData };
 };

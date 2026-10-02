@@ -9,7 +9,8 @@ import {
   getOutpostRogBonus,
   getRoyalGuardian,
   getRoyalStatueBonus,
-  getStatueFlairExpMulti
+  getStatueFlairExpMulti,
+  getStatueFlairMarbleTotals
 } from '@parsers/class-specific/royalGuardian';
 import { lavaLog } from '@utility/helpers';
 
@@ -204,6 +205,32 @@ describe('royal guardian parser matches the live game, with levels seeded in', (
   it('SF_unlocked flips on ArmoryUpgBonus(78)', () => expect(parsed.statueFlair.unlocked).toBe(true));
 });
 
+describe('ArmoryUpgCost applies the Jelly Operator armory discounts (2.3.531)', () => {
+  // Jelly bonus 11 is 50 and 26 is 30 once every obstruction is down.
+  const jellyAccount = { ...account, jellyOperator: { obstructionsDefeated: 72 } };
+  const royalG = buildRoyalG();
+  const armoryLevels = royalG[2];
+  const slotToId = parse(royalG).armory.slotToId;
+  const costReduction = getArmoryCostReduction(account);
+  const ratio = (slot) => getArmoryUpgradeCost(slot, slotToId, armoryLevels, costReduction, jellyAccount)
+    / getArmoryUpgradeCost(slot, slotToId, armoryLevels, costReduction);
+
+  // The game looks the SLOT number up in the slot -> id list, so the discount follows where that
+  // number happens to sit as an id, not the shelf position. Replicated as-is.
+  it('slot 9 (listed at position 4) gets both discounts', () => close(ratio(9), 1 / 1.8));
+  it('slot 35 (listed at position 9) gets only the first-10 discount', () => close(ratio(35), 1 / 1.3));
+  it('slot 2 (listed at position 17) gets neither', () => close(ratio(2), 1));
+  it('slot 5 (not listed, indexOf -1) gets both discounts twice', () => close(ratio(5), 1 / 2.6));
+  it('the parsed armory prices every shelf the same way', () => {
+    const jellyParsed = getRoyalGuardian(
+      { RoyalG: JSON.stringify(royalG), RoyalMaps: JSON.stringify(buildRoyalMaps()) },
+      jellyAccount,
+      []
+    );
+    close(jellyParsed.armory.upgrades.find((upgrade) => upgrade.slot === 9).cost, GAME.costs[9] / 1.8);
+  });
+});
+
 describe('royal guardian with no save', () => {
   const parsed = getRoyalGuardian({}, { bundles: [] }, []);
 
@@ -233,6 +260,38 @@ describe('royal guardian with no save', () => {
     expect(getRoyalStatueBonus({}, 0)).toBe(0);
     expect(getOrbletMarketBonus({}, 1)).toBe(0);
     expect(getOutpostRogBonus({}, 0)).toBe(1);
+  });
+});
+
+// game: the kill roll is MarbleDrop(floor(CurrentMap / 50)) * max(1, 100 - RoyalG[3][5]). Read on a
+// live save (2.3.531) with 52 marbles found: boost 48, W1 base 0.002499780740740741 -> 1 in 8.
+describe('royal marble drop chance', () => {
+  const withMarbles = (dropped) => {
+    const royalG = buildRoyalG();
+    royalG[3][5] = dropped;
+    return parse(royalG).guardian;
+  };
+
+  it('keeps the per-world base chance on the game curve', () => {
+    const { marbleDropChance } = withMarbles(0);
+    expect(marbleDropChance.length).toBeGreaterThanOrEqual(7);
+    marbleDropChance.forEach((chance, world) =>
+      close(chance * (1000 + 300 * world ** 2), marbleDropChance[0] * 1000));
+  });
+
+  it('boosts the roll by 100 - marbles found, bottoming out at 1x', () => {
+    const early = withMarbles(52);
+    expect(early.marblesDropped).toBe(52);
+    expect(early.marbleEarlyBoost).toBe(48);
+    early.marbleDropChanceEffective.forEach((chance, world) => close(chance, early.marbleDropChance[world] * 48));
+
+    const late = withMarbles(140);
+    expect(late.marbleEarlyBoost).toBe(1);
+    expect(late.marbleDropChanceEffective).toEqual(late.marbleDropChance);
+  });
+
+  it('a save with no marbles yet gets the full 100x', () => {
+    expect(withMarbles(0).marbleEarlyBoost).toBe(100);
   });
 });
 
@@ -449,5 +508,27 @@ describe('a world whose every outpost slot is claimed has nothing left to clear'
   it('still reports a unit while a real slot is unclaimed', () => {
     const parsed = parseWithClaimed(WORLD_1_SLOTS.filter((mapIndex) => mapIndex !== 12));
     expect(parsed.deployments[0].hasClearableMap).toBe(true);
+  });
+});
+
+describe('statue flair marble totals', () => {
+  const statue = (index, level, shardIndex) => ({ index, level, maxLevel: 3, shardIndex, costItem: `RGshard${shardIndex}` });
+  const totals = getStatueFlairMarbleTotals([
+    statue(0, 0, 0), // steps 10, 50, 250
+    statue(1, 2, 0), // step to Lv 3 only: 20 * 25 = 500
+    statue(2, 3, 0), // maxed, skipped
+    statue(5, 1, 1), // steps 60 * 5 = 300, 60 * 25 = 1500
+    statue(6, 3, 2) // maxed, so marble 2 gets no row
+  ], (costItem) => ({ RGshard0: 123 })[costItem] ?? 0);
+
+  it('groups by marble and skips maxed statues', () => {
+    expect(totals.map(({ shardIndex, statuesLeft }) => [shardIndex, statuesLeft])).toEqual([[0, 2], [1, 1]]);
+  });
+  it('tiers are cumulative from each statue current level', () => {
+    expect(totals[0].tiers).toEqual([10, 60, 810]);
+    expect(totals[1].tiers).toEqual([0, 300, 1800]);
+  });
+  it('carries the owned balance per marble', () => {
+    expect(totals.map(({ owned }) => owned)).toEqual([123, 0]);
   });
 });

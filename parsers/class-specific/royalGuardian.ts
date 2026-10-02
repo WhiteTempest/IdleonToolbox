@@ -1,6 +1,7 @@
 import { commaNotation, lavaLog, notateNumber, tryToParse } from '@utility/helpers';
 import {
   armoryUpgrades as armoryUpgradesCatalog,
+  items,
   mapDetails,
   mapEnemiesArray,
   mapNames,
@@ -16,6 +17,7 @@ import { getAllMasterclassCostRedux, getAdviceFishBonus, isCompanionBonusActive 
 import { CLASSES, checkCharClass, getBestActiveCharacter, getHighestTalentAcrossCharacters } from '@parsers/talents';
 import { getSpelunkingBonus } from '@parsers/world-7/spelunking';
 import { getSushiBonus } from '@parsers/world-7/sushiStation';
+import { getJellyBonus } from '@parsers/world-7/jellyOperator';
 import { getZenithBonus } from '@parsers/world-1/statues';
 import { getArcadeBonus } from '@parsers/world-2/arcade';
 import { getHatRackBonus } from '@parsers/world-3/hatRack';
@@ -57,6 +59,10 @@ export const RESOURCE_PER_HOUR_WINDOW_HOURS = 24;
 // standing in, and MARBLE_LORE_CAVE is the Spelunk[0] cave whose lore ("DoWeHaveLoreN1") pays +50%.
 const MAPS_PER_WORLD = 50;
 const MARBLE_LORE_CAVE = 9;
+
+// game: "OutpostPTSleft" - the Jelly Operator bonus that adds PTS to every outpost of a world
+// (index = world, W8 reuses W7's).
+const JELLY_OUTPOST_PTS_BY_WORLD = [3, 15, 32, 43, 48, 52, 61, 61];
 
 // Order matches RoyalG[3][2]; strings taken from the armory tooltip for upgrade 79
 // ("Compounding Outposting"), which is the only place the game names them.
@@ -126,6 +132,8 @@ const UNIT_WORLDS = 8;
 const MAP_ANCHOR = [15, 13];
 const NODE_ANCHOR = [28, 26];
 const REACH_SLACK = 15;
+// A Support Camp's links point at other outposts, and the game tests those against range + 8.
+const SUPPORT_REACH_SLACK = 8;
 // MapDetails[map][2] is (9999, 9999) for every map the kingdom screen does not draw.
 const OFF_KINGDOM_MAP = 9999;
 
@@ -209,6 +217,17 @@ export interface StatueFlair {
   costItem: string;
 }
 
+export interface StatueFlairMarbleTotal {
+  shardIndex: number;
+  costItem: string;
+  name: string;
+  owned: number;
+  statuesLeft: number;
+  // Cumulative: tiers[t] is the marble to bring every statue of this marble up to level t + 1 from
+  // where it is now, so the last tier is everything left and a tier all statues passed is 0.
+  tiers: number[];
+}
+
 export interface OrbletUpgrade {
   index: number;
   name: string;
@@ -244,6 +263,27 @@ export interface RoyalResource {
   anchorY: number;
   exhausted: boolean;
   fillPercent: number;
+  // What every outpost wired to it takes out per hour, summed, and how long until that spends it.
+  // Null when nothing drains it or it is already spent.
+  drainRate?: number;
+  hoursToEmpty?: number | null;
+}
+
+// A map with a clear in progress. The game credits it from two places: every Clearing unit sent
+// at it (UnitSpecEffect(4) per hour each), and each kill the Royal Guardian lands on it
+// (ActiveKillClear per kill), so only the militia half has an offline rate.
+export interface RoyalClearingMap {
+  mapIndex: number;
+  name: string;
+  monsterRawName: string | null;
+  monsterName: string | null;
+  world: number;
+  kills: number;
+  killsRequired: number;
+  progress: number;
+  militiaUnits: number;
+  militiaRate: number;
+  hoursToClear: number | null;
 }
 
 interface OutpostBase {
@@ -280,6 +320,14 @@ export interface OutpostNode {
   drainRate: number;
 }
 
+// One of an outpost's two connections, as the game's reach test sees it. Live is false for a link
+// to an exhausted node, which pays nothing until the daily restock.
+export interface OutpostLink {
+  distance: number;
+  slack: number;
+  live: boolean;
+}
+
 export interface Outpost extends OutpostBase {
   name: string;
   // The map's native AFK target, so a map name can be shown alongside something the player
@@ -296,6 +344,9 @@ export interface Outpost extends OutpostBase {
   supports: number;
   resourceRate: number;
   range: number;
+  // OutpostRange before its floor and 999 cap, so a range without some of its Guards can be priced.
+  rangeUncapped: number;
+  links: OutpostLink[];
   ptsLeft: number;
   ptsSpent: number;
   ptsTotal: number;
@@ -374,7 +425,7 @@ const toNum = (value: any): number => {
 // game: "OutpostEXPformula" - i is the bar type, t the rank being tested.
 export const getOutpostExpFormula = (rank: number, type: number): number => {
   if (type === 4) return 1e5 * Math.pow(10, rank);
-  if (type === 2) return (50 + 50 * rank) * Math.pow(1.6, rank);
+  if (type === 2) return (50 + 50 * rank) * Math.pow(1.8, rank);
   return (10 + 5 * rank) * Math.pow(1.3, rank);
 };
 
@@ -517,6 +568,9 @@ export const getRoyalGuardian = (idleonData: IdleonData, account: Account, chara
   const armoryBonus = (index: number): number =>
     toNum(armoryLevels?.[index]) * toNum((armoryUpgradesCatalog as any[])?.[index]?.bonusPerLevel);
 
+  // game: "SupportEXP" / "SupportCollection" - one formula, the % a single support camp adds.
+  const supportBonus = 200 * (1 + armoryBonus(43) / 100) + getJellyBonus(account, 41);
+
   // The armory calls AllMasterclassCostRedux only - NOT First3MC_CostRedux, which the game reserves
   // for grimoire/compass/tesseract (see getMasterclassCostReduction in misc.ts). account.royalGuardian
   // read here is this section's own PREVIOUS pass (multi-pass serialization, parsers/index.ts) -
@@ -657,7 +711,8 @@ export const getRoyalGuardian = (idleonData: IdleonData, account: Account, chara
     .filter((character: any) => checkCharClass(character?.class, CLASSES.Royal_Guardian))
     .reduce((max: number, character: any) => Math.max(max, toNum(character?.level)), 0);
   const warboundPoliticsBonus = Math.max(1, getHighestTalentAcrossCharacters(characters, 'WARBOUND_POLITICS', activeCharacter));
-  const xtraClearKillz = warboundPoliticsBonus * (1 + (orbletBonus(3) + getAdviceFishBonus(account, 6)) / 100);
+  const xtraClearKillz = warboundPoliticsBonus * (1 + (orbletBonus(3) + getAdviceFishBonus(account, 6)) / 100)
+    * (1 + getJellyBonus(account, 2) / 100);
   const militiaClearRate = 4000 * (1 + armoryBonus(23) / 100) * xtraClearKillz; // game: "UnitSpecEffect"(4)
 
   // game: "BarExpRate" - EXP/hr into one rank bar of one outpost. The purity term still looks
@@ -677,7 +732,8 @@ export const getRoyalGuardian = (idleonData: IdleonData, account: Account, chara
       * glorified
       * (1 + (200 * isMapPurified(rawMaps?.[rankType])) / 100)
       * (1 + (intelRank * armoryBonus(72)) / 100)
-      * (1 + (200 * (1 + armoryBonus(43) / 100) * (supportCounts.get(mapIndex) ?? 0)) / 100);
+      * (1 + (supportBonus * (supportCounts.get(mapIndex) ?? 0)) / 100)
+      * (1 + getJellyBonus(account, 1) / 100);
   };
 
   // game: "ActiveKillClear" - kills/hr you clear yourself, gated behind armory 58.
@@ -691,12 +747,14 @@ export const getRoyalGuardian = (idleonData: IdleonData, account: Account, chara
 
   // game: "RI_chance" / "RI_mobs" - Regal Intervention (talent 229) on a Divine Intervention respawn.
   const regalChance = getHighestTalentAcrossCharacters(characters, 'REGAL_INTERVENTION', activeCharacter) / 100
-    * (1 + orbletBonus(5) / 100);
+    * (1 + orbletBonus(5) / 100)
+    + getJellyBonus(account, 56) / 1e3;
   // The game adds 10 more mobs on a purified map by reading CurrentMap, which has no offline
   // answer, so both ends are reported instead of guessing which map the player is standing on.
   const regalMobs = Math.floor(
     getHighestTalentAcrossCharacters(characters, 'REGAL_INTERVENTION', activeCharacter, 'y')
-    + getSushiBonus(account, 61));
+    + getSushiBonus(account, 61)
+    + getJellyBonus(account, 35));
 
   // game: "OrbletMultiDrop" - chance the Orb's 1-per-1000-kills drop comes out doubled.
   const orbletMultiDrop = getHighestTalentAcrossCharacters(characters, 'LIL\'_ORBLETS', activeCharacter)
@@ -705,7 +763,8 @@ export const getRoyalGuardian = (idleonData: IdleonData, account: Account, chara
   // game: "ParchmentDrop" - 1-in-N chance a Verminous Rat drops a Parchment of Enchantment.
   const parchmentDropChance = armoryBonus(37) >= 1
     ? 0.001 * (1 + (armoryBonus(38) + orbletBonus(9)
-      + (isCompanionBonusActive(account, 172) ? (account?.companions?.list?.at(172)?.bonus ?? 0) : 0)) / 100)
+      + (isCompanionBonusActive(account, 172) ? (account?.companions?.list?.at(172)?.bonus ?? 0) : 0)
+      + getJellyBonus(account, 40)) / 100)
     : 0.001;
 
   // game: "MarbleDrop" - the Royal Marble drop chance. The game passes floor(CurrentMap / 50), so
@@ -725,6 +784,12 @@ export const getRoyalGuardian = (idleonData: IdleonData, account: Account, chara
   const marbleWorldCount = Math.floor((((mapDetails as any[])?.length ?? 1) - 1) / MAPS_PER_WORLD) + 1;
   const marbleDropChance = Array.from({ length: marbleWorldCount },
     (_unused, world) => marbleDropMulti / (1000 + 300 * Math.pow(world, 2)));
+  // game: the kill roll is MarbleDrop(world) * max(1, 100 - RoyalG[3][5]). RoyalG[3][5] counts every
+  // marble ever dropped and only goes up, so the first marble is 99x likelier and the boost fades to
+  // nothing by the 99th. The armory shelf 41 text quotes the unboosted chance, so both are kept.
+  const marblesDropped = toNum(raw?.[3]?.[5]);
+  const marbleEarlyBoost = Math.max(1, 100 - marblesDropped);
+  const marbleDropChanceEffective = marbleDropChance.map((chance) => Math.min(1, chance * marbleEarlyBoost));
 
   // game: the Royal Armory list (N.js MenuType2 == 106 draw loop) overwrites the raw "$" in
   // CustomLists.ArmoryUpg[id][9] with a value it hand-picks per shelf id - there is no shared
@@ -761,7 +826,7 @@ export const getRoyalGuardian = (idleonData: IdleonData, account: Account, chara
       case 40: // Parchment_Recycling - game: ParchmentRecycle = min(0.75, ArmoryUpgBonus(40)/100), *100 cancels
         return String(notateNumber(Math.min(75, armoryBonus(40)), 'Small'));
       case 42: { // Support_Camps - SupportEXP and SupportCollection share one formula
-        const supportMulti = stripApprox(String(notateNumber(1 + (200 * (1 + armoryBonus(43) / 100)) / 100, 'MultiplierInfo')));
+        const supportMulti = stripApprox(String(notateNumber(1 + supportBonus / 100, 'MultiplierInfo')));
         return `${supportMulti}x_EXP_&_${supportMulti}x_Collection_Rate!`;
       }
       case 44: // Savage_Strongholds - game: "SavageCollection"
@@ -822,7 +887,7 @@ export const getRoyalGuardian = (idleonData: IdleonData, account: Account, chara
       unlocked: slot >= 0 && slot < unlockedSlots,
       maxed: maxLevel < 999 && level >= maxLevel,
       slot,
-      cost: getArmoryUpgradeCost(slot, slotToId, armoryLevels, costReduction),
+      cost: getArmoryUpgradeCost(slot, slotToId, armoryLevels, costReduction, account),
       costResourceIndex,
       costResourceRawName: costResourceIndex >= 0 ? `RGres${costResourceIndex}` : '',
       description: applyBonusTokens(entry?.description, bonus, resolveArmoryDollarToken(index))
@@ -869,13 +934,15 @@ export const getRoyalGuardian = (idleonData: IdleonData, account: Account, chara
       name: entry?.name ?? '',
       level,
       maxLevel: STATUE_FLAIR_MAX_LEVEL,
-      cost: 10 * (index + 1) * Math.pow(5, level), // game: "SF_costo"
+      cost: getStatueFlairCost(index, level),
       bonus,
       expMulti: 1 + bonus / 100, // game: "StatueEXPmulti"
       shardIndex,
       costItem: `RGshard${shardIndex}`
     };
   });
+  const statueFlairMarbleTotals = getStatueFlairMarbleTotals(statueFlair,
+    (costItem) => calcTotalItemOwned((account as any)?.storage, characters, costItem));
 
   // Node -> outposts, read off the connection slots of every map that has an outpost.
   const mapsByNode = new Map<number, number[]>();
@@ -1049,9 +1116,11 @@ export const getRoyalGuardian = (idleonData: IdleonData, account: Account, chara
     const onKingdomMap = toNum(mapPosition?.[0]) < OFF_KINGDOM_MAP;
 
     // game: "TotalUnitsz" - the units assigned in the packed string, plus the stationary ones the
-    // outpost earns every 4 Command Ranks (game: "PassiveUnitsz"), which occupy no slot.
+    // outpost earns from its Command Rank (game: "PassiveUnitsz"), which occupy no slot. It rounds
+    // up (2.3.531), so each type arrives one rank after the last: rank 1 a Worker, 2 a Trader,
+    // 3 a Guard, 4 a Surveyor, then one more of each every 4 ranks.
     const commandRank = ranks[2];
-    const passiveUnits = ROYAL_UNIT_NAMES.map((_, type) => Math.floor(Math.max(0, commandRank - type) / 4)
+    const passiveUnits = ROYAL_UNIT_NAMES.map((_, type) => Math.ceil(Math.max(0, commandRank - type) / 4)
       + (type === 0 ? Math.min(1, toNum(mapRaw?.[12])) : 0));
     const packed = `${mapRaw?.[11] ?? ''}`;
     const units = Array.from({ length: UNIT_SLOTS_MAX },
@@ -1066,7 +1135,8 @@ export const getRoyalGuardian = (idleonData: IdleonData, account: Account, chara
     // game: "OutpostPTSleft" - the guard is on the raw array length, so a stub outpost earns nothing.
     let ptsTotal = 0;
     if ((mapRaw?.length ?? 0) > 3) {
-      ptsTotal = 2 + armoryBonus(9 + Math.floor(mapIndex / 50)) + ranks[0];
+      ptsTotal = 2 + getJellyBonus(account, JELLY_OUTPOST_PTS_BY_WORLD[Math.min(7, Math.floor(mapIndex / 50))])
+        + armoryBonus(9 + Math.floor(mapIndex / 50)) + ranks[0];
       if (armoryBonus(71) >= 1) ptsTotal += Math.floor(ranks[0] / (11 - armoryBonus(71)));
       if (toNum(mapRaw?.[12]) >= 1) ptsTotal += 10;
     }
@@ -1078,18 +1148,19 @@ export const getRoyalGuardian = (idleonData: IdleonData, account: Account, chara
     // Advanced Logistics level; the Expanded Barracks multiplier only starts at level 6, caps at 5x.
     const resourceRate = globalResourceRate
       * (1 + ((200 + armoryBonus(1)) * (outpost.purified ? 1 : 0)) / 100)
-      * (1 + (200 * (1 + armoryBonus(43) / 100) * supports) / 100)
+      * (1 + (supportBonus * supports) / 100)
       * (1 + (5 * advancedLogistics) / 100)
       * (1 + (ranks[2] * armoryBonus(73)) / 100)
       * (1 + (unitSpecEffect[0] * unitCounts[0]) / 100)
       * Math.min(5, 1 + (10 * Math.max(0, Math.round(expandedBarracks - 5))) / 100);
 
     // game: "OutpostRange" - OutpostLV_Bonuses(1,1) is 250 against a soft L/(L+100) curve.
-    const range = Math.floor(Math.min(999, 80
+    const rangeUncapped = 80
       + orbletBonus(8)
       + 250 * (advancedLogistics / (advancedLogistics + 100))
       + unitSpecEffect[2] * unitCounts[2]
-      + ranks[3] * armoryBonus(74)));
+      + ranks[3] * armoryBonus(74);
+    const range = Math.floor(Math.min(999, rangeUncapped));
 
     // game: the outpost tick pays a bar BarExpRate ONCE PER UNIT feeding it, so a bar with nothing
     // behind it never moves at all. The Trade bar runs on this outpost's own Traders and the Intel
@@ -1183,6 +1254,27 @@ export const getRoyalGuardian = (idleonData: IdleonData, account: Account, chara
     const freshNodeInReach = reachableNodes
       .some((nodeIndex) => resources.find(({ index }) => index === nodeIndex)?.exhausted === false);
 
+    // game: changing a unit re-tests both links against the new range and drops any that no longer
+    // reach - a Support Camp's against the other outpost's map, everything else against its node.
+    const links: OutpostLink[] = mode === 1
+      ? outpost.supportLinks.map((targetMap) => {
+        const target = (mapDetails as any)?.[targetMap]?.[2] ?? [];
+        return {
+          distance: Math.sqrt(Math.pow(mapX - (toNum(target?.[0]) + MAP_ANCHOR[0]), 2)
+            + Math.pow(mapY - (toNum(target?.[1]) + MAP_ANCHOR[1]), 2)),
+          slack: SUPPORT_REACH_SLACK,
+          live: true
+        };
+      })
+      : connectedNodes.map(({ index, exhausted }) => {
+        const node = nodeAt(index);
+        return {
+          distance: Math.sqrt(Math.pow(mapX - toNum(node?.anchorX), 2) + Math.pow(mapY - toNum(node?.anchorY), 2)),
+          slack: REACH_SLACK,
+          live: !exhausted
+        };
+      });
+
     return {
       ...outpost,
       name: `${(mapNames as any)?.[`${mapIndex}`] ?? ''}`.replace(/_/g, ' '),
@@ -1197,6 +1289,8 @@ export const getRoyalGuardian = (idleonData: IdleonData, account: Account, chara
       supports,
       resourceRate,
       range,
+      rangeUncapped,
+      links,
       ptsLeft,
       ptsSpent,
       ptsTotal,
@@ -1256,6 +1350,37 @@ export const getRoyalGuardian = (idleonData: IdleonData, account: Account, chara
     }
   }
 
+  // game: the collect loop pays UnitSpecEffect(4) per hour to a clearing map for every job-4 unit
+  // sent at it, and only while the map has exactly one RoyalMaps entry (clearingMaps' own filter).
+  const detailedClearingMaps: RoyalClearingMap[] = clearingMaps.map((clearingMap) => {
+    const militiaUnits = deployments
+      .filter(({ job, mapIndex }) => job === UNIT_JOB_CLEAR && mapIndex === clearingMap.mapIndex).length;
+    const militiaRate = militiaUnits * militiaClearRate;
+    const remaining = Math.max(0, clearingMap.killsRequired - clearingMap.kills);
+    return {
+      ...clearingMap,
+      militiaUnits,
+      militiaRate,
+      hoursToClear: remaining <= 0 ? 0 : militiaRate > 0 ? remaining / militiaRate : null
+    };
+  });
+
+  // Two outposts can drain the same node, so a node's time to empty has to sum every link.
+  const nodeDrain: Record<number, number> = {};
+  detailedOutposts.forEach(({ connectedNodes }) => connectedNodes.forEach(({ index, drainRate }) => {
+    nodeDrain[index] = (nodeDrain[index] ?? 0) + (drainRate || 0);
+  }));
+  const detailedResources: RoyalResource[] = resources.map((node) => {
+    const drainRate = nodeDrain[node.index] ?? 0;
+    return {
+      ...node,
+      drainRate,
+      hoursToEmpty: !node.exhausted && drainRate > 0
+        ? Math.max(0, node.maxQuantity - node.collected) / drainRate
+        : null
+    };
+  });
+
   return {
     unlocked,
     hasRoyalGuardian,
@@ -1274,7 +1399,8 @@ export const getRoyalGuardian = (idleonData: IdleonData, account: Account, chara
     statueFlair: {
       unlocked: flairUnlocked,
       maxLevel: STATUE_FLAIR_MAX_LEVEL,
-      statues: statueFlair
+      statues: statueFlair,
+      marbleTotals: statueFlairMarbleTotals
     },
     orbletMarket: orbletUpgrades,
     // game: "_ItemsAndStorageOWNED.h.Orblet" - Orblet is a plain CURRENCY item held in inventories
@@ -1294,10 +1420,14 @@ export const getRoyalGuardian = (idleonData: IdleonData, account: Account, chara
       parchmentDropChance,
       // game: "MarbleDrop", one entry per world because the game keys it off the current map.
       marbleDropChance,
+      marblesDropped,
+      marbleEarlyBoost,
+      // What a kill actually rolls against: the per-world chance with the early-marble boost.
+      marbleDropChanceEffective,
       royalRadius: ROYAL_RADIUS
     },
-    resources,
-    clearingMaps,
+    resources: detailedResources,
+    clearingMaps: detailedClearingMaps,
     outposts: detailedOutposts,
     resourcePerHour: computeResourcePerHour(detailedOutposts, RESOURCE_PER_HOUR_WINDOW_HOURS,
       armoryBonus(70) >= 1),
@@ -1322,6 +1452,8 @@ export const getRoyalGuardian = (idleonData: IdleonData, account: Account, chara
       // game: "UnitSpecEffect"(0) - the only unit effect that touches collection, so it is also the
       // lever the "how many Workers does this node actually need" check works against.
       workerRateBonus: unitSpecEffect[0],
+      // game: "UnitSpecEffect"(2) - the range each Guard adds, the only thing a Guard does.
+      guardRangeBonus: unitSpecEffect[2],
       // game: "Peacetime_Milita" pays a clearing unit half rank EXP on an already claimed map;
       // without it such a unit earns nothing. "Resource_Replenish" is what refills spent nodes on
       // the daily reset, so an account without it never gets a node back.
@@ -1374,15 +1506,49 @@ export const getSpareWorkers = (outpost: Outpost, horizonHours: number, workerBo
   return Math.max(0, Math.min(slotWorkers, totalWorkers - minWorkers));
 };
 
-export const getArmoryUpgradeCost = (slot: number, slotToId: number[], armoryLevels: any[], costReduction: number): number => {
+// How many of an outpost's slot Guards could be swapped out. A Guard only adds range, and swapping a
+// unit makes the game drop every link the new range no longer reaches. `spare` Guards hold no link
+// at all; `parked` ones only hold links to exhausted nodes, so swapping them drops those links and
+// they have to be rewired after the restock. Passive Guards occupy no slot, so they never count.
+export const getIdleGuards = (outpost: Outpost, guardBonus: number): { spare: number; parked: number } => {
+  const slotGuards = (outpost?.unitSlots ?? []).filter((unit) => unit === 2).length;
+  const links = outpost?.links ?? [];
+  if (slotGuards <= 0 || !(guardBonus > 0) || links.length === 0) return { spare: 0, parked: 0 };
+  const rangeUncapped = outpost?.rangeUncapped ?? 0;
+  const mostRemovable = (needed: OutpostLink[]) => {
+    let removed = 0;
+    while (removed < slotGuards && needed.every(({ distance, slack }) =>
+      Math.floor(Math.min(999, rangeUncapped - guardBonus * (removed + 1))) + slack >= distance)) {
+      removed++;
+    }
+    return removed;
+  };
+  const spare = mostRemovable(links);
+  return { spare, parked: mostRemovable(links.filter(({ live }) => live)) - spare };
+};
+
+export const getArmoryUpgradeCost = (
+  slot: number,
+  slotToId: number[],
+  armoryLevels: any[],
+  costReduction: number,
+  account?: any
+): number => {
   if (slot < 0) return 0;
   const id = toNum(slotToId?.[slot]);
   if (toNum(armoryLevels?.[46]) < 3 && id === 46) return 2;
   if (toNum(armoryLevels?.[58]) < 1 && id === 58) return 3;
   const upgrade = (armoryUpgradesCatalog as any[])?.[id];
+  // game quirk, replicated: the "first 5 / first 10 upgrades" jelly discounts look the SLOT number
+  // up in the slot -> id list as if it were an id, and a slot absent from it (-1) gets them twice.
+  const slotOrder: string[] = (research as any)?.[RESEARCH_ARMORY_SLOT_TO_ID] ?? [];
+  const position = slotOrder.indexOf(`${slot}`);
+  const jellyDiscount = Math.max(0, Math.ceil((5 - position) / 5)) * getJellyBonus(account, 11)
+    + Math.max(0, Math.ceil((10 - position) / 10)) * getJellyBonus(account, 26);
   return 25 * costReduction
     * Math.pow(1.24, slot)
     * (3 + 5 * slot)
+    * (1 / (1 + jellyDiscount / 100))
     * toNum(upgrade?.baseCost)
     * Math.pow(toNum(upgrade?.costScaling), toNum(armoryLevels?.[id]));
 };
@@ -1414,6 +1580,34 @@ export const getOutpostRank = (account: Account, mapIndex: number, type: number)
 export const isOutpostMapPurified = (account: Account, mapIndex: number): boolean =>
   findOutpost(account, mapIndex)?.purified ?? false;
 
+// game: "SF_costo"
+const getStatueFlairCost = (index: number, level: number): number => 10 * (index + 1) * Math.pow(5, level);
+
+// Sums SF_costo per marble type over the statues still below each flair level.
+export const getStatueFlairMarbleTotals = (statues: StatueFlair[], getOwned: (costItem: string) => number = () => 0): StatueFlairMarbleTotal[] => {
+  const byShard = new Map<number, StatueFlairMarbleTotal>();
+  for (const { index, level, maxLevel, shardIndex, costItem } of statues ?? []) {
+    if (level >= maxLevel) continue;
+    const row = byShard.get(shardIndex) ?? {
+      shardIndex,
+      costItem,
+      name: (items as any)?.[costItem]?.displayName ?? costItem,
+      // game: "SF_weOwn" reads _ItemsAndStorageOWNED, the same chest + inventory balance as Orblets.
+      owned: getOwned(costItem),
+      statuesLeft: 0,
+      tiers: Array(maxLevel).fill(0)
+    };
+    row.statuesLeft++;
+    let cumulative = 0;
+    for (let tier = level; tier < maxLevel; tier++) {
+      cumulative += getStatueFlairCost(index, tier);
+      row.tiers[tier] += cumulative;
+    }
+    byShard.set(shardIndex, row);
+  }
+  return [...byShard.values()].sort((a, b) => a.shardIndex - b.shardIndex);
+};
+
 export const getStatueFlairExpMulti = (account: Account, statueIndex: number): number =>
   byIndex((account as any)?.royalGuardian?.statueFlair?.statues, statueIndex)?.expMulti ?? 1;
 
@@ -1424,6 +1618,25 @@ export const getStatueFlairExpMulti = (account: Account, statueIndex: number): n
 // as it does for Grimoire/Compass/Tesseract's own getUpgradeCost.
 export const getArmoryCostReduction = (account: Account, forceLegendTalent?: any): number =>
   getAllMasterclassCostRedux(account, forceLegendTalent);
+
+// Total resource to take one armory upgrade from its current level to targetLevel, re-pricing
+// every step with getArmoryUpgradeCost so the id 46/58 flat prices and the jelly slot quirk hold.
+// Only this upgrade's level moves: buying it does not touch any other price on the shelf.
+export const getArmoryCostToLevel = (account: Account, upgrade: ArmoryUpgrade, targetLevel: number): number => {
+  const armory = (account as any)?.royalGuardian?.armory;
+  if (!armory || !(upgrade?.slot >= 0)) return 0;
+  const armoryLevels: number[] = [];
+  (armory.upgrades ?? []).forEach((entry: ArmoryUpgrade) => { armoryLevels[entry.index] = entry.level; });
+  const costReduction = getArmoryCostReduction(account);
+  const cap = upgrade.maxLevel < 999 ? upgrade.maxLevel : Infinity;
+  const end = Math.min(targetLevel, cap);
+  let total = 0;
+  for (let level = upgrade.level; level < end; level++) {
+    armoryLevels[upgrade.index] = level;
+    total += getArmoryUpgradeCost(upgrade.slot, armory.slotToId, armoryLevels, costReduction, account);
+  }
+  return total;
+};
 
 // The armory has no per-stat categories the way Grimoire/Compass/Tesseract do - its 69 shelf
 // upgrades feed statues, outposts, minehead currency etc. with no common stat to rank by. The
@@ -1474,7 +1687,7 @@ export const getOptimizedArmoryUpgrades = (character: any, account: Account, cat
       const armoryLevels: number[] = [];
       (upgrades ?? []).forEach((u: any) => { armoryLevels[u.index] = u.level; });
       const costReduction = getArmoryCostReduction(account, forceLegendTalent);
-      return getArmoryUpgradeCost(upgrade.slot, slotToId, armoryLevels, costReduction);
+      return getArmoryUpgradeCost(upgrade.slot, slotToId, armoryLevels, costReduction, account);
     },
     updateResourcesAfterUpgrade: (resources: any, upgrade: any, resourceNames: any, cost: any) => {
       if (resources[upgrade.costResourceIndex] !== undefined) resources[upgrade.costResourceIndex] -= cost;

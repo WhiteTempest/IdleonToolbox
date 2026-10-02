@@ -19,7 +19,7 @@ import { MINE_CURRENCY_UPGRADE_INDICES } from '@parsers/world-7/minehead';
 import { useLocalStorage } from '@mantine/hooks';
 
 const baseTrackers = {
-  version: 76,
+  version: 78,
   account: {
     General: {
       tasks: {
@@ -74,8 +74,11 @@ const baseTrackers = {
           },
           {
             name: 'arcanistDailyDrops',
+            type: 'array',
+            category: 'arcanistDailyDrops',
             checked: true,
-            helperText: 'Alert when Arcanist weapon or ring drops remain for today'
+            helperText: 'Alert when Arcanist weapon or ring drops remain for today. Each drop type can be turned off on its own',
+            props: { value: { weapon: true, ring: true } }
           },
           {
             name: 'topOfTheMornin',
@@ -168,6 +171,13 @@ const baseTrackers = {
             props: { label: 'Threshold', value: 80, minValue: 1, maxValue: 100 },
             checked: true,
             helperText: 'A single collection is capped at 100 garbage, anything above it is lost'
+          },
+          {
+            name: 'crystalIsland',
+            type: 'input',
+            props: { label: 'Days', value: 13, minValue: 1, maxValue: 14 },
+            checked: true,
+            helperText: 'Alert when Crystal Island has this many unclaimed days. It caps at 14 days, and a capped island spawns fewer giant crystal mobs (15) than 13 days does (27)'
           }
         ]
       },
@@ -579,7 +589,7 @@ const baseTrackers = {
             type: 'input',
             props: { label: 'Hours to empty within', value: 24, minValue: 1 },
             checked: true,
-            helperText: 'Alert when an outpost has more Workers than it needs to empty its resource within this many hours. Workers only add collection rate, so the spare ones could be Traders and earn Trade rank EXP instead'
+            helperText: 'Alert when an outpost has more Workers than it needs to empty its resource within this many hours. Workers only add collection rate, so the spare ones could be Traders or Surveyors and earn rank EXP instead'
           },
           {
             name: 'overkillBeforeReset',
@@ -589,7 +599,12 @@ const baseTrackers = {
           {
             name: 'strandedWorkers',
             checked: true,
-            helperText: 'Alert when an outpost\'s resources are all empty and nothing better is in range, while Workers are still assigned to it. They add collection rate to a resource that has none left, so Traders would earn Trade rank EXP instead'
+            helperText: 'Alert when an outpost\'s resources are all empty and nothing better is in range, while Workers are still assigned to it. They add collection rate to a resource that has none left, so Traders or Surveyors would earn rank EXP instead'
+          },
+          {
+            name: 'idleGuards',
+            checked: true,
+            helperText: 'Alert when an outpost has Guards whose range it does not need. Guards only add range, so they could be Traders or Surveyors and earn rank EXP instead. Also lists Guards that only reach an empty resource: swapping them drops that connection, so rewire it after the daily reset'
           },
           {
             name: 'sharedNodes',
@@ -597,6 +612,34 @@ const baseTrackers = {
             props: { label: 'Hours to empty within', value: 24, minValue: 1 },
             checked: true,
             helperText: 'Alert when two outposts are wired to the same resource and one of them empties it within this many hours on its own, so the other is spending a connection slot for nothing. Only when that outpost has another resource with something left in range to move the slot to'
+          },
+          {
+            name: 'tradeRank',
+            type: 'input',
+            props: { label: 'Trade rank', value: 10, minValue: 1 },
+            checked: false,
+            helperText: 'Alert when an outpost reaches this Trade rank while Traders are still assigned to it, so you can move them elsewhere'
+          },
+          {
+            name: 'intelRank',
+            type: 'input',
+            props: { label: 'Intel rank', value: 10, minValue: 1 },
+            checked: false,
+            helperText: 'Alert when an outpost reaches this Intel rank while Surveyors are still assigned to it, so you can move them elsewhere'
+          },
+          {
+            name: 'commandRank',
+            type: 'input',
+            props: { label: 'Command rank', value: 6, minValue: 1 },
+            checked: false,
+            helperText: 'Alert when an outpost reaches this Command rank while units are still sent to it, so you can move them elsewhere'
+          },
+          {
+            name: 'militaryRank',
+            type: 'input',
+            props: { label: 'Military rank', value: 10, minValue: 1 },
+            checked: false,
+            helperText: 'Alert when an outpost reaches this Military rank while units are still sent to it, so you can move them elsewhere'
           },
           {
             name: 'restockLocked',
@@ -687,6 +730,15 @@ const baseTrackers = {
             checked: true
           },
           { name: 'knowledgeLevelUp', checked: true },
+        ]
+      },
+      jellyOperator: {
+        checked: true,
+        options: [
+          { name: 'operationsLeft', checked: true, helperText: 'Alert when you have Jelly operations left for today' },
+          { name: 'slotsToBuy', checked: true, helperText: 'Alert when you can unlock more Jelly slots' },
+          { name: 'emptySlots', checked: true, helperText: 'Alert when open Jelly slots have no cell on them' },
+          { name: 'virusesUnplaced', checked: true, helperText: 'Alert when you can place more Viruses' }
         ]
       },
       clamWork: {

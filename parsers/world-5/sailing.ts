@@ -1,10 +1,9 @@
 import { kFormatter, lavaLog, notateNumber, tryToParse } from '@utility/helpers';
-import { artifacts, captainsBonuses, classFamilyBonuses, islands } from '@website-data';
+import { artifacts, captainsBonuses, islands } from '@website-data';
 import {
   getEventShopBonus,
   getHighestCharacterSkill,
   getHighestLevelCharacter,
-  getHighestLevelOfClass,
   isCompanionBonusActive,
   isCompanionLvl2Active,
   isMasteryBonusUnlocked
@@ -18,7 +17,7 @@ import { getGodBlessingBonus, getMinorDivinityBonus } from '@parsers/world-5/div
 import { getStatueBonus } from '@parsers/world-1/statues';
 import { getLabBonus } from '@parsers/world-4/lab';
 import { getShinyBonus } from '@parsers/world-4/breeding';
-import { getFamilyBonusBonus } from '@parsers/family';
+import { getFamilyBonusesOfActive } from '@parsers/family';
 import LavaRand from '@utility/lavaRand';
 import { getAchievementStatus } from '@parsers/achievements';
 import { getVoteBonus } from '@parsers/world-2/voteBallot';
@@ -31,6 +30,7 @@ import { getLampBonus } from '@parsers/world-5/caverns/the-lamp';
 import { getSchematicBonus } from '@parsers/world-5/caverns/the-well';
 import { getResearchGridBonus } from '@parsers/world-7/research';
 import { getSushiBonus } from '@parsers/world-7/sushiStation';
+import { getJellyBonus } from '@parsers/world-7/jellyOperator';
 import { getWinnerBonus } from '@parsers/world-6/summoning';
 import { getKillRoyShopBonus } from '@parsers/misc';
 import { getButtonBonus } from '@parsers/world-7/button';
@@ -315,11 +315,9 @@ const getRareTreasureChance = () => {
 const getCaptainsAndBoats = (sailingRaw: any, captainsRaw: any, boatsRaw: any, account: any, characters: any, charactersLevels: any, artifactsList: any, lootPileList: any) => {
   const captainsUnlocked = sailingRaw?.[2]?.[0] || 0;
   const boatsUnlocked = sailingRaw?.[2]?.[1] || 0;
-  const highestLevelSiegeBreaker = getHighestLevelOfClass(charactersLevels, CLASSES.Siege_Breaker) ?? 0;
-  const theFamilyGuy = getHighestTalentAcrossCharacters(characters, 'THE_FAMILY_GUY', getBestActiveCharacter(characters)) ?? 0;
-  const familyBonus = getFamilyBonusBonus(classFamilyBonuses, 'FASTER_MINIMUM_BOAT_TRAVEL_TIME', highestLevelSiegeBreaker);
+  // FamBonusQTYs[44]: buffed by the account's best THE_FAMILY_GUY, whoever is played
+  const amplifiedFamilyBonus = getFamilyBonusesOfActive(charactersLevels, characters)?.[CLASSES.Siege_Breaker] ?? 0;
   const shinyBonus = getShinyBonus(account?.breeding?.pets, 'Lower_Minimum_Travel_Time_for_Sailing');
-  const amplifiedFamilyBonus = familyBonus * (1 + theFamilyGuy / 100);
   const legendTalentBonus = getLegendTalentBonus(account, 11);
   const gemShopBonus = account?.gemShopPurchases?.find((value: any, index: any) => index === 8) ?? 0;
   const minimumTravelTime = Math.round(Math.max(15, 120 / (1 + (amplifiedFamilyBonus + (shinyBonus +
@@ -343,8 +341,7 @@ const getCaptainsAndBoats = (sailingRaw: any, captainsRaw: any, boatsRaw: any, a
     minimumTravelTime,
     minimumTravelTimeBreakdown: [
       { name: 'Base', value: 120 },
-      { name: 'Family Bonus', value: familyBonus },
-      { name: 'The Family Guy', value: theFamilyGuy },
+      { name: 'Family Bonus', value: amplifiedFamilyBonus },
       { name: 'Shiny Bonus', value: shinyBonus }
     ]
   }
@@ -666,6 +663,7 @@ const getBoatArtifactChance = (artifacts: any, captain: any, account: any, chara
   // Summer event shop: Purple Chest Slugs (EventShopOwned 48) - multiplies artifact find by 1.5^owned
   const purpleChestSlugs = Math.max(1, Math.pow(1.5, getEventShopBonus(account, 48)));
   const winnerBonus = getWinnerBonus(account, '<x Artifact Find');
+  const jellyBonus = getJellyBonus(account, 19);
   const daveyJonesBonus = getDaveyJonesBonus(account, lootLevel, speedLevel);
   const labBonus = getLabBonus(account?.lab?.labBonuses, 14);
   const loreBonus = getLoreBonus(account, 3);
@@ -688,6 +686,7 @@ const getBoatArtifactChance = (artifacts: any, captain: any, account: any, chara
     * (1 + turtleVial / 100)
     * purpleChestSlugs
     * (1 + winnerBonus / 100)
+    * (1 + jellyBonus / 100)
     * daveyJonesBonus
     * (1 + labBonus / 100)
     * (1 + loreBonus / 100)
@@ -730,6 +729,7 @@ const getBoatArtifactChance = (artifacts: any, captain: any, account: any, chara
           { name: 'Vial - Turtle Tisane', value: 1 + turtleVial / 100 },
           { name: 'Purple Chest Slugs', value: purpleChestSlugs },
           { name: 'Summoning - Win Bonus', value: 1 + winnerBonus / 100 },
+          { name: 'Jelly Operator', value: 1 + jellyBonus / 100 },
           { name: 'Gem Shop (Davey Jones)', value: daveyJonesBonus },
           { name: 'Lab - Artifact Attraction', value: 1 + labBonus / 100 },
           { name: 'Lore Episode 3', value: 1 + loreBonus / 100 },

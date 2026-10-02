@@ -22,6 +22,7 @@ import { getArcadeBonus } from '@parsers/world-2/arcade';
 import { getLoreBossBonus } from '@parsers/world-7/spelunking';
 import { getResearchGridBonus } from '@parsers/world-7/research';
 import { getSushiBonus } from '@parsers/world-7/sushiStation';
+import { getJellyBonus } from '@parsers/world-7/jellyOperator';
 
 
 const GAMING_SPROUT_IMPORTS_START = 25;
@@ -566,7 +567,7 @@ const calcFertilizerCost = (index: any, gamingRaw: any, serverVars: any) => {
       const baseMath = 25 * (baseValue + 1) + Math.pow((baseValue) + 1, 3);
       return baseMath * Math.pow(5 + 3.7 * baseValue, baseValue);
     }
-    return 9999 * Math.pow(10, 63);
+    return 9999 * Math.pow(10, 39 + 2 * baseValue);
   }
 }
 
@@ -617,6 +618,7 @@ const calcRatKing = (gamingSproutRaw: any, researchRaw: any, account: any, super
     * (1 + (ratShopBonus2 + (ratBaseBonus ?? 0) + arcadeBonusCrown) / 100)
     * Math.pow(1.5, crownsCount)
     * (1 + getSushiBonus(account, 31) / 100)
+    * (1 + getJellyBonus(account, 42) / 100)
   );
 
   const paletteBonus34 = getPaletteBonus(account, 34) ?? 0;

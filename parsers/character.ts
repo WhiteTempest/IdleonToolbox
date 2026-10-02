@@ -3,7 +3,6 @@ import {
   cardBonuses,
   carryBags,
   classes,
-  classFamilyBonuses,
   divStyles,
   fishingKits,
   gods,
@@ -24,8 +23,6 @@ import {
   getEventShopBonus,
   getFoodBonus,
   getGoldenFoodBonus,
-  getHighestLevelOf,
-  getHighestLevelOfClass,
   getMaterialCapacity,
   getRandomEventItems,
   getSkillMasteryBonusByIndex,
@@ -62,7 +59,7 @@ import { getAnvil } from './world-1/anvil';
 import { getPrayerBonusAndCurse } from './world-3/prayers';
 import { getGuildBonusBonus } from './guild';
 import { getShrineBonus } from './world-3/shrines';
-import { getFamilyBonusBonus, getUpdatedFamilyBonus } from './family';
+import { getFamilyBonusesSeenBy } from './family';
 import { getSaltLickBonus } from './world-3/saltLick';
 import { getDungeonFlurboStatBonus, getDungeonStatBonus } from './dungeons';
 import { getCookingEff, getCookingProwess, getMealsBonusByEffectOrStat } from './world-4/cooking';
@@ -116,6 +113,7 @@ import { getSpelunkingBonus } from '@parsers/world-7/spelunking';
 import { getResearchGridBonus } from '@parsers/world-7/research';
 import { getMineheadBonusQTY } from '@parsers/world-7/minehead';
 import { getSushiBonus } from '@parsers/world-7/sushiStation';
+import { getJellyBonus } from '@parsers/world-7/jellyOperator';
 import { getButtonBonus } from '@parsers/world-7/button';
 import { getGuaranteedCrystalMobs } from '@parsers/misc';
 import { getFountainBonusTotal } from '@parsers/world-5/caverns/the-fountain';
@@ -490,21 +488,15 @@ export const initializeCharacter = (char: any, charactersLevels: any, account: a
   // real value on the later ones.
   character.rgTalentAddedLevelsCap = getArmoryUpgradeBonus(account as any, ARMORY_TALENT_REATTAINMENT);
 
-  // Initial calculation without added levels
-  let familyEffBonus = getUpdatedFamilyBonus(character, charactersLevels);
-  let addedLevels = getTalentAddedLevels(talents, selectedTalentPreset, linkedDeity, character.secondLinkedDeityIndex, character.deityMinorBonus, character.secondDeityMinorBonus, familyEffBonus, account, character);
-
-  let iterations = 0;
-  const maxIterations = 3;
-
-  while (iterations < maxIterations) {
-    const tempCharacter = Object.assign({}, character);
-    tempCharacter.talents = applyTalentAddedLevels(talents, null, addedLevels?.value || 0, addedLevels?.superTalentsInfo, selectedTalentPreset, character.rgTalentAddedLevelsCap);
-    familyEffBonus = getUpdatedFamilyBonus(tempCharacter, charactersLevels);
-    addedLevels = getTalentAddedLevels(talents, selectedTalentPreset, linkedDeity, character.secondLinkedDeityIndex, character.deityMinorBonus, character.secondDeityMinorBonus, familyEffBonus, account, character);
-
-    iterations++;
-  }
+  // The family walk reads THE_FAMILY_GUY with every added level but the Elemental Sorcerer family
+  // bonus, which is the one the walk is still building.
+  const levelsWithoutFamily = getTalentAddedLevels(talents, selectedTalentPreset, linkedDeity, character.secondLinkedDeityIndex, character.deityMinorBonus, character.secondDeityMinorBonus, 0, account, character);
+  const familyGuy = applyTalentAddedLevels(talents, flatTalents, levelsWithoutFamily?.value, levelsWithoutFamily?.superTalentsInfo, selectedTalentPreset, character.rgTalentAddedLevelsCap)
+    ?.find(({ name }: any) => name === 'THE_FAMILY_GUY');
+  character.familyGuyWithoutFamily = familyGuy && (({ baseLevel, level, funcX, x1, x2 }: any) => ({ baseLevel, level, funcX, x1, x2 }))(familyGuy);
+  character.familyBonuses = getFamilyBonusesSeenBy(charactersLevels, character.playerId, character.familyGuyWithoutFamily);
+  const familyEffBonus = character.familyBonuses[CLASSES.Elemental_Sorcerer] ?? 0;
+  const addedLevels = getTalentAddedLevels(talents, selectedTalentPreset, linkedDeity, character.secondLinkedDeityIndex, character.deityMinorBonus, character.secondDeityMinorBonus, familyEffBonus, account, character);
 
   character.addedLevelsBreakdown = addedLevels?.breakdown;
   character.addedLevels = addedLevels?.value;
@@ -534,7 +526,7 @@ export const initializeCharacter = (char: any, charactersLevels: any, account: a
   character.questCompleted = Object.entries(char?.QuestComplete || {})?.reduce((res, [key, value]) => res + (value === 1
     ? 1
     : 0), 0);
-  character.printerSample = getPrinterSampleRate(character, account, charactersLevels);
+  character.printerSample = getPrinterSampleRate(character, account);
   character.anvil = getAnvil(char, character);
   return character;
 }
@@ -1574,52 +1566,6 @@ const createTalentPreset = (charClass: any, skillLevels: any, maxSkillLevels: an
   }
 }
 
-const getStealthRate = (character: any, account: any) => {
-  const playerFloor = account?.sneaking?.players?.[character?.playerId]?.floor; // NjaDN1
-  const sneakingLevel = character?.skillsInfo?.sneaking?.level; // NjaDN3
-  const mainStat = mainStatMap?.[character?.class];
-  const bubbleBonus = getBubbleBonus(account, 'STEALTH_CHAPTER', false, mainStat === 'agility');
-  const starSignBonus = getStarSignBonus(character, account, 'Ninja_Twin')
-  const statueBonus = getStatueBonus(account, 26, character?.flatTalents);
-  const passiveCardBonus = getCardBonusByEffect(account?.cards, 'Sneaking_Stealth_(Passive)');
-  const ninjaUpgradeBonus = getNinjaUpgradeBonus(account, 'Way_of_Stealth');
-  let stealthMulti = 1;
-  account.sneaking.players?.forEach((player: any, playerIndex: any) => {
-    player?.equipment?.forEach((item: any) => {
-      if (item.name === 'Smoke_Bomb') {
-        if (playerFloor === player.floor && character?.playerId !== playerIndex) {
-          stealthMulti += item.value / 100;
-        }
-      }
-      if (item.name === 'Lotus_Flower') {
-        if (playerFloor === player.floor && character?.playerId !== playerIndex) {
-          stealthMulti += item.value / 100;
-        }
-      }
-    })
-  })
-  const ninjaEquip = getNinjaEquipmentBonus(account, character.playerId, 'Scroll_of_Power');
-  const anotherNinjaEquip = getNinjaEquipmentBonus(account, character.playerId, 'Silk_Veil');
-  const yetAnotherNinjaEquip = getNinjaEquipmentBonus(account, character.playerId, 'Rosaries');
-  const companion163 = isCompanionBonusActive(account, 163) ? (account?.companions?.list?.at(163)?.bonus ?? 0) : 0;
-  const math = stealthMulti
-    * (1 + ninjaEquip / 100)
-    * (1 + anotherNinjaEquip / 100)
-    * (1 + yetAnotherNinjaEquip / 100)
-    * (1 + (bubbleBonus
-      + starSignBonus) / 100)
-    * (1 + statueBonus / 100)
-    * (1 + passiveCardBonus / 100)
-    * (1 + 39 * companion163)
-
-  return (10 + ninjaUpgradeBonus * sneakingLevel) * math;
-}
-const getDetectionRate = (character: any, account: any) => {
-  const floor = account?.sneaking?.players?.[character?.playerId]?.floor;
-  const floorDetectionModifier = ninjaExtraInfo[9]?.[floor];
-  return Math.max(0, Math.min(1, 1 - 1.1 * getStealthRate(character, account)
-    / (getStealthRate(character, account) + parseFloat(floorDetectionModifier))));
-}
 export const getJadeRate = (character: any, account: any) => {
   const floor = account?.sneaking?.players?.[character?.playerId]?.floor;
   const floorJadeModifier = ninjaExtraInfo[10]?.[floor];
@@ -1632,7 +1578,7 @@ export const getJadeRate = (character: any, account: any) => {
   const ninjaEquip = getNinjaEquipmentBonus(account, character.playerId, 'Green_Belt') * (floorSolo ? 3 : 1);
   const ninjaEquip1 = getNinjaEquipmentBonus(account, character.playerId, 'Black_Belt') * (floorSolo ? 3 : 1);
   const ninjaEquip2 = getInventoryNinjaItem(account, 'Gold_Coin');
-  const detectionRate = getDetectionRate(character, account);
+  const detectionRate = account?.sneaking?.detection?.ninjas?.[character?.playerId]?.detection ?? 1;
   const ninjaEquip3 = getNinjaEquipmentBonus(account, character.playerId, 'Shiny_Smoke') * (detectionRate <= 0 ? 3 : 1);
   const ninjaEquip4 = getNinjaEquipmentBonus(account, character.playerId, 'Scroll_of_Power');
   const ninjaEquip5 = getNinjaEquipmentBonus(account, character.playerId, 'Goodie_Bag');
@@ -1648,7 +1594,6 @@ export const getJadeRate = (character: any, account: any) => {
   const starSignBonus = getStarSignBonus(character, account, 'Jade_Gain')
   const masteryBonus = isMasteryBonusUnlocked(account?.rift, account?.totalSkillsLevels?.sneaking?.rank, 1);
   const vaultBonus81 = getUpgradeVaultBonus(account?.upgradeVault?.upgrades, 81);
-  const sushiBonus32 = getSushiBonus(account, 32);
   const companion163Jade = isCompanionBonusActive(account, 163) ? (account?.companions?.list?.at(163)?.bonus ?? 0) : 0;
 
   return parseFloat(floorJadeModifier)
@@ -1662,7 +1607,6 @@ export const getJadeRate = (character: any, account: any) => {
         + vaultBonus81)) / 100)
     * (1 + starSignBonus / 100)
     * (1 + (10 * masteryBonus) / 100)
-    * (1 + sushiBonus32 / 100)
     * (1 + 99 * companion163Jade);
 }
 export const getRespawnRate = (character: any, account: any) => {
@@ -1880,6 +1824,9 @@ export const getClassExpMulti = (character: any, account: any, characters: any) 
   const comp32 = isCompanionBonusActive(account, 32) ? account?.companions?.list?.at(32)?.bonus : 0;
   const comp34 = isCompanionBonusActive(account, 34) ? account?.companions?.list?.at(34)?.bonus : 0;
   const comp168 = isCompanionBonusActive(account, 168) ? account?.companions?.list?.at(168)?.bonus : 0;
+  const comp145 = isCompanionBonusActive(account, 145) ? account?.companions?.list?.at(145)?.bonus : 0;
+  const jellyClassExp30 = getJellyBonus(account, 30);
+  const jellyClassExp62 = getJellyBonus(account, 62);
 
   // Research grid 130, 131, 132, 152
   const researchGrid130 = getResearchGridBonus(account, 130, 0);
@@ -1908,6 +1855,9 @@ export const getClassExpMulti = (character: any, account: any, characters: any) 
     * (1 + comp32)
     * (1 + 0.4 * comp168)
     * (1 + comp34)
+    * (1 + comp145)
+    * (1 + jellyClassExp30 / 100)
+    * (1 + jellyClassExp62 / 100)
     * babyTrollMulti
     * (1 + researchGridTotal / 100)
     * (1 + stickerBonus / 100)
@@ -2166,6 +2116,8 @@ export const getClassExpMulti = (character: any, account: any, characters: any) 
             { name: "Companion (Glunko)", value: 1 + 4 * comp160 },
             { name: "Companion (Mr Pig)", value: 1 + comp32 },
             { name: "Companion (Whale)", value: 1 + comp34 },
+            { name: "Companion (Eggroll)", value: 1 + comp145 },
+            { name: "Jelly Operator", value: (1 + jellyClassExp30 / 100) * (1 + jellyClassExp62 / 100) },
             { name: "Companion (Baby Troll)", value: babyTrollMulti },
             { name: "Research Grid", value: 1 + researchGridTotal / 100 },
             { name: "Sticker", value: 1 + stickerBonus / 100 },
@@ -2432,6 +2384,7 @@ export const getDropRate = (character: any, account: any, characters: any) => {
   const crystalGlunkoDropRate = isCompanionBonusActive(account, 168) ? account?.companions?.list?.at(168)?.bonus : 0;
   // SushiStuff("RoG_BonusQTY", 48) - Unagi Nigiri
   const sushiDropRateBonus = getSushiBonus(account, 48);
+  const jellyDropRateBonus = getJellyBonus(account, 14);
   // 5 * Dreamstuff("CloudBonus", 69) - equinox challenge "Acquire at least 10 Megaflesh from Bubba the Seal"
   const equinoxDropRateMulti = 5 * getCloudBonus(account?.equinox?.challenges, 69);
   const vialDrMulti = getVialsBonusByStat(account?.alchemy?.vials, '7drMulto');
@@ -2439,11 +2392,11 @@ export const getDropRate = (character: any, account: any, characters: any) => {
   // this factor right after ArcaneMapMulti_bon in this same chain, before CardBonusREAL(101).
   const royalStatueDropRateBonus = getRoyalStatueBonus(account, 1);
   // FamBonusQTYs[32]: the DNSM key is 2 * classIndex, so 32 is classFamilyBonuses[16],
-  // "+{% DROP RATE MULTIPLIER" - the Royal Guardian class family bonus (see damage.ts).
-  const familyDropRateMulti = getFamilyBonusBonus(classFamilyBonuses, 'DROP_RATE_MULTIPLIER', getHighestLevelOf(characters, CLASSES.Royal_Guardian));
+  // "+{% DROP RATE MULTIPLIER" - the Royal Guardian class family bonus, as the played character sees it.
+  const familyDropRateMulti = character?.familyBonuses?.[CLASSES.Royal_Guardian] ?? 0;
 
   // Game: *= (1+tesseract/100) * (1+royalStatue/100) * (1+cardMulti/100) * (1+famBonus32/100) * (1+0.3*comp168)
-  //       * (1+min(0.5,comp132)+0.2*compLV2(132)) * (1+sushi48/100) * max(1,glimboDR) * (1+tomeMulti/100)
+  //       * (1+min(0.5,comp132)+0.2*compLV2(132)) * (1+(sushi48+jelly14)/100) * max(1,glimboDR) * (1+tomeMulti/100)
   //       * (1+equip99/100) * (1+mineheadQTY0/100) * (1+5*cloud69/100)
   final *= (1 + (tesseractMapBonus || 0) / 100)
     * (1 + royalStatueDropRateBonus / 100)
@@ -2451,7 +2404,7 @@ export const getDropRate = (character: any, account: any, characters: any) => {
     * (1 + familyDropRateMulti / 100)
     * (1 + 0.3 * crystalGlunkoDropRate)
     * (1 + (Math.min(0.5, mamaTrollDropRate) + 0.2 * mamaTrollLvl2))
-    * (1 + sushiDropRateBonus / 100)
+    * (1 + (sushiDropRateBonus + jellyDropRateBonus) / 100)
     * Math.max(1, glimboDRmulti)
     * (1 + tomeMulti / 100)
     * (1 + dropChanceEquip2 / 100)
@@ -2461,10 +2414,9 @@ export const getDropRate = (character: any, account: any, characters: any) => {
   // Game: *= (1+charm/100) * (1+equip91/100) * (1+vial7drMulto/100)
   final *= (1 + charmBonus / 100) * (1 + equipmentDrMulti / 100) * (1 + vialDrMulti / 100);
 
-  // Game: *= max(1, min(1.3, 1+comp26) * (1+0.5*comp160)) * max(1, min(1.01, 1+comp50/2500)) - the
-  // Glunko term (comp160) has no game-side cap; the code's min(1.5, ...) is an extra clamp not
-  // present in the live formula.
-  final *= Math.max(1, Math.min(1.3, 1 + thirdCompanionDropRate) * Math.min(1.5, 1 + 0.5 * seventhCompanionDropRate));
+  // Game: *= max(1, min(1.3, 1+comp26) * (1+0.5*comp160)) * max(1, min(1.01, 1+comp50/2500)) - only
+  // Mallay (comp26) is capped; the Glunko term (comp160) has no cap.
+  final *= Math.max(1, Math.min(1.3, 1 + thirdCompanionDropRate) * (1 + 0.5 * seventhCompanionDropRate));
   final *= Math.max(1, Math.min(1.01, 1 + fourthCompanionDropRate / 2500));
 
   const breakdown = {
@@ -2565,6 +2517,7 @@ export const getDropRate = (character: any, account: any, characters: any) => {
           { name: 'Crystal Glunko', value: 1 + 0.3 * crystalGlunkoDropRate },
           { name: 'Mama Troll', value: 1 + (Math.min(0.5, mamaTrollDropRate) + 0.2 * mamaTrollLvl2) },
           { name: 'Sushi (Unagi Nigiri)', value: sushiDropRateBonus / 100 },
+          { name: 'Jelly Operator', value: jellyDropRateBonus / 100 },
           { name: 'Glimbo DR', value: glimboDRmulti },
           { name: 'Tome Multi', value: tomeMulti / 100 },
           { name: 'Minehead', value: mineheadBonusQTY0 / 100 },
@@ -2577,7 +2530,7 @@ export const getDropRate = (character: any, account: any, characters: any) => {
           },
           {
             name: 'Glunko The Massive',
-            value: Math.min(1.5, 1 + 0.5 * seventhCompanionDropRate)
+            value: 1 + 0.5 * seventhCompanionDropRate
           },
           {
             name: 'Santa Snake',
@@ -2683,7 +2636,7 @@ final *= (1 + charmBonus / 100)
   * (1 + vialDrMulti / 100);
 
 final *= Math.max(1, Math.min(1.3, 1 + thirdCompanionDropRate)
-  * Math.min(1.5, 1 + 0.5 * seventhCompanionDropRate));
+  * (1 + 0.5 * seventhCompanionDropRate));
 final *= Math.max(1, Math.min(1.01, 1 + fourthCompanionDropRate / 2500));`
   };
 }
@@ -2932,7 +2885,7 @@ export const getCashMulti = (character: any, account: any, characters: any, play
     + vault70 * cardsCollected) / 100)`
   }
 }
-const getPrinterSampleRate = (character: any, account: any, charactersLevels: any) => {
+const getPrinterSampleRate = (character: any, account: any) => {
   const printerSamplingTalent = getTalentBonus(character?.flatStarTalents, 'PRINTER_SAMPLING');
   const saltLickBonus = getSaltLickBonus(account?.saltLick, 0);
   const { value: equipSampling } = getStatsFromGear(character, 60, account);
@@ -2943,8 +2896,8 @@ const getPrinterSampleRate = (character: any, account: any, charactersLevels: an
   const theRoyalSamplerPrayer = getPrayerBonusAndCurse(character?.activePrayers, 'The_Royal_Sampler', account)?.bonus;
   const stampBonus = getStampsBonusByEffect(account, '3D_Printer_Sampling_Size');
   const meritBonus = account?.tasks?.[2]?.[2]?.[4];
-  const highestLevelMaestro = getHighestLevelOfClass(charactersLevels, CLASSES.Voidwalker);
-  const familyPrinterSample = getFamilyBonusBonus(classFamilyBonuses, 'PRINTER_SAMPLE_SIZE', highestLevelMaestro) || 0;
+  // FamBonusQTYs[6], as the played character sees it
+  const familyPrinterSample = character?.familyBonuses?.[CLASSES.Maestro] ?? 0;
   const arcadeSampleBonus = getArcadeBonus(account?.arcade?.shop, 'Sample_Size')?.bonus;
   const postofficeSampleBonus = getPostOfficeBonus(character?.postOffice, 'Utilitarian_Capsule', 0);
 
@@ -3018,16 +2971,18 @@ export const getPlayerCrystalChance = (character: any, account: any, idleonData:
 
   const eventShop42 = getEventShopBonus(account, 42);
 
+  const jellyBonus8 = getJellyBonus(account, 8);
+  const cardBonus = poopCardBonus + demonGenieBonus;
+
   const guaranteedCrystalMobs = getGuaranteedCrystalMobs(account);
   const remainingCrystalKills = guaranteedCrystalMobs - account?.accountOptions?.[101];
 
-  // Game moved the card term (poopCardBonus + demonGenieBonus) out of its own multiplicative factor
-  // and into this additive group, and added companion171Bonus alongside it. This is a deliberate
-  // nerf for high-card-level accounts (card term used to compound; now it just adds) - do not "fix".
+  // 2.3.531: the card term (game CardBonusREAL(14)) is its own multiplier again, Jelly bonus 8 took its additive slot.
   const product = (1 + cmonOutCrystalsBonus / 100)
-    * (1 + (nonPredatoryBoxBonus + crystalShrineBonus + companion171Bonus + poopCardBonus + demonGenieBonus) / 100)
+    * (1 + (nonPredatoryBoxBonus + crystalShrineBonus + companion171Bonus + jellyBonus8) / 100)
     * (1 + crystals4DaysBonus / 100)
-    * (1 + crystallinStampBonus / 100);
+    * (1 + crystallinStampBonus / 100)
+    * (1 + cardBonus / 100);
   const value = (5 * eventShop42 + product) / 2000;
   // Chance past the cap is not wasted, it becomes game: "CrystalEmbiggener" = max(1, spawn / CAP),
   // which scales the EXP a crystal mob gives (ExpGiven = 30 * embiggener * base). Their HP is a
@@ -3055,10 +3010,16 @@ export const getPlayerCrystalChance = (character: any, account: any, idleonData:
       {
         name: "Additive",
         sources: [
-          { name: "Cmon Out Crystals", value: cmonOutCrystalsBonus },
           { name: "Crystal Shrine Crescent", value: crystalShrineBonus },
           { name: "Post Office", value: nonPredatoryBoxBonus },
           { name: "Companion (Armadillo)", value: companion171Bonus },
+          { name: "Jelly Operator", value: jellyBonus8 },
+        ],
+      },
+      {
+        name: "Multiplicative",
+        sources: [
+          { name: "Cmon Out Crystals", value: cmonOutCrystalsBonus },
           { name: "Crystals 4 Days", value: crystals4DaysBonus },
           { name: "Crystallin Stamp", value: crystallinStampBonus },
           { name: "Poop Card", value: poopCardBonus },
@@ -3092,9 +3053,10 @@ export const getPlayerCrystalChance = (character: any, account: any, idleonData:
     embiggener,
     expression: `(5 * eventShop42 + product) / 2000
  product = (1 + cmonOutCrystalsBonus / 100)
- * (1 + (nonPredatoryBoxBonus + crystalShrineBonus + companion171Bonus + poopCardBonus + demonGenieBonus) / 100)
+ * (1 + (nonPredatoryBoxBonus + crystalShrineBonus + companion171Bonus + jellyBonus8) / 100)
  * (1 + crystals4DaysBonus / 100)
- * (1 + crystallinStampBonus / 100)`
+ * (1 + crystallinStampBonus / 100)
+ * (1 + (poopCardBonus + demonGenieBonus) / 100)`
   }
 }
 
@@ -3165,10 +3127,10 @@ export const getAfkGain = (character: any, characters: any, account: any) => {
   // null until a branch below claims the afkType, so an unhandled type stays distinguishable from a real 0
   let breakdown: any[] = [], gains: number | null = null;
   const { afkType } = character;
-  const { guild, bribes, shrines, charactersLevels, tasks } = account;
+  const { guild, bribes, shrines, tasks } = account;
   const afkGainsTaskBonus = tasks?.[2]?.[1]?.[2] > character?.playerId ? 2 : 0;
-  const highestLevelBM = getHighestLevelOf(characters, CLASSES.Beast_Master)
-  const familyBonus = getFamilyBonusBonus(classFamilyBonuses, 'ALL_SKILL_AFK_GAINS', highestLevelBM);
+  // FamBonusQTYs[50], as the played character sees it
+  const familyBonus = character?.familyBonuses?.[CLASSES.Beast_Master] ?? 0;
   const cardBonus = getCardBonusByEffect(character?.cards?.equippedCards, 'Skill_AFK_gain_rate');
   const cardPassiveBonus = getCardBonusByEffect(account?.cards, 'All_AFK_Gains(Passive)');
   let guildBonus = 0;
@@ -3300,8 +3262,8 @@ export const getAfkGain = (character: any, characters: any, account: any) => {
 
   // Fighting AFK Gains
   if (afkType === 'FIGHTING') {
-    const highestVoidwalker = getHighestLevelOfClass(charactersLevels, CLASSES.Voidwalker);
-    const familyEffBonus = getFamilyBonusBonus(classFamilyBonuses, 'FIGHTING_AFK_GAINS', highestVoidwalker);
+    // FamBonusQTYs[8], as the played character sees it
+    const familyEffBonus = character?.familyBonuses?.[CLASSES.Voidwalker] ?? 0;
     const postOfficeBonus = getPostOfficeBonus(character?.postOffice, 'Civil_War_Memory_Box', 1);
     const firstTalentBonus = getTalentBonus(character?.flatTalents, 'IDLE_BRAWLING');
     const secondTalentBonus = getTalentBonus(character?.flatTalents, 'IDLE_CASTING');

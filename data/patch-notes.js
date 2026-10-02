@@ -4,6 +4,65 @@ import React from 'react';
 /* eslint-disable react/jsx-key */
 export const patchNotes = [
   {
+    'ver': '3.3.82',
+    'gameVer': '2.3.531',
+    'date': '01/10/2026',
+    'features': [
+      'Dashboard: the Arcanist weapon and ring daily drop alerts can now be turned off separately',
+      'Leaderboards: added Day Market Levels and Night Market Levels',
+      'Dashboard: Royal Guardian Worker alerts now suggest Surveyors too, a new alert for Guards whose range is not needed, and optional alerts for when an outpost reaches a chosen Trade, Intel, Command or Military rank',
+      'Sneaking: new Detection tab showing the detection % of every ninja, plus a calculator for any mastery, floor and Funeral Flower count',
+      'Storage: your storage coins are now shown at the top of the page, with the exact amount and your account total in the tooltip',
+      'General: the Giant Mob chance now shows how many Giant Mobs spawned this week',
+      'Royal Armory: added a Marble Chance card showing your drop chance per world, including the early marble boost',
+      'Upgrade Optimizers (Grimoire, Compass, Tesseract, Royal Armory, Clam Work, Jelly): new Game order group mode that lists upgrades in the same order as the in-game menu',
+      'Wiki: new pages for game systems, grouped by world: Upgrade Vault, Star Signs, Constellations, Sigils, Post Office Boxes, Arcade Upgrades, Buildings, Prayers, Equinox Upgrades, Lab Chips, Lab Jewels, Meals, Divinity Gods, Sailing Artifacts, Gaming Superbits and the Jade Emporium',
+      'Wiki: items now show more of their uses: Glimbo trades and the vault upgrade they raise, Refinery salts and their ingredients, lab chip and jewel recipes, building and prayer costs, and the Beanstalk',
+      'Wiki: new Anvil page listing everything it produces, and anvil materials now show which anvil upgrade points they pay for',
+      'Wiki: more items now say where to get them: skilling spots, random event bosses, Mob Cosplay Craze hats, the Talent Book Library, and Dungeon, Event, Spelunking, Royal Guardian and Compass items',
+      'Wiki: the menu and home page are now grouped into Encyclopedia, Account and World 1 to 6',
+      'Constellations: each constellation now shows its in-game shape'
+    ],
+    'fixes': [
+      'Family bonuses now match the game when several characters share a class or have The Family Guy: drop rate, damage, HP, kill per kill, efficiency, AFK gains, golden food, star talent points, added talent levels, printer sample size, refinery speed and boat travel time',
+      'Gaming: Sprout Capacity upgrade cost now matches the game at higher levels',
+      'Slab: greenstack total now matches the game (Zenith Cluster now counts)',
+      'Cauldrons: liquid cauldrons no longer all show as Dragonic, and the max liquid tooltip now shows the correct Bleach / Dragonic bonus',
+      'Wiki: test and placeholder items no longer have pages, and sailing treasure costs no longer show up as Strung Jewels',
+      'Tournament: upgraded (Pet Mart+) companions now show their upgraded power and a + next to their name'
+    ]
+  },
+  {
+    'ver': '3.3.81',
+    'gameVer': '2.3.531',
+    'date': '30/09/2026',
+    'features': [
+      'New Jelly Operator page (World 7): your cell board with each cell DPS, passives and neighbour boosts, all obstructions and their bonuses, upgrades with costs, cells, and an Upgrade Optimizer',
+      'Jelly Operator obstruction bonuses are now counted everywhere they apply',
+      'Dashboard: new Jelly Operator alerts for operations left, slots to unlock, empty slots and Viruses left to place',
+      'Tome: added Successful Jelly Operations',
+      'Pets: upgraded pets now show how many of their Pet Mart+ copies are tradable',
+      'Leaderboards: added Best Jelly DPS, Total Jelly Cell Levels, Total Jelly Upgrades and Best Sushi Combo',
+      'Islands: Crystal Island now shows how many giant crystal mobs are waiting, with a dashboard alert before the 14 day cap',
+      'Cauldrons: exact new bubble chance per cauldron (no more 0.01% rounding), attempts ready, expected bubbles from stored brew, and the next bubbles with their chance',
+      'Royal Armory: see the cost and time to afford an upgrade several levels ahead, maps being cleared now show in the outposts list with their progress and clear time, and resource nodes show when they will run empty',
+      'Active Calculator: Royal Guardians now see territory clear rate and time left',
+      'Royal Statues: Statue Flair shows how much of each marble you need to bring all statues to each flair level, compared with what you own',
+      'Upgrade optimizers now show what building your stash is worth, per hour of farming or per 10x stash, next to the best buy'
+    ],
+    'fixes': [
+      'Royal Guardian: Commander Rank EXP and passive units updated for the new game patch',
+      'Crystal spawn chance: the card bonus is now its own multiplier, matching the game fix',
+      'Compass: Tempest multishot is now capped at 800%',
+      'Atom Collider: available atoms count corrected',
+      'Sneaking: the sushi Stealth bonus no longer boosts Jade gain',
+      'Class EXP now counts the Eggroll pet',
+      'Upgrade optimizers no longer show a -80% discount where the Masterclass allowance does not apply',
+      'Cauldrons: brew needed per new bubble attempt and the Future Bubbles tooltip showed the wrong amounts',
+      'Dashboard: the W3 closest salt timer now skips salts waiting for a manual rank up and shows the next one'
+    ]
+  },
+  {
     'ver': '3.3.80',
     'gameVer': '2.3.530',
     'date': '11/09/2026',

@@ -1981,6 +1981,104 @@ const migration76 = (dashboardConfig) => {
   return dashboardConfig;
 };
 
+const migration77 = (dashboardConfig) => {
+  ensureDashboardOptions(dashboardConfig);
+  const world7 = dashboardConfig?.account?.['World 7'];
+  const jellyOptions = [
+    { name: 'operationsLeft', checked: true, helperText: 'Alert when you have Jelly operations left for today' },
+    { name: 'slotsToBuy', checked: true, helperText: 'Alert when you can unlock more Jelly slots' },
+    { name: 'emptySlots', checked: true, helperText: 'Alert when open Jelly slots have no cell on them' },
+    { name: 'virusesUnplaced', checked: true, helperText: 'Alert when you can place more Viruses' }
+  ];
+  if (world7 && !world7.jellyOperator) {
+    dashboardConfig.account['World 7'] = insertKeyNear(world7, 'sushiStation', 'jellyOperator', {
+      checked: true,
+      options: jellyOptions
+    });
+  }
+  else if (Array.isArray(world7?.jellyOperator?.options)) {
+    // A config saved while this group only had operationsLeft picks up the rest.
+    jellyOptions.forEach((option) => {
+      if (!world7.jellyOperator.options.some(({ name }) => name === option.name)) world7.jellyOperator.options.push(option);
+    });
+  }
+
+  const islandsOptions = dashboardConfig?.account?.['World 2']?.islands?.options;
+  if (Array.isArray(islandsOptions) && !islandsOptions.some((o) => o?.name === 'crystalIsland')) {
+    islandsOptions.push({
+      name: 'crystalIsland',
+      type: 'input',
+      props: { label: 'Days', value: 13, minValue: 1, maxValue: 14 },
+      checked: true,
+      helperText: 'Alert when Crystal Island has this many unclaimed days. It caps at 14 days, and a capped island spawns fewer giant crystal mobs (15) than 13 days does (27)'
+    });
+  }
+
+  dashboardConfig.version = 77;
+  return dashboardConfig;
+};
+
+const migration78 = (dashboardConfig) => {
+  ensureDashboardOptions(dashboardConfig);
+  const etcOptions = dashboardConfig?.account?.General?.etc?.options;
+  const arcanistDrops = Array.isArray(etcOptions)
+    ? etcOptions.find((option) => option?.name === 'arcanistDailyDrops')
+    : null;
+  if (arcanistDrops && arcanistDrops.type !== 'array') {
+    // Weapon and ring drops shared one checkbox; each now has its own. Both inherit the old
+    // checkbox so a user who had the alert off doesn't get it back.
+    const wasOn = arcanistDrops.checked !== false;
+    arcanistDrops.type = 'array';
+    arcanistDrops.category = 'arcanistDailyDrops';
+    arcanistDrops.checked = true;
+    arcanistDrops.helperText = 'Alert when Arcanist weapon or ring drops remain for today. Each drop type can be turned off on its own';
+    arcanistDrops.props = { ...arcanistDrops.props, value: { weapon: wasOn, ring: wasOn } };
+  }
+
+  const rgOptions = dashboardConfig?.account?.['World 7']?.royalGuardian?.options;
+  if (Array.isArray(rgOptions)) {
+    // Surveyors feed the Intel bar the way Traders feed Trade, so the Worker alerts now offer both.
+    const surveyorText = {
+      overkillWorkers: 'Alert when an outpost has more Workers than it needs to empty its resource within this many hours. Workers only add collection rate, so the spare ones could be Traders or Surveyors and earn rank EXP instead',
+      strandedWorkers: 'Alert when an outpost\'s resources are all empty and nothing better is in range, while Workers are still assigned to it. They add collection rate to a resource that has none left, so Traders or Surveyors would earn rank EXP instead'
+    };
+    rgOptions.forEach((option) => {
+      if (surveyorText[option?.name]) option.helperText = surveyorText[option.name];
+    });
+
+    if (!rgOptions.some((option) => option?.name === 'idleGuards')) {
+      const strandedIndex = rgOptions.findIndex((option) => option?.name === 'strandedWorkers');
+      rgOptions.splice(strandedIndex >= 0 ? strandedIndex + 1 : rgOptions.length, 0, {
+        name: 'idleGuards',
+        checked: true,
+        helperText: 'Alert when an outpost has Guards whose range it does not need. Guards only add range, so they could be Traders or Surveyors and earn rank EXP instead. Also lists Guards that only reach an empty resource: swapping them drops that connection, so rewire it after the daily reset'
+      });
+    }
+
+    // Off by default: which rank is worth moving units away at is the player's call.
+    const rankOptions = [
+      ['tradeRank', 'Trade', 10, 'Traders are still assigned to it'],
+      ['intelRank', 'Intel', 10, 'Surveyors are still assigned to it'],
+      ['commandRank', 'Command', 6, 'units are still sent to it'],
+      ['militaryRank', 'Military', 10, 'units are still sent to it']
+    ].filter(([name]) => !rgOptions.some((option) => option?.name === name))
+      .map(([name, label, value, holders]) => ({
+        name,
+        type: 'input',
+        props: { label: `${label} rank`, value, minValue: 1 },
+        checked: false,
+        helperText: `Alert when an outpost reaches this ${label} rank while ${holders}, so you can move them elsewhere`
+      }));
+    if (rankOptions.length > 0) {
+      const restockIndex = rgOptions.findIndex((option) => option?.name === 'restockLocked');
+      rgOptions.splice(restockIndex >= 0 ? restockIndex : rgOptions.length, 0, ...rankOptions);
+    }
+  }
+
+  dashboardConfig.version = 78;
+  return dashboardConfig;
+};
+
 const migrations = {
   2: migrateToVersion2,
   3: migrateToVersion3,
@@ -2057,6 +2155,8 @@ const migrations = {
   74: migration74,
   75: migration75,
   76: migration76,
+  77: migration77,
+  78: migration78,
 };
 
 export const migrateConfig = (baseTrackers, userConfig) => {

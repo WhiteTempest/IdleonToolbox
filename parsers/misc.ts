@@ -4,7 +4,6 @@ import {
   bonuses,
   bundles as bundlesData,
   cards as cardsData,
-  classFamilyBonuses,
   companions,
   deathNote,
   generalSpelunky,
@@ -28,7 +27,6 @@ import { getAtomBonus } from './world-3/atomCollider';
 import { getPrayerBonusAndCurse } from './world-3/prayers';
 import { getShrineBonus } from './world-3/shrines';
 import { isSuperbitUnlocked } from './world-5/gaming';
-import { getFamilyBonusBonus } from './family';
 import { getStatsFromGear } from './items';
 import LavaRand from '../utility/lavaRand';
 import { isPast } from 'date-fns';
@@ -49,6 +47,7 @@ import { getPaletteBonus } from '@parsers/world-5/gaming';
 import { getMinorDivinityBonus } from '@parsers/world-5/divinity';
 import { getSpelunkingBonus } from '@parsers/world-7/spelunking';
 import { getButtonBonus } from '@parsers/world-7/button';
+import { getJellyBonus } from '@parsers/world-7/jellyOperator';
 import { getWinnerBonus } from '@parsers/world-6/summoning';
 import { isArtifactAcquired } from '@parsers/world-5/sailing';
 import { getSaltLickBonus } from '@parsers/world-3/saltLick';
@@ -399,11 +398,19 @@ export const isEquipmentItem = (item: any): boolean =>
 // check). The Storage Chest is NOT carry-capped, so any item that stacks there can reach the threshold.
 // An item is greenstackable iff it can sit in the Storage Chest as a stack:
 //   1. not equipment - see isEquipmentItem, gear never stacks;
-//   2. actually depositable - hole/cavern resources (Type CURRENCY) and dungeon-only drops (DUNGEON_*)
-//      route to their own banks / evaporate on map exit, so they never get a chest slot.
-const NON_STORABLE_TYPES = new Set(['CURRENCY', 'DUNGEON_EVAPORATE', 'DUNGEON_FOOD', 'DUNGEON_ITEM', 'DUNGEON_KEY']);
+//   2. actually depositable - the game's pickup code banks some drops by name and never puts them in
+//      the inventory, and dungeon drops of the types below evaporate or stay in the dungeon.
+// Type CURRENCY is only a label, the game never checks it: Zenith Cluster and Orblet are CURRENCY
+// and sit in the chest like any other item.
+const NON_STORABLE_TYPES = new Set(['DUNGEON_EVAPORATE', 'DUNGEON_FOOD', 'DUNGEON_ITEM']);
+const NON_STORABLE_ITEMS = new Set([
+  'Motherlode', 'Bug14', 'MotherlodeTREE', 'Fish14', // hole resources
+  'LootDice', 'DungCredits1', 'DungCredits2', 'DungEnhancer0', 'DungEnhancer1', 'DungEnhancer2',
+  'XP', 'XPskill', 'Cash', 'Cashb'
+]);
 const isGreenstackable = (item: any): boolean =>
-  typeof item?.typeGen === 'string' && !isEquipmentItem(item) && !NON_STORABLE_TYPES.has(item?.Type);
+  typeof item?.typeGen === 'string' && !isEquipmentItem(item) && !NON_STORABLE_TYPES.has(item?.Type)
+  && !NON_STORABLE_ITEMS.has(item?.rawName);
 
 export const getSlab = (idleonData: any) => {
   const lootyRaw = idleonData?.Cards?.[1] || tryToParse(idleonData?.Cards1);
@@ -431,8 +438,10 @@ export const getSlab = (idleonData: any) => {
     unrealisticGreenstack: unrealisticGreenstackItems?.[name]
   }));
   const missingItems = slabItems?.filter(({ obtained, unobtainable }) => !obtained && !unobtainable)?.length;
-  const greenstackableItems = slabItems?.filter(({ greenstackable, unobtainable, unrealisticGreenstack }) =>
-    greenstackable && !unobtainable && !unrealisticGreenstack);
+  // The game counts every registered greenstack, so an unrealistic or unobtainable item the account
+  // did stack counts toward both sides; the rest stay out so 100% remains reachable.
+  const greenstackableItems = slabItems?.filter(({ greenstackable, greenStacked, unobtainable, unrealisticGreenstack }) =>
+    greenstackable && (greenStacked || (!unobtainable && !unrealisticGreenstack)));
   const greenstackableCount = greenstackableItems?.length ?? 0;
   const greenstackableStackedCount = greenstackableItems?.filter(({ greenStacked }) => greenStacked)?.length ?? 0;
 
@@ -651,23 +660,7 @@ export const getHighestLevelOf = (characters: any, className: any) => {
   }, 0);
 }
 
-export const getHighestLevelOfClass = (characters: any, className: any, exactSearch?: any) => {
-  const highest = characters?.reduce((res: any, { level, class: cName }: any) => {
-    if (res?.[cName]) {
-      res[cName] = Math.max(res?.[cName], level);
-    }
-    else {
-      res[cName] = level;
-    }
-    return res;
-  }, {});
-  let allClasses = talentPagesMap?.[className];
-  if (exactSearch) {
-    allClasses = allClasses.filter((cName) => cName === className);
-  }
-  const classAlias = allClasses?.find((cName) => highest?.[cName]);
-  return highest?.[classAlias!] || 0;
-};
+
 
 export const getCharacterByHighestLevel = (characters: any, className: any) => {
   let filteredObjects = characters.filter((obj: any) => obj.class === className);
@@ -838,6 +831,7 @@ export const getGiantMobChance = (character: any, account: any) => {
   }
   return {
     chance,
+    giantsAlreadySpawned,
     crescentShrineBonus,
     giantMobVial,
     glitterbugPrayer
@@ -845,13 +839,9 @@ export const getGiantMobChance = (character: any, account: any) => {
 }
 
 export const getGoldenFoodMulti = (character: any, account: any, characters: any) => {
-  const highestLevelShaman = account?.charactersLevels?.reduce((max: number, { level, class: cName }: any) => {
-    return checkCharClass(cName, CLASSES.Shaman) ? Math.max(max, level) : max;
-  }, 0) ?? 0;
   const theFamilyGuy = getTalentBonus(character?.flatTalents, 'THE_FAMILY_GUY');
-  const familyBonus = getFamilyBonusBonus(classFamilyBonuses, 'GOLDEN_FOODS', highestLevelShaman);
-  const isShaman = checkCharClass(character?.class, CLASSES.Shaman);
-  const amplifiedFamilyBonus = familyBonus * (theFamilyGuy > 0 ? (1 + theFamilyGuy / 100) : 1) || 0;
+  // FamBonusQTYs[66], the Shaman family bonus, as the played character sees it.
+  const familyBonus = character?.familyBonuses?.[CLASSES.Shaman] ?? 0;
   const obolsBonus = getObolsBonus(character?.obols, bonuses?.etcBonuses?.[8]);
   const { value: gearGoldFoodBonus, newBreakdown: equipmentBonusBreakdown } = getStatsFromGear(character, 8, account);
   const hungryForGoldTalentBonus = getTalentBonus(character?.flatTalents, 'HAUNGRY_FOR_GOLD');
@@ -881,20 +871,21 @@ export const getGoldenFoodMulti = (character: any, account: any, characters: any
   };
   const cardBonus = goldenFoodCardBonus('cropfallEvent1') + goldenFoodCardBonus('anni5Event1');
   const vaultBonus86 = getUpgradeVaultBonus(account?.upgradeVault?.upgrades, 86);
+  const jellyBonus = getJellyBonus(account, 10) + getJellyBonus(account, 51);
 
   const deathBringer = characters?.find((char: any) => checkCharClass(char?.class, CLASSES.Death_Bringer));
   const apocalypseWow = getHighestTalentAcrossCharacters(characters, 'APOCALYPSE_WOW', character);
   const apocalypses = deathBringer?.wow?.finished?.at(0) || 0;
   const armorSetBonus = getArmorSetBonus(account, 'SECRET_SET');
   const value = (1 + (armorSetBonus + 50 * companionBonus174) / 100)
-    * (Math.max(isShaman ? amplifiedFamilyBonus : familyBonus, 1)
+    * (Math.max(familyBonus, 1)
       + ((gearGoldFoodBonus + obolsBonus)
         + (hungryForGoldTalentBonus
           + (goldenAppleStamp
             + (goldenFoodAchievement
               + (goldenFoodBubbleBonus
                 + goldenFoodSigilBonus) + mealBonus + starSignBonus + bribeBonus + charmBonus
-              + (2 * achievementBonus + 3 * secondAchievementBonus + voteBonus + apocalypseWow * apocalypses + companionBonus + legendTalentBonus + cardBonus + companionBonus155 + 1e4 * companionBonus174 + vaultBonus86))))) / 100);
+              + (2 * achievementBonus + 3 * secondAchievementBonus + voteBonus + apocalypseWow * apocalypses + companionBonus + legendTalentBonus + cardBonus + companionBonus155 + 1e4 * companionBonus174 + vaultBonus86 + jellyBonus))))) / 100);
 
   const breakdown = {
     statName: 'Golden food multi', // adjust if needed
@@ -915,7 +906,7 @@ export const getGoldenFoodMulti = (character: any, account: any, characters: any
         sources: [
           {
             name: 'Family Bonus',
-            value: isShaman ? amplifiedFamilyBonus : familyBonus
+            value: familyBonus
           },
           { name: 'The Family Guy', value: theFamilyGuy },
 
@@ -943,7 +934,8 @@ export const getGoldenFoodMulti = (character: any, account: any, characters: any
           { name: 'Card', value: cardBonus },
           { name: 'Vanillie Companion', value: companionBonus155 },
           { name: 'Verminous Companion', value: 1e4 * companionBonus174 },
-          { name: 'Vault Upgrade', value: vaultBonus86 }
+          { name: 'Vault Upgrade', value: vaultBonus86 },
+          { name: 'Jelly Operator', value: jellyBonus }
         ],
         subSections: [
           equipmentBonusBreakdown
@@ -956,7 +948,7 @@ export const getGoldenFoodMulti = (character: any, account: any, characters: any
     value,
     breakdown,
     expression: `(1 + armorSetBonus / 100)
-* (Math.max(isShaman ? amplifiedFamilyBonus : familyBonus, 1)
+* (Math.max(familyBonus, 1)
 + (gearGoldFoodBonus
 + (hungryForGoldTalentBonus
 + (goldenAppleStamp
@@ -1327,18 +1319,30 @@ export const getCompanions = (companionObject: any = {}, accountOptions: any = [
   const companion = companions?.[companionIndex];
   const ownedCompanions = companionObject?.l?.reduce((result: any, comp: any) => {
     const [companionIndex, isTradable, , , levelRaw] = `${comp}`.split(',');
-    const current = result[companionIndex] || { count: 0, tradableCount: 0, nonTradableCount: 0, level: 0 };
+    const current = result[companionIndex] || {
+      count: 0,
+      tradableCount: 0,
+      nonTradableCount: 0,
+      upgradedCount: 0,
+      upgradedTradableCount: 0,
+      level: 0
+    };
     const tradable = isTradable === '1';
     // Field index 4 is the Pet Mart+ upgrade level; the game keeps the max across owned copies.
     // Absent/malformed (pre-patch saves) must resolve to 0, never NaN.
     const parsedLevel = Number(levelRaw);
     const level = Number.isFinite(parsedLevel) ? parsedLevel : 0;
+    // Tradability belongs to a copy, not to the pet: the upgraded copy can be the untradable one
+    // while a base copy is tradable, so the + counts are tracked per copy.
+    const copyUpgraded = level >= 1;
     return {
       ...result,
       [companionIndex]: {
         count: current.count + 1,
         tradableCount: current.tradableCount + (tradable ? 1 : 0),
         nonTradableCount: current.nonTradableCount + (tradable ? 0 : 1),
+        upgradedCount: current.upgradedCount + (copyUpgraded ? 1 : 0),
+        upgradedTradableCount: current.upgradedTradableCount + (copyUpgraded && tradable ? 1 : 0),
         level: Math.max(current.level, level)
       }
     }
@@ -1381,9 +1385,13 @@ export const getCompanions = (companionObject: any = {}, accountOptions: any = [
       copies: ownedCompanions?.[index]?.count ?? 0,
       tradableCount: ownedCompanions?.[index]?.tradableCount ?? 0,
       nonTradableCount: ownedCompanions?.[index]?.nonTradableCount ?? 0,
+      upgradedCount: ownedCompanions?.[index]?.upgradedCount ?? 0,
+      upgradedTradableCount: ownedCompanions?.[index]?.upgradedTradableCount ?? 0,
       level,
       upgraded,
-      bonus: upgraded ? (comp?.upgradedBonus ?? comp?.bonus) : comp?.bonus
+      bonus: upgraded ? (comp?.upgradedBonus ?? comp?.bonus) : comp?.bonus,
+      // Game: Stuff2("PetTournyPOW") reads CompanionDB[9] for an upgraded copy, [7] otherwise.
+      tourPower: upgraded ? (comp?.upgradedTourPower ?? comp?.tourPower) : comp?.tourPower
     }
   })
 

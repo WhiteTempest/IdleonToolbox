@@ -38,7 +38,9 @@ import { useLocalStorage } from '@mantine/hooks';
 import { getLegendTalentBonus } from '@parsers/world-7/legendTalents';
 
 const maxUpgradesOptions = [5, 10, 25, 50, 100, 200, 300];
-const groupModes = ['None', 'Upgrade', 'Summary'];
+// 'Game order' is Summary sorted by in-game list position: reordering single steps would scatter
+// one upgrade's levels across the list, so the only useful in-game ordering is one row per upgrade.
+const groupModes = ['None', 'Upgrade', 'Summary', 'Game order'];
 // Not every upgrade set has a max level - clam work upgrades are uncapped, and "5 / undefined"
 // reads as a bug.
 const formatLevel = (upgrade) => (Number.isFinite(upgrade?.x4)
@@ -72,9 +74,14 @@ const GenericUpgradeOptimizer = ({
   // Grimoire/Compass/Tesseract's resource icons all have a `_x1` idle-quantity variant; the Royal
   // Guardian's RGres{n} currencies don't, so this lets a consumer opt out instead of 404ing.
   resourceImageSuffix = '_x1',
+  // Jelly Bloodcells are a font glyph kept in etc/, not a data/ sprite.
+  resourceImageDir = 'data/',
   upgradeImagePrefix,
   getResourceType,
   getUpgradeIconIndex,
+  // Position in the in-game upgrade list. The index matches it for linear lists; Compass (paths)
+  // and the Royal Armory (shelf slots) lay out differently and pass their own.
+  getGameOrder = (upgrade) => upgrade.index,
   getResourceAmount,
   tooltipText,
   // A map of resourceType -> resource per hour the consumer derived itself. Royal Guardian income is
@@ -86,6 +93,9 @@ const GenericUpgradeOptimizer = ({
   // allowance has nothing to say about them (Clam Work).
   usesMasterclassReduction = true,
   showSplitByResource = true,
+  // False where the currency has no hourly income to divide by (Jelly Bloodcells come from
+  // operations), which pins the method to cost only and hides the selector.
+  showResourcePerHour = true,
   statLabels
 }) => {
   // Stat keys are camelCase; the fallback spaces them out so "pearlGain" reads as "Pearl Gain".
@@ -184,9 +194,11 @@ const GenericUpgradeOptimizer = ({
   });
   // A stored 'rph-auto' left behind by an optimizer that no longer supplies computed rates would
   // price every upgrade at zero hours, so it falls back to the manual rate instead.
-  const optimizationMethod = storedOptimizationMethod === 'rph-auto' && !autoRphAvailable
-    ? 'rph'
-    : storedOptimizationMethod;
+  const optimizationMethod = !showResourcePerHour
+    ? 'cost'
+    : storedOptimizationMethod === 'rph-auto' && !autoRphAvailable
+      ? 'rph'
+      : storedOptimizationMethod;
   const usesRph = optimizationMethod === 'rph' || optimizationMethod === 'rph-auto';
   const effectiveResourcePerHour = optimizationMethod === 'rph-auto' ? autoResourcePerHour : resourcePerHour;
   const valueCommitDebouncersRef = useRef({});
@@ -201,7 +213,8 @@ const GenericUpgradeOptimizer = ({
       : maxUpgrades;
     optimizedUpgrades = getOptimizedUpgradesFn(character, account, category, maxToUse, {
       onlyAffordable,
-      masterClassReduction: isNaN(masterClassReduction) ? 0 : masterClassReduction,
+      // Optimizers whose costs never read the allowance must not spend it, or rows show a bogus -80%.
+      masterClassReduction: !usesMasterclassReduction || isNaN(masterClassReduction) ? 0 : masterClassReduction,
       resourcePerHour: usesRph ? effectiveResourcePerHour : undefined,
       getResourceType
     });
@@ -209,6 +222,8 @@ const GenericUpgradeOptimizer = ({
   // read before the grouping below, which maps the array and loses the property
   const stoppedReason = optimizedUpgrades.stoppedReason ?? null;
   const holdingBeatsSpending = stoppedReason === 'hoarding';
+  const holdRates = optimizedUpgrades.holdRates ?? [];
+  const bestBuy = optimizedUpgrades[0];
 
   // Group upgrades by name if consolidation is enabled
   let displayUpgrades;
@@ -268,7 +283,7 @@ const GenericUpgradeOptimizer = ({
       };
     });
   }
-  else if (groupMode === 'Summary') {
+  else if (groupMode === 'Summary' || groupMode === 'Game order') {
     const grouped = {};
     optimizedUpgrades.forEach((upgrade, index) => {
       if (!grouped[upgrade.name]) {
@@ -299,6 +314,10 @@ const GenericUpgradeOptimizer = ({
       ...g,
       combinedStatChanges: Object.values(g.combinedStatChanges)
     }));
+    if (groupMode === 'Game order') {
+      const position = (upgrade) => getGameOrder(upgrade) ?? Infinity;
+      displayUpgrades.sort((a, b) => position(a) - position(b));
+    }
   }
   else {
     displayUpgrades = optimizedUpgrades.map((upgrade, index) => ({ ...upgrade, upgradeIndex: index }));
@@ -409,6 +428,63 @@ const GenericUpgradeOptimizer = ({
       </Typography>
     );
   };
+  // Growing the stash is itself a gain for hoarding upgrades. Per hour of farming it lines up with
+  // the best purchase (whose efficiency is % per hour of its own resource); without an RPH the
+  // only honest unit is a 10x bigger stash. The gain is logarithmic, so the hourly rate is "now".
+  // Same window as the rebuild note: an RPH that needs over a year to grow the stash 10x is the
+  // untouched default of 1, not a farming rate, and would print as +0%; a buy paid off in under a
+  // minute extrapolates to an absurd hourly rate.
+  const MAX_REAL_FARMING_HOURS = 24 * 365;
+  const renderHoldRates = () => {
+    if (!holdRates.length) return null;
+    const bestBuyHours = bestBuy ? getRebuildTime(bestBuy) : null;
+    const bestBuyPerHour = bestBuyHours >= 1 / 60 && bestBuyHours <= MAX_REAL_FARMING_HOURS
+      ? bestBuy.totalStatChange / bestBuyHours
+      : null;
+    const formatRate = (value) => {
+      const magnitude = Math.abs(value);
+      const digits = magnitude >= 1000
+        ? notateNumber(value)
+        : magnitude >= 0.01 ? value.toFixed(2) : value.toPrecision(2);
+      return `${value >= 0 ? '+' : ''}${digits}%`;
+    };
+    const rates = holdRates.map((rate) => {
+      const rph = usesRph ? effectiveResourcePerHour[rate.resourceType] : null;
+      const tenfoldHours = rph > 0 ? 9 * Math.max(rate.held, 1) / rph : Infinity;
+      return { ...rate, hourly: rate.perHour !== null && tenfoldHours <= MAX_REAL_FARMING_HOURS };
+    });
+    return (
+      <Stack gap={0.5}>
+        {rates.map((rate) => (
+          <Stack key={rate.resourceType} direction="row" gap={1} alignItems="center" flexWrap="wrap">
+            <img
+              style={{ objectPosition: '0 -6px' }}
+              src={`${prefix}${resourceImageDir}${resourceImagePrefix}${rate.resourceType}${resourceImageSuffix}.png`}
+              alt=""
+              width={24}
+              height={24}
+            />
+            <Typography variant="body2">
+              Holding {cleanUnderscore(rate.name)}: {rate.hourly
+              ? `${formatRate(rate.perHour)} per hour of farming right now`
+              : `${formatRate(rate.perTenfold)} per 10x stash`}
+            </Typography>
+            <Tooltip title={rate.hourly
+              ? 'What farming this resource adds just by keeping it, no purchase. It shrinks as the stash grows, since the bonus follows its log.'
+              : `What a stash 10x bigger than your ${notateNumber(rate.held)} would add, no purchase. Set a real resource per hour to see it per hour of farming.`}>
+              <IconInfoCircleFilled size={16}/>
+            </Tooltip>
+          </Stack>
+        ))}
+        {bestBuyPerHour !== null && rates.some((rate) => rate.hourly) && (
+          <Typography variant="body2" color="text.secondary">
+            Best buy: {cleanUnderscore(bestBuy.name)}, {formatRate(bestBuyPerHour)} per hour
+            of {cleanUnderscore(resourceNames[getResourceType(bestBuy)] ?? '')} farming
+          </Typography>
+        )}
+      </Stack>
+    );
+  };
   const renderStatChanges = (statChanges, upgrade) => {
     const rebuildTime = getRebuildTime(upgrade);
     return statChanges.map((change, index) => (
@@ -437,7 +513,7 @@ const GenericUpgradeOptimizer = ({
         <Stack direction="row" gap={1} alignItems="center">
           <img
             style={{ objectPosition: '0 -6px' }}
-            src={`${prefix}data/${resourceImagePrefix}${resourceTypeKey}${resourceImageSuffix}.png`}
+            src={`${prefix}${resourceImageDir}${resourceImagePrefix}${resourceTypeKey}${resourceImageSuffix}.png`}
             alt=""
           />
           <Typography variant="body2">Total Cost: {notateNumber(upgrade.totalCost)}</Typography>
@@ -517,7 +593,7 @@ const GenericUpgradeOptimizer = ({
       <Stack direction="row" gap={1} alignItems="center">
         <img
           style={{ objectPosition: '0 -6px' }}
-          src={`${prefix}data/${resourceImagePrefix}${section.resourceType}${resourceImageSuffix}.png`}
+          src={`${prefix}${resourceImageDir}${resourceImagePrefix}${section.resourceType}${resourceImageSuffix}.png`}
           alt=""
           width={24}
           height={24}
@@ -572,7 +648,7 @@ const GenericUpgradeOptimizer = ({
                 <Stack direction="row" gap={1} alignItems="center">
                   <img
                     style={{ objectPosition: '0 -6px' }}
-                    src={`${prefix}data/${resourceImagePrefix}${resourceTypeKey}${resourceImageSuffix}.png`}
+                    src={`${prefix}${resourceImageDir}${resourceImagePrefix}${resourceTypeKey}${resourceImageSuffix}.png`}
                     alt=""
                   />
                   <Typography variant="body2">
@@ -646,7 +722,7 @@ const GenericUpgradeOptimizer = ({
           <Stack direction="row" gap={1} alignItems="center">
             <img
               style={{ objectPosition: '0 -6px' }}
-              src={`${prefix}data/${resourceImagePrefix}${resourceTypeKey}${resourceImageSuffix}.png`}
+              src={`${prefix}${resourceImageDir}${resourceImagePrefix}${resourceTypeKey}${resourceImageSuffix}.png`}
               alt=""
               width={20}
               height={20}
@@ -677,7 +753,7 @@ const GenericUpgradeOptimizer = ({
             <MenuItem value={'all'}>All</MenuItem>
           </Select>
         </FormControl>
-        <FormControl size="small" sx={{ width: 180 }}>
+        {showResourcePerHour ? <FormControl size="small" sx={{ width: 180 }}>
           <InputLabel>Optimization Method</InputLabel>
           <Select
             value={optimizationMethod}
@@ -688,7 +764,7 @@ const GenericUpgradeOptimizer = ({
             <MenuItem value="rph">Resource per hour{autoRphAvailable ? ' (manual)' : ''}</MenuItem>
             <MenuItem value="cost">Cost only</MenuItem>
           </Select>
-        </FormControl>
+        </FormControl> : null}
         {optimizationMethod === 'rph' && (
           <Button sx={{ width: 'fit-content' }} variant="outlined" onClick={() => setRphDialogOpen(true)}>
             Set RPH
@@ -703,7 +779,7 @@ const GenericUpgradeOptimizer = ({
                 <Stack key={key} direction="row" gap={1} alignItems="center">
                   <img
                     style={{ objectPosition: '0 -3px' }}
-                    src={`${prefix}data/${resourceImagePrefix}${key}${resourceImageSuffix}.png`}
+                    src={`${prefix}${resourceImageDir}${resourceImagePrefix}${key}${resourceImageSuffix}.png`}
                     width={24}
                     height={24}
                     alt=""/>
@@ -758,18 +834,26 @@ const GenericUpgradeOptimizer = ({
             }}
           />
         )}
-        <FormControl size="small" sx={{ width: 120 }}>
-          <InputLabel>Group mode</InputLabel>
-          <Select
-            value={groupMode}
-            label="Group mode"
-            onChange={(e) => setGroupMode(e.target.value)}
-          >
-            {groupModes.map(group => (
-              <MenuItem key={group} value={group}>{group}</MenuItem>
-            ))}
-          </Select>
-        </FormControl>
+        <Stack direction="row" alignItems="center" gap={0.5}>
+          <FormControl size="small" sx={{ width: 140 }}>
+            <InputLabel>Group mode</InputLabel>
+            <Select
+              value={groupMode}
+              label="Group mode"
+              onChange={(e) => setGroupMode(e.target.value)}
+            >
+              {groupModes.map(group => (
+                <MenuItem key={group} value={group}>{group}</MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+          {groupMode === 'Game order' && (
+            <Tooltip
+              title="One row per upgrade, listed in the same order as the in-game menu, so you can buy top to bottom. Costs are priced in the recommended order: buying in a different order reaches the same levels, but the daily 80% discount may land on different purchases.">
+              <IconInfoCircleFilled size={16} />
+            </Tooltip>
+          )}
+        </Stack>
         {showSplitByResource && (
           <FormControlLabel
             sx={{ width: 'fit-content' }}
@@ -809,7 +893,7 @@ const GenericUpgradeOptimizer = ({
         </Stack>
         <Divider sx={{ my: 1 }} flexItem orientation={'vertical'} />
         {resourceUsage.map((resource) => {
-          const resourceTypeKey = Object.keys(resourceNames).find(key => resourceNames[key] === resource.name) || resource.name;
+          const resourceTypeKey = Object.keys(resourceNames).find(key => resourceNames[key] === resource.name) ?? resource.name;
           const resourcePerHourValue = effectiveResourcePerHour[resourceTypeKey];
           const hasResourcePerHour = resourcePerHourValue && !isNaN(resourcePerHourValue) && resourcePerHourValue > 0;
           const timeEstimateHours = hasResourcePerHour ? resource.cost / resourcePerHourValue : null;
@@ -819,7 +903,7 @@ const GenericUpgradeOptimizer = ({
             <Stack key={resource.name} direction="row" gap={1} alignItems="center">
               <img
                 style={{ objectPosition: '0 -6px' }}
-                src={`${prefix}data/${resourceImagePrefix}${resourceTypeKey}${resourceImageSuffix}.png`}
+                src={`${prefix}${resourceImageDir}${resourceImagePrefix}${resourceTypeKey}${resourceImageSuffix}.png`}
                 alt={resource.name}
                 width={24}
                 height={24}
@@ -860,7 +944,7 @@ const GenericUpgradeOptimizer = ({
                       // Guardian's currency ids have gaps, so the two disagree.
                       startAdornment: <img
                         style={{ objectPosition: '0 -3px', marginLeft: -5, marginRight: 5 }}
-                        src={`${prefix}data/${resourceImagePrefix}${key}${resourceImageSuffix}.png`}
+                        src={`${prefix}${resourceImageDir}${resourceImagePrefix}${key}${resourceImageSuffix}.png`}
                         width={24}
                         height={24} alt=""/>
                     }}
@@ -894,6 +978,7 @@ const GenericUpgradeOptimizer = ({
       )}
 
       <Typography variant="h6" data-testid="optimizer-heading">Recommended Upgrade Sequence</Typography>
+      {renderHoldRates()}
       {holdingBeatsSpending && displayUpgrades.length > 0 && (
         <Typography variant="body2" color="text.secondary">
           Stopping here: past this point, spending costs more in Hoarding bonus than it gains. Build the stash back up first.
