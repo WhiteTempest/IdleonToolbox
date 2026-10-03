@@ -4,6 +4,17 @@ import React from 'react';
 /* eslint-disable react/jsx-key */
 export const patchNotes = [
   {
+    'ver': '3.3.83',
+    'gameVer': '2.3.531',
+    'date': '03/10/2026',
+    'features': [
+      'Dashboard: the Bosses card now tracks Dr Defecaus (up after every daily reset) and Baba Yaga (22h 20m respawn timer), with a Killed button and an undo'
+    ],
+    'fixes': [
+      'Leaderboards: fixed leaderboards not updating since October 1, and the new Day/Night Market, Jelly and Best Sushi Combo leaderboards not showing'
+    ]
+  },
+  {
     'ver': '3.3.82',
     'gameVer': '2.3.531',
     'date': '01/10/2026',
