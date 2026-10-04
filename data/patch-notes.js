@@ -4,14 +4,33 @@ import React from 'react';
 /* eslint-disable react/jsx-key */
 export const patchNotes = [
   {
+    'ver': '3.3.84',
+    'gameVer': '2.3.531',
+    'date': '04/10/2026',
+    'features': [
+      'Traps: separated the Shiny Chance line from Collect Rates, and added a breakdown for collect rates',
+      'Masterclass upgrade pages: added a Daily Shopping Spree toggle and a Levels ahead selector to preview future upgrade costs',
+      'Bubbles: the Future Bubbles tooltip now always shows the next 15 bubbles after your least progressed cauldron'
+    ],
+    'fixes': []
+  },
+  {
     'ver': '3.3.83',
     'gameVer': '2.3.531',
     'date': '03/10/2026',
     'features': [
-      'Dashboard: the Bosses card now tracks Dr Defecaus (up after every daily reset) and Baba Yaga (22h 20m respawn timer), with a Killed button and an undo'
+      'Dashboard: the Bosses card now tracks Dr Defecaus (up after every daily reset) and Baba Yaga (22h 20m respawn timer), with a Killed button and an undo',
+      'Royal Guardian: the kingdom map now marks nodes that are only in reach thanks to Guards, and shows the Military rank (and ETA) needed to reach each node without Guards',
+      'Dashboard: the Zenith Cluster Farming alert icon is now greyed out when farming is OFF',
+      'Spelunking: Lore Bosses now show the best Manic depth for each boss',
+      'Refinery: max rank (no deficit) now also accounts for what your 3D printer produces, with a breakdown tooltip',
+      'Quests: new Completed at least once option to find quests none of your characters have done yet'
     ],
     'fixes': [
-      'Leaderboards: fixed leaderboards not updating since October 1, and the new Day/Night Market, Jelly and Best Sushi Combo leaderboards not showing'
+      'Leaderboards: fixed leaderboards not updating since October 1, and the new Day/Night Market, Jelly and Best Sushi Combo leaderboards not showing',
+      'Legend Talents: the Obsidian artifact now counts its 6th point at Transcendent tier',
+      'Spelunking: fixed a Meritocracy typo in the Stamina Regen Rate breakdown',
+      'Refinery: fixed max rank (no deficit) sometimes showing one rank lower than it should'
     ]
   },
   {

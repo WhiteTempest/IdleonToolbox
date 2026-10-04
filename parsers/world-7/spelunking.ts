@@ -221,6 +221,7 @@ const parseSpelunking = (account: any, characters: any, rawSpelunking: any, rawT
       defeated: (rawSpelunking?.[0]?.[index] ?? 0) > 0,
       biggestHaul: biggestHauls?.[index] ?? 0,
       bestCaveLevel: bestCaveLevels?.[index] ?? 0,
+      bestManicCaveLevel: rawUpgradeExtra47?.[index] ?? 0,
       foundAt: (parseFloat(generalSpelunky?.[7]?.[index]) + 1) || 0,
       grandDiscoveriesFound,
       grandDiscoveryChance
@@ -990,7 +991,7 @@ export const groupUpgradesByColumn = (upgrades: any) => {
 
 export const getStaminaRegenRate = (account: any) => {
   const baseRate = 5;
-  const meritoracyBonus = getMeritocracyBonus(account, 17);
+  const meritocracyBonus = getMeritocracyBonus(account, 17);
   const legendBonus = getLegendTalentBonus(account, 30);
   const shopUpg5 = getSpelunkingBonus(account, 5);
   const bubbleBonus = getBubbleBonus(account, 'FASTER_NRG', false);
@@ -1016,7 +1017,7 @@ export const getStaminaRegenRate = (account: any) => {
           name: "Additive",
           sources: [
             { name: "Base Rate", value: baseRate },
-            { name: "Meritoracy", value: meritoracyBonus },
+            { name: "Meritocracy", value: meritocracyBonus },
             { name: "Legend", value: legendBonus },
             { name: "Stamina Resurgence", value: shopUpg5 },
             { name: "Bubble", value: bubbleBonus },

@@ -23,6 +23,7 @@ import ErrorBoundary from '@components/common/ErrorBoundary';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { PAGE_SEO } from '../data/page-seo';
 import { resolveSeoHead } from '../utility/seo-head.mjs';
+import { pageIconFor } from '../utility/page-icons';
 import { trackPageView } from '../utility/analytics';
 import { reportWebVitals } from '../utility/web-vitals';
 
@@ -61,6 +62,7 @@ const MyApp = (props) => {
   const canonicalUrl = `https://idleontoolbox.com${asPath.split('?')[0].split('#')[0]}`;
   const isGdprRegion = useGdprRegion();
   const { title: staticTitle, description: staticDescription } = resolveSeoHead({ pageProps, pageSeo });
+  const pageIcon = pageIconFor(pathname);
 
   // GA's own history-change measurement reads document.title before next/head has swapped it, so
   // every client-side navigation used to be reported under the previous page's title. Sending the
@@ -206,11 +208,13 @@ const MyApp = (props) => {
                     locale: 'en_US',
                     url: canonicalUrl,
                     siteName: 'Idleon Toolbox',
-                    title: 'Idleon Toolbox - Essential Tools for Legends of Idleon',
-                    description: 'Power up your Legends of Idleon adventure with Idleon Toolbox\'s essential tools and resources for optimizing gameplay, character builds, crafting, and more.',
+                    // Link previews (Discord etc.) read og:*, and a data page's own NextSeo never
+                    // reaches the export, so the per-page values have to be written here.
+                    title: staticTitle ?? 'Idleon Toolbox - Essential Tools for Legends of Idleon',
+                    description: staticDescription ?? 'Power up your Legends of Idleon adventure with Idleon Toolbox\'s essential tools and resources for optimizing gameplay, character builds, crafting, and more.',
                     images: [
                       {
-                        url: 'https://idleontoolbox.com/data/Coins5.png',
+                        url: `https://idleontoolbox.com/${pageIcon ?? 'data/Coins5'}.png`,
                         alt: 'Idleon Toolbox'
                       }
                     ]
