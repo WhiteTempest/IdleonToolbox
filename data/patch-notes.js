@@ -4,6 +4,32 @@ import React from 'react';
 /* eslint-disable react/jsx-key */
 export const patchNotes = [
   {
+    'ver': '3.3.86',
+    'gameVer': '2.3.531',
+    'date': '06/10/2026',
+    'features': [],
+    'fixes': [
+      'Dashboard: the Hole Bell alert now shows when a cavern bell is ready'
+    ]
+  },
+  {
+    'ver': '3.3.85',
+    'gameVer': '2.3.531',
+    'date': '05/10/2026',
+    'features': [
+      'Research: added a timer until the next Posty Note unlock',
+      'Vote Ballot: added a toggle to show only the current bonus and the choices for next week',
+      'Dashboard: Royal Guardian rank alerts can now take a different rank per world'
+    ],
+    'fixes': [
+      'Meritocracy: bonuses (incl. Palette Luck) are no longer too high before the Demonflesh is handed in, and are 0 before reaching World 6',
+      'Palette Luck: Colourful Luck and Gamer Luck now use the gaming level of your last played character, like the game does',
+      'Grimoire, Compass, Tesseract and Royal Armory upgrade search now works with multiple words',
+      'Sailing and Amber breakdowns: the Tome bonus is now labeled Tome',
+      'Dashboard: Royal Guardian Command and Military rank alerts now show the Commander and Knight sprites, and a new Purity rank alert was added'
+    ]
+  },
+  {
     'ver': '3.3.84',
     'gameVer': '2.3.531',
     'date': '04/10/2026',

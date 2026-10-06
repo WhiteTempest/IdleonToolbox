@@ -48,11 +48,7 @@ const alertBadges = {
   saltRankUpRoom: { Icon: KeyboardArrowUpIcon, color: '#66bb6a', border: '#3e6b40', size: 24 },
   saltDeficit: { Icon: ArrowDropDownIcon, color: '#d62727', border: '#833b3b', size: 36 },
   saltMaterials: { Icon: WarningRoundedIcon, color: '#d1921e', border: '#7a5a1e', size: 18 },
-  // Several Royal Guardian alerts share a sprite, so the badge is what tells them apart: the arrow
-  // marks a rank reached, and Command/Military share the militia helmet, so they get a letter.
   rankUp: { Icon: ArrowDropUpIcon, color: '#66bb6a', size: 36 },
-  rankCommand: { label: 'C', color: '#ffd54f' },
-  rankMilitary: { label: 'M', color: '#ef5350' },
   sharedLink: { Icon: LinkIcon, color: '#90caf9', size: 18 },
   locked: { Icon: LockIcon, color: '#d1921e', size: 15 }
 };
@@ -784,10 +780,12 @@ const Account = ({ account, characters, trackers, lastUpdated }) => {
                   title={<RoyalGuardianList
                     headline={`${alerts?.['World 7']?.royalGuardian?.[option]?.count} outpost${alerts?.['World 7']?.royalGuardian?.[option]?.count === 1
                       ? ' has'
-                      : 's have'} reached ${rank} rank ${alerts?.['World 7']?.royalGuardian?.[option]?.threshold} with ${holders} still on it`}
+                      : 's have'} reached ${alerts?.['World 7']?.royalGuardian?.[option]?.threshold != null
+                      ? `${rank} rank ${alerts?.['World 7']?.royalGuardian?.[option]?.threshold}`
+                      : `their ${rank} rank target`} with ${holders} still on it`}
                     entries={alerts?.['World 7']?.royalGuardian?.[option]?.outposts?.map((outpost) => ({
                       ...outpost,
-                      detail: `Rank ${outpost?.rank}, ${outpost?.units} ${unit}${outpost?.units === 1 ? '' : 's'}`
+                      detail: `Rank ${outpost?.rank}/${outpost?.threshold}, ${outpost?.units} ${unit}${outpost?.units === 1 ? '' : 's'}`
                     }))}/>}
                   iconPath={iconPath} badge={badge} maxWidth={RG_LIST_TOOLTIP_WIDTH}/> : null)}
               {alerts?.['World 7']?.royalGuardian?.restockLocked ?
@@ -950,8 +948,9 @@ const RG_LIST_TOOLTIP_WIDTH = 540;
 const RG_RANK_ALERTS = [
   { option: 'tradeRank', rank: 'Trade', holders: 'Traders', unit: 'Trader', iconPath: 'etc/RGunit1', badge: 'rankUp' },
   { option: 'intelRank', rank: 'Intel', holders: 'Surveyors', unit: 'Surveyor', iconPath: 'etc/RGunit3', badge: 'rankUp' },
-  { option: 'commandRank', rank: 'Command', holders: 'units', unit: 'unit', iconPath: 'etc/RGmilitia', badge: 'rankCommand' },
-  { option: 'militaryRank', rank: 'Military', holders: 'units', unit: 'unit', iconPath: 'etc/RGmilitia', badge: 'rankMilitary' }
+  { option: 'commandRank', rank: 'Command', holders: 'Commanders', unit: 'Commander', iconPath: 'etc/RGcommander', badge: 'rankUp' },
+  { option: 'militaryRank', rank: 'Military', holders: 'Knights', unit: 'Knight', iconPath: 'etc/RGknight', badge: 'rankUp' },
+  { option: 'purityRank', rank: 'Purity', holders: 'Priests', unit: 'Priest', iconPath: 'etc/RGpriest', badge: 'rankUp' }
 ];
 
 const RoyalGuardianList = ({ headline, entries = [] }) => {

@@ -352,7 +352,7 @@ const serializeData = (idleonData: IdleonData, serverVars: ServerVars, staticDat
   accountData.tome = safeSection<any>('tome', {}, () => getTome(idleonData, accountData, charactersData, serverVars));
   accountData.owl = safeSection<any>('owl', {}, () => getOwl(idleonData, accountData));
   accountData.kangaroo = safeSection<any>('kangaroo', {}, () => getKangaroo(idleonData, accountData));
-  accountData.voteBallot = safeSection<any>('voteBallot', {}, () => getVoteBallot(idleonData, accountData));
+  accountData.voteBallot = safeSection<any>('voteBallot', {}, () => getVoteBallot(idleonData, accountData, charactersData));
   accountData.upgradeVault = safeSection<any>('upgradeVault', {}, () => getUpgradeVault(idleonData, accountData, charactersData));
   accountData.emperor = safeSection<any>('emperor', {}, () => getEmperor(idleonData, accountData));
   accountData.legendTalents = safeSection<any>('legendTalents', {}, () => getLegendTalents(idleonData, accountData, charactersData));
@@ -364,7 +364,7 @@ const serializeData = (idleonData: IdleonData, serverVars: ServerVars, staticDat
   accountData.clamWork = safeSection<any>('clamWork', {}, () => getClamWork(idleonData, accountData));
   accountData.minehead = safeSection<any>('minehead', {}, () => getMinehead(idleonData, accountData, serverVars));
   accountData.tournament = safeSection<any>('tournament', {}, () => getTournament(idleonData, accountData, staticData.tournamentServerData));
-  accountData.research = safeSection<any>('research', {}, () => getResearch(idleonData, accountData, charactersData));
+  accountData.research = safeSection<any>('research', {}, () => getResearch(idleonData, accountData, charactersData, serverVars));
   accountData.button = safeSection<any>('button', {}, () => getButton(accountData, charactersData));
   accountData.sushiStation = safeSection<any>('sushiStation', {}, () => getSushiStation(idleonData, accountData));
   (accountData as any).jellyOperator = safeSection<any>('jellyOperator', {}, () => getJellyOperator(idleonData, accountData));

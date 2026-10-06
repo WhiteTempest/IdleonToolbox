@@ -2093,6 +2093,58 @@ const migration79 = (dashboardConfig) => {
   return dashboardConfig;
 };
 
+const migration80 = (dashboardConfig) => {
+  const rgOptions = dashboardConfig?.account?.['World 7']?.royalGuardian?.options;
+  if (Array.isArray(rgOptions)) {
+    // Command/Military units are Commanders/Knights, so the helper text names them like Trade/Intel do.
+    const holderText = {
+      commandRank: 'Alert when an outpost reaches this Command rank while Commanders are still sent to it, so you can move them elsewhere',
+      militaryRank: 'Alert when an outpost reaches this Military rank while Knights are still sent to it, so you can move them elsewhere'
+    };
+    rgOptions.forEach((option) => {
+      if (holderText[option?.name]) option.helperText = holderText[option.name];
+    });
+
+    if (!rgOptions.some((option) => option?.name === 'purityRank')) {
+      const militaryIndex = rgOptions.findIndex((option) => option?.name === 'militaryRank');
+      const restockIndex = rgOptions.findIndex((option) => option?.name === 'restockLocked');
+      const insertAt = militaryIndex >= 0 ? militaryIndex + 1 : restockIndex >= 0 ? restockIndex : rgOptions.length;
+      rgOptions.splice(insertAt, 0, {
+        name: 'purityRank',
+        type: 'input',
+        props: { label: 'Purity rank', value: 10, minValue: 1, perWorld: {} },
+        checked: false,
+        helperText: 'Alert when an outpost reaches this Purity rank while Priests are still sent to it, so you can move them elsewhere'
+      });
+    }
+
+    // Empty map = every world falls back to the single value, so existing setups are unchanged.
+    const rankOptionNames = ['tradeRank', 'intelRank', 'commandRank', 'militaryRank', 'purityRank'];
+    rgOptions.forEach((option) => {
+      if (rankOptionNames.includes(option?.name) && option?.props && !option.props.perWorld) {
+        option.props.perWorld = {};
+      }
+    });
+  }
+
+  dashboardConfig.version = 80;
+  return dashboardConfig;
+};
+
+const migration81 = (dashboardConfig) => {
+  // The Bell alert reads a `theBell` option, but the Hole tracker shipped it as `theWell`, so the
+  // alert never fired. Renaming keeps whatever the user had it set to.
+  const holeOptions = dashboardConfig?.account?.['World 5']?.hole?.options;
+  if (Array.isArray(holeOptions) && !holeOptions.some((option) => option?.name === 'theBell')) {
+    const wellOption = holeOptions.find((option) => option?.name === 'theWell');
+    if (wellOption) wellOption.name = 'theBell';
+    else holeOptions.push({ name: 'theBell', checked: true });
+  }
+
+  dashboardConfig.version = 81;
+  return dashboardConfig;
+};
+
 const migrations = {
   2: migrateToVersion2,
   3: migrateToVersion3,
@@ -2172,6 +2224,8 @@ const migrations = {
   77: migration77,
   78: migration78,
   79: migration79,
+  80: migration80,
+  81: migration81,
 };
 
 export const migrateConfig = (baseTrackers, userConfig) => {

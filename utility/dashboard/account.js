@@ -1666,19 +1666,28 @@ export const getWorld7Alerts = (account, fields, options, characters) => {
       { option: 'tradeRank', type: 0, unitsOf: (outpost) => slotUnitsOf(outpost, 1) },
       { option: 'intelRank', type: 1, unitsOf: (outpost) => slotUnitsOf(outpost, 3) },
       { option: 'commandRank', type: 2, unitsOf: (outpost) => outpost.rankBars?.[2]?.units ?? 0 },
-      { option: 'militaryRank', type: 3, unitsOf: (outpost) => outpost.rankBars?.[3]?.units ?? 0 }
+      { option: 'militaryRank', type: 3, unitsOf: (outpost) => outpost.rankBars?.[3]?.units ?? 0 },
+      { option: 'purityRank', type: 4, unitsOf: (outpost) => outpost.rankBars?.[4]?.units ?? 0 }
     ];
     RANK_ALERTS.forEach(({ option, type, unitsOf }) => {
       if (!rgOptions?.[option]?.checked) return;
-      const threshold = rgOptions?.[option]?.props?.value ?? 1;
+      const { value, perWorld } = rgOptions?.[option]?.props ?? {};
+      const thresholdOf = (world) => Number(perWorld?.[world] ?? value ?? 1);
       // Once the rank is reached, the units still feeding the bar are the ones worth moving, so the
       // alert clears itself the moment they are.
       const reached = outposts
-        .filter(({ rankBars }) => rankBars?.[type]?.unlocked && (rankBars?.[type]?.rank ?? 0) >= threshold)
-        .map((outpost) => ({ ...pickOutpostEntry(outpost), rank: outpost.rankBars[type].rank, units: unitsOf(outpost) }))
+        .filter(({ rankBars, world }) => rankBars?.[type]?.unlocked && (rankBars?.[type]?.rank ?? 0) >= thresholdOf(world))
+        .map((outpost) => ({
+          ...pickOutpostEntry(outpost),
+          rank: outpost.rankBars[type].rank,
+          threshold: thresholdOf(outpost.world),
+          units: unitsOf(outpost)
+        }))
         .filter(({ units }) => units > 0);
       if (reached.length > 0) {
-        royalGuardian[option] = { count: reached.length, threshold, outposts: reached };
+        const thresholds = new Set(reached.map(({ threshold }) => threshold));
+        // One shared threshold reads as "reached rank N"; mixed ones are shown per outpost instead.
+        royalGuardian[option] = { count: reached.length, threshold: thresholds.size === 1 ? reached[0].threshold : null, outposts: reached };
       }
     });
 
