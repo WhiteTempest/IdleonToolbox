@@ -219,7 +219,8 @@ export const getGeneralAlerts = (account, fields, options, characters) => {
         etc.newCharacters = newCharactersCounter;
       }
     }
-    if (options?.etc?.gemsFromBosses?.checked) {
+    // Bosses only drop gems once the World 2 merit "World bosses can now drop gems" (Tasks[2][1][4]) is bought.
+    if (options?.etc?.gemsFromBosses?.checked && account?.tasks?.[2]?.[1]?.[4] > 0) {
       const availableKills = Math.max(0, (600 - account?.accountOptions?.[195]) / 4);
       if (availableKills) {
         alerts.gemsFromBosses = availableKills;
@@ -969,7 +970,9 @@ export const getWorld4Alerts = (account, fields, options) => {
       }
     }
     if (eggs?.checked) {
-      const eggsAvailable = account?.breeding?.eggs.slice(0, 15).every((eggLv) => eggLv > 0);
+      // Full means every unlocked slot holds an egg; the nest grows from 3 to 15 slots with upgrades.
+      const eggCapacity = account?.breeding?.eggCapacity ?? 0;
+      const eggsAvailable = eggCapacity > 0 && account?.breeding?.eggs?.slice(0, eggCapacity).every((eggLv) => eggLv > 0);
       if (eggsAvailable) {
         breeding.eggs = eggsAvailable
       }
@@ -1213,7 +1216,6 @@ export const getWorld5Alerts = (account, fields, options, characters) => {
       bravery,
       justice,
       wisdom,
-      theBell,
       theHarp,
       theHive,
       grotto,
@@ -1258,9 +1260,16 @@ export const getWorld5Alerts = (account, fields, options, characters) => {
     if (wisdom?.checked && account?.hole?.caverns?.wisdom?.rewardMulti >= wisdom?.props?.value) {
       hole.wisdom = true;
     }
-    const readyBells = account?.hole?.caverns?.theBell?.bells?.filter(({ exp, expReq }) => exp >= expReq);
-    if (theBell?.checked && readyBells?.length > 0) {
-      hole.theBell = true;
+    const readyBells = account?.hole?.caverns?.theBell?.bells?.map(({ name, readyUses }, index) => ({
+      name,
+      readyUses,
+      index
+    })).filter(({ name, readyUses }) => {
+      const option = options?.hole?.[`bell${name?.capitalize()}`];
+      return option?.checked && readyUses > 0 && readyUses >= (option?.props?.value || 1);
+    });
+    if (readyBells?.length > 0) {
+      hole.bells = readyBells;
     }
     const powerThresholdReached = account?.hole?.caverns?.theHarp?.power >= theHarp?.props?.value;
     if (theHarp?.checked && powerThresholdReached) {
