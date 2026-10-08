@@ -4,12 +4,31 @@ import React from 'react';
 /* eslint-disable react/jsx-key */
 export const patchNotes = [
   {
+    'ver': '3.3.87',
+    'gameVer': '2.3.531',
+    'date': '08/10/2026',
+    'features': [
+      'Dashboard: redesigned alert settings with search, filters, clearer names and descriptions for every alert, and Undo. Click any alert icon to edit that alert right there'
+    ],
+    'fixes': [
+      'Dashboard: unticked picker items (tasks, shops, printer atoms, talents, Crystal Countdown skills), switched-off character alerts and the Sneaking loot checkbox now hide their alerts',
+      'Dashboard: the ribbon alert now shows when your ribbon shelf is full, and a sediment threshold can now be 0 to alert at its max'
+    ]
+  },
+  {
     'ver': '3.3.86',
     'gameVer': '2.3.531',
     'date': '06/10/2026',
-    'features': [],
+    'features': [
+      'Dashboard: the Hole Bell alert is now split per bell (Ring, Ping, Clean, Renew), each with its own ready uses threshold',
+      'Dashboard: added a Bubba Smoker timer to Clickers, counting down to max smoked meat quality',
+      'Royal Guardian kingdom map: an inner ring shows each outpost reach without its slot Guards, the range Guards add is striped, rings are labelled, nodes are marked by whether they need Guards or are taken, and wide screens show the details in a side panel'
+    ],
     'fixes': [
-      'Dashboard: the Hole Bell alert now shows when a cavern bell is ready'
+      'Dashboard: the Hole Bell alert now shows when a cavern bell is ready',
+      'Dashboard: the Egg nest full alert now fires when every unlocked egg slot is filled, not only once all 15 slots are unlocked',
+      'Dashboard: the boss gems alert now only shows once you bought the World 2 merit that lets world bosses drop gems',
+      'Masterclass upgrade cards: long upgrade names now wrap beside the icon instead of below it'
     ]
   },
   {
