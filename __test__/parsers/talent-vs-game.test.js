@@ -3,7 +3,8 @@ import fs from 'fs';
 import path from 'path';
 import { describe, expect, it } from 'vitest';
 import fresh from '../fixtures/fresh.json';
-import latest from '../fixtures/latest.json';
+// Values below are pinned to the 22 Aug 2026 save (latest-2026-08.json), checked against the game then.
+import latest from '../fixtures/latest-2026-08.json';
 import { parseFixture } from '../helpers/parsed-fixtures';
 import { CLASSES, getHighestTalentAcrossCharacters, getHighestTalentByClass } from '@parsers/talents';
 
@@ -26,6 +27,9 @@ const TALENTS = [
   ["Siege_Breaker", "THE_FAMILY_GUY", 144, 34.091580502215656],
   ["Divine_Knight", "1000_HOURS_PLAYED", 176, 49.20863309352518],
   ["Divine_Knight", "BITTY_LITTY", 177, 17.045790251107828],
+  // Added with the Daily ribbons section: matches the live client's getbonus2(1, 204, -1) with Nine
+  // active, read 2026-10-09.
+  ["Death_Bringer", "RIBBON_WINNING", 204, 174.6518105849582],
   ["Death_Bringer", "AGRICULTURAL_'PRECIATION", 206, 836],
   ["Death_Bringer", "DANK_RANKS", 207, 2.45872801082544],
   ["Death_Bringer", "WRAITH_OVERLORD", 208, 1.3902439024390243],
@@ -49,7 +53,12 @@ const TALENTS = [
   ["Bubonic_Conjuror", "PURPLE_TUBE", 535, 33.48534201954397],
   ["Bubonic_Conjuror", "GREEN_TUBE", 536, 50.22801302931596],
   ["Arcane_Cultist", "OVERWHELMING_ENERGY", 589, 1.4769874476987448],
+  // Summoning upgrade cost and value. Pinned to the fixture: the live client read 348.901 and 176.2
+  // on 2026-10-10 with Nine active, which is level 508 for both against the fixture's 539 (Nine's
+  // added levels have since dropped by 31), so the lookup agrees and only the account moved.
+  ["Arcane_Cultist", "ESSENTIAL_ESSENCE", 595, 355.07246376811594],
   ["Arcane_Cultist", "PASSION_OF_THE_SUMMON", 596, 4.8545887961859355],
+  ["Arcane_Cultist", "ABSOLUTE_STARDOM", 597, 180.85],
   ["Arcane_Cultist", "TACHYON_TRUTH", 598, 7.508982035928144],
   // Royal Guardian (patch 2.3.525, task D5): no character in this fixture has levelled these, so
   // the pinned values are each talent's level-0 identity (0 for decay, 1 for decayMulti) - still a

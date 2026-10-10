@@ -10,7 +10,8 @@ import {
   research,
   royalKillRequirements,
   royalResources as royalResourcesCatalog,
-  statues as statuesCatalog
+  statues as statuesCatalog,
+  gameTables
 } from '@website-data';
 import { liveEntries } from '@parsers/catalog';
 import { getAllMasterclassCostRedux, getAdviceFishBonus, isCompanionBonusActive } from '@parsers/misc';
@@ -42,7 +43,7 @@ const ARMORY_STATUE_FLAIR = 78;
 export const ARMORY_TALENT_REATTAINMENT = 55;
 
 // game: "StatueUpgOdds" - the level-0 upgrade chance is 1 / this, per royal statue.
-const ROYAL_STATUE_FIRST_ODDS = [25, 50, 100, 250, 500, 1000, 2500, 10000];
+const ROYAL_STATUE_FIRST_ODDS: number[] = gameTables.royalStatueFirstOdds;
 
 // game: "SF_maxLV"
 const STATUE_FLAIR_MAX_LEVEL = 3;
@@ -62,7 +63,7 @@ const MARBLE_LORE_CAVE = 9;
 
 // game: "OutpostPTSleft" - the Jelly Operator bonus that adds PTS to every outpost of a world
 // (index = world, W8 reuses W7's).
-const JELLY_OUTPOST_PTS_BY_WORLD = [3, 15, 32, 43, 48, 52, 61, 61];
+const JELLY_OUTPOST_PTS_BY_WORLD: number[] = gameTables.royalOutpostJellyBonus;
 
 // Order matches RoyalG[3][2]; strings taken from the armory tooltip for upgrade 79
 // ("Compounding Outposting"), which is the only place the game names them.
@@ -283,6 +284,10 @@ export interface RoyalClearingMap {
   progress: number;
   militiaUnits: number;
   militiaRate: number;
+  // game: RoyalG[3][0] - seconds banked since the last collect (it only runs while the map screen is
+  // open). Militia kills land in one lump, militiaRate * bankedSeconds / 3600, at the next collect.
+  bankedSeconds: number;
+  bankedKills: number;
   hoursToClear: number | null;
 }
 
@@ -860,12 +865,11 @@ export const getRoyalGuardian = (idleonData: IdleonData, account: Account, chara
         return militiaClearRate > 1e7
           ? String(notateNumber(militiaClearRate, 'Big'))
           : commaNotation(militiaClearRate);
-      case 68: { // Kingdom_Sovereignty - next recruit, keyed off the upgrade's OWN level (max 36)
+      case 68: { // Kingdom_Sovereignty - next recruit, keyed off the upgrade's OWN level (one per recruit)
         const level = toNum(armoryLevels?.[68]);
-        if (level >= 36) return "None._You've_recruited_them_all!";
-        const roleByLevel = '0,0,0,0,0,0,0,1,1,1,1,1,1,0,0,0,1,1,1,1,0,2,2,2,1,2,2,2,2,2,2,2,0,1,2,2'.split(',');
-        const worldByLevel = '1,2,1,2,1,2,3,1,2,3,1,2,3,3,4,3,4,1,2,3,4,1,2,3,4,1,2,3,4,1,2,3,4,4,4,4'.split(',');
-        const role = ['Commander', 'Knight', 'Priest'][toNum(roleByLevel[level])];
+        const { role: roleByLevel, world: worldByLevel } = gameTables.royalRecruitOrder;
+        if (level >= roleByLevel.length) return "None._You've_recruited_them_all!";
+        const role = gameTables.royalRecruitClasses[toNum(roleByLevel[level])];
         return `${role}_for_World_${worldByLevel[level]}`;
       }
       case 71: // Trading_Rank
@@ -1139,6 +1143,7 @@ export const getRoyalGuardian = (idleonData: IdleonData, account: Account, chara
     // up (2.3.531), so each type arrives one rank after the last: rank 1 a Worker, 2 a Trader,
     // 3 a Guard, 4 a Surveyor, then one more of each every 4 ranks.
     const commandRank = ranks[2];
+    // game: "PassiveUnitsz"
     const passiveUnits = ROYAL_UNIT_NAMES.map((_, type) => Math.ceil(Math.max(0, commandRank - type) / 4)
       + (type === 0 ? Math.min(1, toNum(mapRaw?.[12])) : 0));
     const packed = `${mapRaw?.[11] ?? ''}`;
@@ -1407,11 +1412,16 @@ export const getRoyalGuardian = (idleonData: IdleonData, account: Account, chara
     const militiaUnits = deployments
       .filter(({ job, mapIndex }) => job === UNIT_JOB_CLEAR && mapIndex === clearingMap.mapIndex).length;
     const militiaRate = militiaUnits * militiaClearRate;
-    const remaining = Math.max(0, clearingMap.killsRequired - clearingMap.kills);
+    const bankedSeconds = Math.max(0, toNum(progression?.[0]));
+    const bankedKills = militiaRate * bankedSeconds / 3600;
+    // Banked kills are already owed, so they come off what is left before the ETA.
+    const remaining = Math.max(0, clearingMap.killsRequired - clearingMap.kills - bankedKills);
     return {
       ...clearingMap,
       militiaUnits,
       militiaRate,
+      bankedSeconds,
+      bankedKills,
       hoursToClear: remaining <= 0 ? 0 : militiaRate > 0 ? remaining / militiaRate : null
     };
   });
@@ -1529,9 +1539,6 @@ const getRoyalStatueOdds = (index: number, level: number): number => {
   return 1 / (10 * Math.ceil(((25 + 15 * Math.pow(index, 2)) * Math.max(1, 1 + (level - 1) / 4)) / 10));
 };
 
-// game: "ArmoryUpgCost" - indexed by display slot; only the level and the two per-upgrade cost
-// factors come from the upgrade id behind that slot. Exported so the Upgrade Optimizer (task C2)
-// can re-price a slot at a hypothetical level without duplicating this formula.
 // How many of an outpost's slot Workers could be swapped for a Trader while every node it is wired
 // to still empties inside `horizonHours`. Workers are the only unit in the collection rate (game:
 // "OutpostResourceRate" multiplies by UnitSpecEffect(0) * TotalUnitsz(map, 0)), so dropping k of
@@ -1592,6 +1599,9 @@ export const getIdleGuards = (outpost: Outpost, guardBonus: number): { spare: nu
   return { spare, parked: mostRemovable(links.filter(({ live }) => live)) - spare };
 };
 
+// game: "ArmoryUpgCost" - indexed by display slot; only the level and the two per-upgrade cost
+// factors come from the upgrade id behind that slot. Exported so the Upgrade Optimizer (task C2)
+// can re-price a slot at a hypothetical level without duplicating this formula.
 export const getArmoryUpgradeCost = (
   slot: number,
   slotToId: number[],
@@ -1629,6 +1639,7 @@ export const getArmoryUpgradeBonus = (account: Account, index: number): number =
 export const getRoyalStatueBonus = (account: Account, index: number): number =>
   (account as any)?.royalGuardian?.royalStatues?.[index]?.bonus ?? 0;
 
+// game: "OrbletMarketBonus"
 export const getOrbletMarketBonus = (account: Account, index: number): number =>
   byIndex((account as any)?.royalGuardian?.orbletMarket, index)?.bonus ?? 0;
 

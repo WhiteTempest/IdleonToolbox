@@ -1504,7 +1504,7 @@ const getKillPerKill = (character: Character, characters: Character[], account: 
   return { value, breakdown };
 }
 
-// MultiKill_base: everything that is not multiplied by the overkill tier count.
+// game: "MultiKill_base" - everything that is not multiplied by the overkill tier count.
 export const getMultiKillBase = (character: Character, characters: Character[], account: Account) => {
   const starSignBonus = getStarSignBonus(character, account, 'Total_Multikill');
   const saltLickBonus = getSaltLickBonus(account?.saltLick, 8);
@@ -1540,6 +1540,7 @@ const getVoidRadiusMultiKill = (character: Character) => {
   return speedrunning ? getTalentBonusIfActive(character?.activeBuffs, 'VOID_RADIUS', 'y') : 0;
 }
 
+// game: "MultiKill_perTier"
 export const getMultiKillPerTier = (character: Character, characters: Character[], account: Account, deathNoteIndex?: number) => {
   const noteIndex = deathNoteIndex ?? Math.floor(character?.mapIndex / 50);
   const deathNoteRank = account?.deathNote?.[noteIndex]?.rank || 0;
@@ -1591,6 +1592,7 @@ const DIMINISHED_MULTIKILL_MAP_INDEX = 300;
 // From World 7 onwards (CurrentMap >= 300) the game squashes both halves of multikill through a
 // bracketed curve. The top bracket has no ceiling, it just flattens to a 1/50 slope, so a raw
 // 2557 reads back as 144.29 rather than being capped near 100.
+// game: "MultiKill_base" / "MultiKill_perTier" - the curve both apply on World 7+ maps.
 export const getMultiKillDiminished = (value: number) => {
   if (value >= 250) return 98.14 + (value - 250) / 50;
   if (value >= 200) return 95.6 + (value - 200) / 20;

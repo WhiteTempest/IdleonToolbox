@@ -1,6 +1,7 @@
 import { commaNotation, lavaLog, notateNumber } from '@utility/helpers';
 import { items, randomList2 } from '@website-data';
 import { getSchematicBonus } from '@parsers/world-5/caverns/the-well';
+import { getStudyBonus } from '@parsers/world-5/hole';
 
 // Cavern 18 — Crystal Glunko Cove. Mirrors N.js customBlock_Holes2 Cglunko_* handlers.
 // Cove upgrade level t (0..23) lives in OptionsListAccount[630 + t]; gooey shapes (the cove currency)
@@ -11,36 +12,38 @@ const SHAPE_COUNT = 12;
 const UPGRADE_OPTION_OFFSET = 630; // OptionsListAccount[630 + t] = upgrade level
 const SHAPE_OPTION_OFFSET = 654;   // OptionsListAccount[654 + shapeId] = shapes owned
 
-// Cglunko_upgBon: total bonus for upgrade t = level * bonusPerLevel.
+// game: "Cglunko_upgBon" - total bonus for upgrade t = level * bonusPerLevel.
 export const getCglunkoBonus = (account: any, t: number): number =>
   (account?.accountOptions?.[UPGRADE_OPTION_OFFSET + t] ?? 0) * Number(randomList2?.[13]?.[t] ?? 0);
 
-// Cglunko_upgCost: pow(costBase, level) + level, discounted by upgrade 7, with a 5x surcharge on odd indices.
-const getCglunkoUpgCost = (account: any, t: number): number => {
+// game: "Cglunko_upgCost" - pow(costBase, level) + level, discounted by upgrade 7, with a 5x surcharge on odd
+// indices, and 15% off while OptionsListAccount[604] is below Study 17's bonus.
+const getCglunkoUpgCost = (holesObject: any, account: any, t: number): number => {
   const level = account?.accountOptions?.[UPGRADE_OPTION_OFFSET + t] ?? 0;
   const costBase = Number(randomList2?.[14]?.[t] ?? 0);
   let cost = (Math.pow(costBase, level) + level) * (1 / (1 + getCglunkoBonus(account, 7) / 100));
   if (t % 2 === 1) cost *= 5;
+  if (Math.round(account?.accountOptions?.[604] ?? 0) < getStudyBonus(holesObject, 17, 0)) cost *= 0.85;
   return cost < 1e6 ? Math.floor(Math.max(1, cost)) : cost;
 };
 
 const getShapesOwned = (account: any): number[] =>
   Array.from({ length: SHAPE_COUNT }, (_, i) => Math.max(0, account?.accountOptions?.[SHAPE_OPTION_OFFSET + i] ?? 0));
 
-// Cglunko_Bdig: sum of digit-counts of the 6 blue shapes (OptionsListAccount[654..659]).
+// game: "Cglunko_Bdig" - sum of digit-counts of the 6 blue shapes (OptionsListAccount[654..659]).
 const getCglunkoBdig = (account: any): number => {
   let sum = 0;
   for (let i = 654; i <= 659; i++) sum += Math.ceil(lavaLog(account?.accountOptions?.[i] ?? 0));
   return sum;
 };
-// Cglunko_Pdig: sum of digit-counts of the 6 purp shapes (OptionsListAccount[660..665]).
+// game: "Cglunko_Pdig" - sum of digit-counts of the 6 purp shapes (OptionsListAccount[660..665]).
 const getCglunkoPdig = (account: any): number => {
   let sum = 0;
   for (let i = 660; i <= 665; i++) sum += Math.ceil(lavaLog(account?.accountOptions?.[i] ?? 0));
   return sum;
 };
 
-// Cglunko_DR: drop-rate multiplier active while a character is in Cavern 18.
+// game: "Cglunko_DR" - drop-rate multiplier active while a character is in Cavern 18.
 const getCglunkoDropRate = (account: any): number => {
   const uB = (t: number) => getCglunkoBonus(account, t);
   const opt = (i: number) => account?.accountOptions?.[i] ?? 0;
@@ -53,11 +56,11 @@ const getCglunkoDropRate = (account: any): number => {
     * (1 + (uB(18) * Math.ceil(lavaLog(opt(200)))) / 100);
 };
 
-// Cglunko_AFKgains: AFK-gains rate (fraction) while in Cavern 18.
+// game: "Cglunko_AFKgains" - AFK-gains rate (fraction) while in Cavern 18.
 const getCglunkoAfkGains = (account: any): number =>
   (10 + (getCglunkoBonus(account, 8) + getCglunkoBonus(account, 13))) / 100;
 
-// Cglunko_DoublePickup: chance (0..3) to double-pick shapes, from schematics 101/103/105.
+// game: "Cglunko_DoublePickup" - chance (0..3) to double-pick shapes, from schematics 101/103/105.
 const getCglunkoDoublePickup = (holesObject: any): number =>
   Math.min((getSchematicBonus({ holesObject, t: 101, i: 10 })
     + getSchematicBonus({ holesObject, t: 103, i: 10 })
@@ -93,7 +96,7 @@ export const getCrystalGlunkoCove = (holesObject: any, accountData: any) => {
       bonus,
       bonusPerLevel: Number(randomList2?.[13]?.[t] ?? 0),
       costBase: Number(randomList2?.[14]?.[t] ?? 0),
-      cost: getCglunkoUpgCost(accountData, t),
+      cost: getCglunkoUpgCost(holesObject, accountData, t),
       group,
       shapeId,
       shapeName,

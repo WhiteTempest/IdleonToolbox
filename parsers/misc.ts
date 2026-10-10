@@ -214,6 +214,7 @@ export const getAdviceFishBonus = (account: any, upgradeIndex: any) => {
   return account?.adviceFish?.upgrades?.[upgradeIndex]?.bonus ?? 0;
 }
 
+// game: "GuaranteedCrystalMobs"
 export const getGuaranteedCrystalMobs = (account: any) => {
   const meritocracyBonus = getMeritocracyBonus(account, 15);
   const legendPTSBonus = getLegendTalentBonus(account, 37);
@@ -230,7 +231,7 @@ export const getGuaranteedCrystalMobs = (account: any) => {
 export const hasMasterclassDailyDiscount = (account: any): boolean =>
   account?.accountOptions?.[480] < getLegendTalentBonus(account, 23);
 
-// Game: "AllMasterclassCostReduxPrefix" - the pre-2.3.525 whole formula, now just the first factor.
+// game: "AllMasterclassCostReduxPrefix" - the pre-2.3.525 whole formula, now just the first factor.
 const getAllMasterclassCostReduxPrefix = (account: any, forceLegendTalent: any) => {
   const hasBonusBundle = isBundlePurchased(account?.bundles, 'bon_p');
   const hasLegendTalent = forceLegendTalent === undefined
@@ -244,6 +245,7 @@ const getAllMasterclassCostReduxPrefix = (account: any, forceLegendTalent: any) 
 // Game: "AllMasterclassCostRedux" - applied alone by the Royal Armory (ArmoryUpgCost never touches
 // First3MC_CostRedux below). The orblet BARGAIN upgrade (index 7) is new in 2.3.525 and discounts
 // every masterclass, armory included, so it belongs here rather than in the "first 3" factor.
+// game: "AllMasterclassCostRedux"
 export const getAllMasterclassCostRedux = (account: any, forceLegendTalent: any) => {
   const orbletBargain = getOrbletMarketBonus(account, 7);
   return getAllMasterclassCostReduxPrefix(account, forceLegendTalent) * (1 / (1 + orbletBargain / 100));
@@ -253,6 +255,7 @@ export const getAllMasterclassCostRedux = (account: any, forceLegendTalent: any)
 // Outpost ROG-bonus stat index (0-3) - the game multiplies it straight into ArmoryUpgBonus(79)
 // ("Compounding Outposting"), which reads like a copy-paste of the stat selector used elsewhere,
 // but it is the live formula.
+// game: "First3MC_CostRedux"
 const getFirst3MasterclassCostRedux = (account: any) => {
   const selectedRogIndex = account?.royalGuardian?.raw?.[3]?.[2] ?? 0;
   const armoryBonus79 = getArmoryUpgradeBonus(account, 79);
@@ -336,6 +339,7 @@ const calcTimeToXBooks = (bookCount: any, maxCount: any, account: any, character
 }
 
 //  "BookReqTime"
+// game: "BookReqTime"
 export const getTimeToNextBooks = (bookCount: any, account: any, characters: any, idleonData: any) => {
   const towersLevels = tryToParse(idleonData?.Tower) || idleonData?.Tower;
   const mealBonus = getMealsBonusByEffectOrStat(account, null, 'Lib');
@@ -1069,21 +1073,23 @@ const getEventType = (index: any) => {
 }
 
 export const getHighestCapacityCharacter = (item: any, characters: any, account: any, forceMaxCapacity: any) => {
-  return characters?.reduce((res: any, character: any) => {
+  const ranked = (characters ?? []).map((character: any) => {
     const itemCapacity = item?.itemType === 'Equip'
       ? 1
       : getItemCapacity(item?.typeGen, character, account, forceMaxCapacity)?.value;
-    const maxCapacity = character?.inventorySlots * itemCapacity;
-    if (maxCapacity > res?.maxCapacity) {
-      res = {
-        capacityPerSlot: itemCapacity,
-        maxCapacity,
-        character: character?.name,
-        skillsInfoArray: character?.skillsInfoArray
-      }
-    }
-    return res;
-  }, { capacityPerSlot: 0, maxCapacity: 0, character: '' })
+    return {
+      capacityPerSlot: itemCapacity,
+      maxCapacity: character?.inventorySlots * itemCapacity,
+      character: character?.name,
+      skillsInfoArray: character?.skillsInfoArray
+    };
+  }).filter(({ maxCapacity }: any) => maxCapacity > 0)
+    .sort((a: any, b: any) => b.maxCapacity - a.maxCapacity);
+  return {
+    ...(ranked[0] ?? { capacityPerSlot: 0, maxCapacity: 0, character: '' }),
+    // VMan's Extra Bags always wins, so the runners-up show who can realistically carry it
+    topCharacters: ranked.slice(0, 3).map(({ character, maxCapacity }: any) => ({ character, maxCapacity }))
+  };
 }
 export const getAllCap = (character: any, account: any, forceMaxCapacity: any) => {
   const guildBonus = getGuildBonusBonus(account?.guild?.guildBonuses, 2);
@@ -1675,8 +1681,7 @@ export const getKillroyBonus = (account: any, index: any) => {
   return account?.killroy?.permanentUpgrades?.[index]?.bonus;
 }
 
-// Game: Summoning("AllMasterclassDropz", 0, 0)
-// Shared multiplier applied to AC Tachyons, WW Dust and DB Bones.
+// game: "AllMasterclassDropz" - shared multiplier applied to AC Tachyons, WW Dust and DB Bones.
 export const getAllMasterclassDropz = (character: any, account: any) => {
   const killroy = getKillroyBonus(account, 4) ?? 0;
   const spelunkShop = getSpelunkingBonus(account, 49) ?? 0; // Turquoise Hardhat

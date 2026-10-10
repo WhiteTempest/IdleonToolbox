@@ -1,5 +1,5 @@
 import { tryToParse, commaNotation, notateNumber } from '@utility/helpers';
-import { research as researchData, jellyUpgrades as jellyUpgradesData } from '@website-data';
+import { research as researchData, jellyUpgrades as jellyUpgradesData, gameTables } from '@website-data';
 import { getArcadeBonus } from '@parsers/world-2/arcade';
 import { getAtomBonus } from '@parsers/world-3/atomCollider';
 import { getResearchGridBonus } from '@parsers/world-7/research';
@@ -24,14 +24,14 @@ const bonusValues: number[] = ((researchData as any)?.[47] ?? []).map(Number);
 const slotGroups: string[] = (researchData as any)?.[50] ?? [];
 
 // game: "MainAtkDMG" / "MainAtkCD" base tables and the hover panel's passive text, one entry per cell.
-const CELL_BASE_DMG = [1, 1.2, 12, 6, 20, 1, 2, 4, 1];
-const CELL_BASE_CD = [145, 60, 400, 160, 750, 200, 10, 20, 30];
+const CELL_BASE_DMG: number[] = gameTables.jellyMainAttackDamage;
+const CELL_BASE_CD: number[] = gameTables.jellyMainAttackCooldown;
 const CELL_PASSIVES = ['+10% All DMG', '+15% All SPD', '+50% All DMG', '+25% All SPD', '', '', '1.5x All SPD', '3x All DMG'];
 const CELL_EFFECTS = ['', '', '', '', 'Takes aggro during Critical Condition', 'Each star multiplies all DMG by +0.1x'];
 const ORGANELLE = 3;
 const VIRUS = 5;
 // game: "ObstAdj" - Proximity Stimulus pays cells dropped on the ring around the obstruction.
-const OBSTRUCTION_ADJACENT_SLOTS = [43, 44, 45, 46, 60, 65, 78, 83, 96, 101, 114, 119, 133, 134, 135, 136];
+const OBSTRUCTION_ADJACENT_SLOTS: number[] = gameTables.jellyObstructionCells;
 // The first 8 upgrades unlock one cell each ("UnitsOwned").
 const CELL_UNLOCK_UPGRADES = 8;
 // The board is 18 x 10 slots, numbered row by row. Four slots are always open, two more open after
@@ -83,9 +83,10 @@ const formatDescription = (desc: string, value: number) => String(desc ?? '')
   .replace(/\}/g, '' + notateNumber(1 + value / 100, 'MultiplierInfo'))
   .replace(/@/g, '\n');
 
-// game: "BossHP"
-const getBossHP = (index: number) => index < 12
-  ? [100, 200, 400, 1000, 2000, 4000, 6000, 10000, 15000, 30000, 50000, 100000][index]
+// game: "BossHP" - a table for the first bosses, a curve after it.
+const BOSS_HP: number[] = gameTables.jellyBossHP;
+const getBossHP = (index: number) => index < BOSS_HP.length
+  ? BOSS_HP[index]
   : 1e5 * Math.pow(1.65, index - 11) * (1 + 0.9 * Math.floor((index - 11) / 12));
 
 export interface JellySave {
@@ -122,7 +123,7 @@ export const computeJellyOperator = (save: JellySave, account: any) => {
   const unlocked = obstructionsDefeated > 0 || operationsLeft > 0 || bloodcells > 0
     || upgradeLevels?.some((level) => Number(level) > 0);
 
-  // game: "UpgradeQTY" - bonus per level * level, by upgrade id.
+  // game: "JellyOperation:UpgradeQTY" - bonus per level * level, by upgrade id.
   const upgradeQTY = (id: number) => (Number((jellyUpgradesData as any)?.[id]?.[3]) || 0)
     * (Number(upgradeLevels?.[id]) || 0);
   const jellyBonus = (index: number) => obstructionsDefeated > index ? (bonusValues?.[index] ?? 0) : 0;
@@ -147,7 +148,7 @@ export const computeJellyOperator = (save: JellySave, account: any) => {
   const arcadeBonus = getArcadeBonus(account?.arcade?.shop, 'Jelly_Bloodcells')?.bonus ?? 0;
   const atomBonus = getAtomBonus(account, 'Sulfur_-_Jelly_Bloodcell_Juicer') ?? 0;
   const gridBonus187 = getResearchGridBonus(account, 187, 0);
-  // game: "CurrencyMulti"
+  // game: "JellyOperation:CurrencyMulti"
   const bloodcellMultiSources = [
     { name: 'Upgrades', value: 1 + (upgradeQTY(23) + upgradeQTY(24) + upgradeQTY(25) + upgradeQTY(33) * cellLevelTotal) / 100 },
     { name: 'Arcade', value: 1 + arcadeBonus / 100 },
@@ -174,7 +175,7 @@ export const computeJellyOperator = (save: JellySave, account: any) => {
   const cellExpMulti = (1 + feverBonus(3) / 100)
     * (1 + (upgradeQTY(30) + upgradeQTY(31) + upgradeQTY(10)) / 100) * (1 + upgradeQTY(11) / 100);
 
-  // game: "DailyTries" / "BloodcellDaily"
+  // game: "JellyOperation:DailyTries" / "BloodcellDaily"
   const dailyOperations = Math.round(2 + getResearchGridBonus(account, 186, 1));
   const bloodcellDaily = bloodcellDailyBase * (upgradeQTY(38) / 100);
 
@@ -185,7 +186,7 @@ export const computeJellyOperator = (save: JellySave, account: any) => {
   const slotPurchasesLeft = Math.max(0, Math.round(upgradeQTY(9) + upgradeQTY(8) + jellyBonus(44) + hasBundle
     - purchasedSlotGroups.length));
 
-  // game: "UpgCost" / "CanWeBuyUpg" - costs and unlocks follow the display position, not the id.
+  // game: "JellyOperation:UpgCost" / "JellyOperation:CanWeBuyUpg" - costs and unlocks follow the display position, not the id.
   const upgradeCost = (position: number, id: number) => {
     if (position === 0) return 0;
     const costFactor = Number((jellyUpgradesData as any)?.[id]?.[4]) || 0;
@@ -236,7 +237,7 @@ export const computeJellyOperator = (save: JellySave, account: any) => {
         maxLevel: maxLevel > 998 ? null : maxLevel,
         bonus: upgradeQTY(id),
         cost: upgradeCost(position, id),
-        // game: "UpgLvREQ" - Research skill level, by display position.
+        // game: "JellyOperation:UpgLvREQ" - Research skill level, by display position.
         lvReq: 15 + (2 * position + (Math.floor(position / 15) - Math.floor(position / 11))),
         unlocked: position === 0 || (Number(upgradeLevels?.[previousId]) || 0) >= 1
       };
@@ -417,7 +418,7 @@ export const getJellyBonus = (account: any, index: number): number => {
   return bonusValues?.[index] ?? 0;
 };
 
-// game: UpgCost priced by display position; exported for the upgrade optimizer.
+// game: "JellyOperation:UpgCost" priced by display position; exported for the upgrade optimizer.
 const getJellyUpgradeCost = (levels: number[], id: number) => {
   const position = upgradeOrder.indexOf(id);
   if (position <= 0) return 0;
@@ -478,7 +479,7 @@ export const getOptimizedJellyUpgrades = (character: any, account: any, category
     getResources: (acc: any) => [{ name: 'Bloodcells', value: acc?.jellyOperator?.bloodcells ?? 0 }],
     getCurrentStats: (simulated: any) => statsOf(simulated),
     getUpgradeCost: (upgrade: any, index: any, { upgrades: simulated }: any) => getJellyUpgradeCost(levelsOf(simulated), index),
-    // game: CanWeBuyUpg - the previous display position must be owned, plus the Research level gate
+    // game: "JellyOperation:CanWeBuyUpg" - the previous display position must be owned, plus the Research level gate
     getUnlockedIndices: (simulated: any[]) => {
       const levels = levelsOf(simulated);
       return new Set(simulated.filter(({ index, position, lvReq }: any) => lvReq <= researchLevel

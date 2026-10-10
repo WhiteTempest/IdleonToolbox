@@ -4,6 +4,53 @@ import React from 'react';
 /* eslint-disable react/jsx-key */
 export const patchNotes = [
   {
+    'ver': '3.3.89',
+    'gameVer': '2.3.531',
+    'date': '10/10/2026',
+    'features': [
+      'Grimoire, Tesseract, Royal Armory and Upgrade Vault upgrades now show the in-game (?) help text in an info tooltip',
+      'Construction: each step in Steps to apply now shows the selected stat on its cogs, matching the numbers on the board',
+      'New dashboard alert for Cooking: count meals whose next level costs fewer ladles than your threshold, with an option to include Overflowing Ladle',
+      'Leaderboards: redesigned page with an Overview tab (global podium, your rank, highlights and boards within reach), boards grouped into sections, and a Top 100 drawer that shows the players around you',
+      'Leaderboards: search any player or Anon# id to see their ranks, and jump to any board with the / key',
+      'Leaderboards: tied players now share a rank, and maxed boards show how many players hold the max'
+    ],
+    'fixes': [
+      'Leaderboards: salt rank boards no longer count salts that are not unlocked yet',
+      'Fixed Crystal Glunko Cove upgrade costs missing the 15% study discount, and Coral Reef daily gains counting the Demonblub card bonus when the card is not owned',
+      'Monster cash multiplier now includes the Molti passive card and the first Cash from Mobs arcade upgrade',
+      'Summoning: upgrade bonuses now include Absolute Stardom, Allstar and stone trial multipliers, and upgrade costs now match the game (Essential Essence, Sell Sell Sell and Cost Laundering included, Upgrade Vault sushi discounts no longer applied)',
+      'Sailing: Sushi Station now shows in the artifact find breakdown'
+    ]
+  },
+  {
+    'ver': '3.3.88',
+    'gameVer': '2.3.531',
+    'date': '09/10/2026',
+    'features': [
+      'Material Tracker: added a Clear all button',
+      'Material Tracker: Add tracker for all greenstacks now only adds missing greenstacks, including past ones below 10M, and keeps your existing bounds',
+      'Royal Armory Outposts: sort by Trade, Intel, Command, Military or Purity rank, and filter glorified or unglorified outposts',
+      'Bone Joe Calculator: prayer levels now prefill from your account (still editable for what-if), each prayer can be toggled on or off, and a new Target hits option sizes the pickle cap for killing in N hits',
+      'Merged the Active Exp Calculator into the Active Stuff Calculator (Exp section), old link redirects',
+      'Bubbles: Future Bubbles can now list from your least or most progressed cauldron',
+      'Dashboard: the alert quick edit now has a button to that alert page, and Ctrl or middle click on an alert opens its page in a new tab',
+      'Cooking Ribbons: shows your daily ribbon count, the chance for each ribbon rank and where they come from, with a slider to preview different Smoky points'
+    ],
+    'fixes': [
+      'Dashboard: Egg rarity alert now supports tiers up to Godshard (11) and shows your highest egg tier',
+      'Premium Pets: Glowfish no longer listed as not yet released',
+      'Stamps: the Max capacity tooltip now lists the top 3 characters, not just the best one',
+      'Material Tracker: importing an invalid file no longer adds broken entries that cannot be removed',
+      'Item Planner: importing an invalid file now shows an error instead of breaking the page',
+      'Royal Guardian: Territory clear in the Active Stuff Calculator and the clearing ETA in Outposts now account for Militia progress that only lands when the map is opened',
+      'Dashboard: Royal Guardian rank cap inputs now say Rank instead of the holder names',
+      'Divinity: Kattlekruk now shows the daily bubble levels and which bubbles they apply to',
+      'Dashboard: the companions timer no longer links to a missing page',
+      'Active Stuff Calculator and Royal Armory: clear and ready timers now show hours up to 5 days instead of rounding to days'
+    ]
+  },
+  {
     'ver': '3.3.87',
     'gameVer': '2.3.531',
     'date': '08/10/2026',

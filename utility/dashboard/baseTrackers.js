@@ -334,7 +334,8 @@ export const baseTrackers = {
               label: 'Eggs rarity',
               value: 1,
               minValue: 1,
-              helperText: '1=Base, 2=Copper, 3=Iron'
+              maxValue: 11,
+              helperText: '1=Base, 2=Copper, 3=Iron ... 9=Starfire, 10=Dreadlo, 11=Godshard'
             },
             checked: false
           },
@@ -360,7 +361,14 @@ export const baseTrackers = {
           },
           { name: 'meals', checked: true, category: 'meals' },
           { name: 'alertOnlyCookedMeal', checked: false },
-          { name: 'cookingMastery', checked: true }
+          { name: 'cookingMastery', checked: true },
+          {
+            name: 'mealLadleCost',
+            type: 'input',
+            props: { label: 'Ladles threshold', value: 1, minValue: 0, helperText: 'Next level cost in ladles' },
+            checked: false
+          },
+          { name: 'includeOverflowingLadle', checked: false }
         ]
       },
       laboratory: {

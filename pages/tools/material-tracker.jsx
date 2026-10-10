@@ -1,14 +1,21 @@
 import {
+  Alert,
   Autocomplete,
   Card,
   CardContent,
   Checkbox,
   Chip,
   createFilterOptions,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogContentText,
+  DialogTitle,
   Divider,
   FormControlLabel,
   List,
   ListItem,
+  Snackbar,
   Stack,
   TextField,
   Typography,
@@ -31,7 +38,8 @@ import EditIcon from '@mui/icons-material/Edit';
 import Box from '@mui/material/Box';
 import FileUploadButton from '@components/common/DownloadButton';
 import { CardTitleAndValue } from '@components/common/styles';
-import { IconFileExport } from '@tabler/icons-react';
+import { IconFileExport, IconTrash } from '@tabler/icons-react';
+import { getValidTrackedMaterials } from '@utility/materialTracker';
 
 const filterOptions = createFilterOptions({
   trim: true,
@@ -45,7 +53,10 @@ const MaterialTracker = () => {
   const [bounds, setBounds] = useState({ lowerBound: '', upperBound: '' });
   const [note, setNote] = useState('');
   const [hoverIcons, setHoverIcons] = useState({});
-  const [trackedItems, setTrackedItems] = useLocalStorage({ key: 'material-tracker', defaultValue: {} });
+  const [storedItems, setTrackedItems] = useLocalStorage({ key: 'material-tracker', defaultValue: {} });
+  const trackedItems = getValidTrackedMaterials(storedItems);
+  const [result, setResult] = useState(null);
+  const [confirmClear, setConfirmClear] = useState(false);
   const items = itemsArray.filter(({
                                                    itemType,
                                                    typeGen,
@@ -56,8 +67,22 @@ const MaterialTracker = () => {
   const totalOwnedItems = getAllItems(state?.characters, state?.account);
   const [errors, setErrors] = useState({ material: false, lowerBound: false, upperBound: false });
 
+  const getUntrackedGreenStacks = () => {
+    // A greenstack stays registered after the stack drops below 10M, so the game's registry is the
+    // source; 10M+ owned covers stacks the game hasn't registered yet
+    const rawNames = new Set([
+      ...(state?.account?.looty?.greenStacks || []),
+      ...totalOwnedItems.filter(({ amount }) => amount >= 10e6).map(({ rawName }) => rawName)
+    ]);
+    return items.filter(({ rawName }) => rawNames.has(rawName) && !trackedItems[rawName]);
+  }
+
   const handleAddTracker = (allGreenStacks) => {
-    const greenStacks = totalOwnedItems.filter(({ amount }) => amount >= 10e6);
+    const greenStacks = allGreenStacks ? getUntrackedGreenStacks() : [];
+    if (allGreenStacks && greenStacks.length === 0) {
+      setResult({ severity: 'info', message: 'All your greenstacks are already tracked' });
+      return;
+    }
     const tempErrors = {};
     if (value.length > 0 || (allGreenStacks && greenStacks.length > 0)) {
       tempErrors.material = false;
@@ -77,7 +102,7 @@ const MaterialTracker = () => {
     const updated = { ...trackedItems };
     (allGreenStacks ? greenStacks : value).forEach((item) => {
       updated[item?.rawName] = {
-        item,
+        item: { rawName: item?.rawName, displayName: item?.displayName },
         lowerBound: tempLowerBound ? parseInt(tempLowerBound) : '',
         upperBound: tempUpperBound ? parseInt(tempUpperBound) : '',
         includeNearly,
@@ -85,6 +110,12 @@ const MaterialTracker = () => {
       }
     })
     setTrackedItems(updated)
+    if (allGreenStacks) {
+      setResult({
+        severity: 'success',
+        message: `Added ${greenStacks.length} greenstack${greenStacks.length === 1 ? '' : 's'}`
+      });
+    }
     setValue([]);
     setBounds({ lowerBound: '', upperBound: '' });
     setNote('');
@@ -95,6 +126,17 @@ const MaterialTracker = () => {
     delete updated[rawName];
     setTrackedItems(updated);
     setHoverIcons({})
+  }
+
+  const handleImport = (data) => {
+    const validItems = getValidTrackedMaterials(data);
+    const count = Object.keys(validItems).length;
+    if (count === 0) {
+      setResult({ severity: 'error', message: 'That file doesn\'t contain tracked materials' });
+      return;
+    }
+    setTrackedItems(validItems);
+    setResult({ severity: 'success', message: `Imported ${count} material${count === 1 ? '' : 's'}` });
   }
 
   const handleEdit = (rawName) => {
@@ -129,10 +171,15 @@ const MaterialTracker = () => {
     )}/>
     <CardTitleAndValue title={'Utility'} cardSx={{ mb: 3 }}>
       <Stack sx={{ mt: 1 }} direction={'row'} alignItems={'center'} gap={2}>
-        <FileUploadButton onFileUpload={(data) => setTrackedItems(data)}>Import</FileUploadButton>
+        <FileUploadButton onFileUpload={handleImport}
+                          onInvalidFile={() => setResult({ severity: 'error', message: 'That file isn\'t valid JSON' })}>Import</FileUploadButton>
         <Button onClick={() => handleDownload(trackedItems, 'it-material-tracker')} variant={'outlined'}
                 startIcon={<IconFileExport size={18}/>}
                 size="small">Export</Button>
+        <Button onClick={() => setConfirmClear(true)} variant={'outlined'} color={'error'}
+                disabled={Object.keys(storedItems || {}).length === 0}
+                startIcon={<IconTrash size={18}/>}
+                size="small">Clear all</Button>
       </Stack>
     </CardTitleAndValue>
     <Stack mb={3} direction={'row'} alignItems={'center'} gap={2} flexWrap={'wrap'}>
@@ -233,7 +280,7 @@ const MaterialTracker = () => {
         dashboard</Typography>
     </Stack>
     <Stack mt={3} direction={isSm ? 'column' : 'row'} gap={1} flexWrap={'wrap'}>
-      {(Object.values(trackedItems))?.map(({ item, lowerBound, upperBound, note }, index) => {
+      {Object.entries(trackedItems).map(([rawName, { item, lowerBound, upperBound, note }], index) => {
         const { amount: quantityOwned } = findQuantityOwned(totalOwnedItems, item?.displayName);
         return <Stack key={`tracked-item-${index}`}
                       onMouseEnter={() => setHoverIcons({ [index]: true })}
@@ -282,10 +329,10 @@ const MaterialTracker = () => {
           </Card>
           <Stack sx={{ minHeight: 34, mt: 1 }} direction={'row'} justifyContent={'center'}>
             {hoverIcons?.[index] ? <>
-              <IconButton size={'small'} onClick={() => handleDeleteTracker(item?.rawName)}>
+              <IconButton size={'small'} onClick={() => handleDeleteTracker(rawName)}>
                 <DeleteForeverIcon/>
               </IconButton>
-              <IconButton size={'small'} onClick={() => handleEdit(item?.rawName)}>
+              <IconButton size={'small'} onClick={() => handleEdit(rawName)}>
                 <EditIcon/>
               </IconButton>
             </> : null}
@@ -293,6 +340,30 @@ const MaterialTracker = () => {
         </Stack>
       })}
     </Stack>
+    <Dialog open={confirmClear} onClose={() => setConfirmClear(false)}>
+      <DialogTitle>Clear all trackers</DialogTitle>
+      <DialogContent>
+        <DialogContentText>Are you sure you would like to remove all tracked materials?</DialogContentText>
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={() => setConfirmClear(false)}>Close</Button>
+        <Button color={'error'} onClick={() => {
+          setTrackedItems({});
+          setHoverIcons({});
+          setConfirmClear(false);
+        }} autoFocus>Confirm</Button>
+      </DialogActions>
+    </Dialog>
+    <Snackbar
+      open={Boolean(result)}
+      autoHideDuration={result?.severity === 'error' ? 5000 : 2000}
+      onClose={() => setResult(null)}
+      anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+    >
+      <Alert severity={result?.severity} variant="filled" onClose={() => setResult(null)}>
+        {result?.message}
+      </Alert>
+    </Snackbar>
   </>);
 };
 

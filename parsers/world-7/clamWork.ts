@@ -1,6 +1,6 @@
 import type { IdleonData, Account } from '../types';
 import { tryToParse, notateNumber } from '@utility/helpers';
-import { generalSpelunky } from '@website-data';
+import { generalSpelunky, gameTables } from '@website-data';
 import { getOptimizedGenericUpgrades } from '@parsers/genericUpgradeOptimizer';
 
 const CLAM_UPGRADE_COUNT = 9;
@@ -11,17 +11,7 @@ const CLAM_LEVEL_OPTION_BASE = 455;
 // one point per level, which is what the page showed before the multikill input existed.
 export const DEFAULT_CLAM_MULTIKILL = 1000;
 
-const clamWorkNames = [
-  'PEARL_VALUE',
-  'CLAM_COMRADES',
-  'LUCKY_DAY',
-  'MULTI-SCALPING',
-  'FRUGALITY',
-  'PURE_PEARLS',
-  'ENCYSTATION_UP',
-  'SHINIER_PEARLS',
-  'ANTI_INFLATION'
-];
+const clamWorkNames: string[] = gameTables.clamWorkBonusNames;
 
 export const CLAM_WORK_UPGRADE_CATEGORIES = {
   pearlGain: {
@@ -115,6 +105,7 @@ export const parseClamWork = (account: Account, spelunkingRaw?: any, multiKill: 
 const getClamClassExpMulti = (workerClass: number): number =>
   Math.round(100 * (1 + Math.max(0, 5 * (workerClass - 8)) / 100)) / 100;
 
+// game: "ClamWorkBonus"
 export const getClamWorkBonus = (account: Account, index: number): number => {
   return (account as any)?.accountOptions?.[464] > index ? 1 : 0;
 };
@@ -127,6 +118,7 @@ const getClamPromotionCost = (workerClass: number): number => 1e5 * Math.pow(10,
 
 const getClamPearlUpgReq = (workerClass: number, index: number): number => 20 * Math.pow(10 + 3 * workerClass, index - 1);
 
+// game: "Clam_Cost"
 export const getClamCost = (levels: number[], index: number, workerClass: number): number => {
   if (index === 9) return getClamPromotionCost(workerClass);
 
@@ -146,6 +138,7 @@ export const getClamCost = (levels: number[], index: number, workerClass: number
 
 // Game: _customBlock_Thingies("ClamBonuses"). Index 3 (MULTI-SCALPING) scales with the multikill
 // of the character farming the Clamworks, hence the parameter.
+// game: "ClamBonuses"
 export const getClamBonus = (levels: number[], index: number, multiKill: number = DEFAULT_CLAM_MULTIKILL): number => {
   const upgradeLevel = levels[index] ?? 0;
   const perLevel = parseFloat(generalSpelunky[28]?.[index] ?? 0);
