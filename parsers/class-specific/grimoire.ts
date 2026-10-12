@@ -1,20 +1,21 @@
 import { commaNotation, lavaLog, notateNumber, tryToParse } from '@utility/helpers';
 import { grimoire, mapEnemiesArray, mapNames, monsterCoinQuantity, monsters, randomList } from '@website-data';
 import { liveEntries } from '@parsers/catalog';
-import { CLASSES, getTalentBonus } from '@parsers/talents';
+import { getTalentBonus } from '@parsers/talents';
 import { getStatsFromGear } from '@parsers/items';
 import { getGambitBonus } from '@parsers/world-5/caverns/gambit';
 import { getEmperorBonus } from '@parsers/world-6/emperor';
 import { getOptimizedGenericUpgrades } from '@parsers/genericUpgradeOptimizer';
 import { getMasterclassCostReduction, getAllMasterclassDropz } from '@parsers/misc';
 import { getArcadeBonus } from '@parsers/world-2/arcade';
-import { getLabBonus } from '@parsers/world-4/lab';
+import { getJewelBonus } from '@parsers/world-4/lab';
 import { getPaletteBonus } from '@parsers/world-5/gaming';
 import { getExoticMarketBonus } from '@parsers/world-6/farming';
 import { getCharmBonus } from '@parsers/world-6/sneaking';
 import { getBubbleBonus } from '@parsers/world-2/alchemy';
 import { getLoreBossBonus } from '@parsers/world-7/spelunking';
 import { getMeritocracyBonus } from '@parsers/world-2/voteBallot';
+import { additiveGroup, createBreakdown, multiplier, NUMBERED_GROUP, percent } from '@parsers/breakdown';
 
 export const boneNames = [
   'Femur',
@@ -63,7 +64,6 @@ export const getGrimoire = (idleonData: any, charactersData: any, account: any) 
 };
 
 const parseGrimoire = (grimoireRaw: any, ribbonRaw: any, charactersData: any, account: any) => {
-  const monsterList = randomList?.[104];
   const bones = boneNames.map((_, index) => account?.accountOptions?.[330 + index] ?? 0);
   const totalUpgradeLevels = grimoireRaw?.reduce((sum: any, level: any) => sum + level, 0) ?? 0;
   const totalBonesCollected = account?.accountOptions?.[329] ?? 0;
@@ -85,7 +85,7 @@ const parseGrimoire = (grimoireRaw: any, ribbonRaw: any, charactersData: any, ac
       index,
       unlocked: upgrade?.unlockLevel <= totalUpgradeLevels,
       bonus,
-      monsterProgress: getMonsterProgress(monsterList, account, index),
+      monsterProgress: getMonsterProgress(account, index),
       description: upgrade?.description.replace('{', '' + commaNotation(bonus)).replace('}', '' + notateNumber(1 + bonus / 100, 'MultiplierInfo'))
     }
   })
@@ -143,25 +143,30 @@ const getMonsterDrops = () => {
 
 }
 
-const getMonsterProgress = (monsterList: any, account: any, index: any) => {
-  let selectedIndex;
-  if (index === 13) {
-    selectedIndex = 334;
-  } else if (index === 21) {
-    selectedIndex = 335;
-  } else if (index === 31) {
-    selectedIndex = 336;
-  }
-  return monsters?.[monsterList?.[account?.accountOptions?.[selectedIndex!]]]?.Name;
+// RANDOlist[104] is a kill-target ladder shared by several upgrades, each counting its progress in its own
+// OptionsListAccount slot. Past the last monster the game shows "All_Done!".
+export const getMonsterLadderTarget = (progress: number) => {
+  const monsterList = randomList?.[104] ?? [];
+  return progress < monsterList.length ? monsters?.[monsterList[progress]]?.Name : 'All_Done!';
 }
 
-export const getWraithStats = (character: any, account: any) => {
+// Grimoire upgrade index -> the OptionsListAccount slot holding its monster ladder progress
+const GRIMOIRE_LADDER_OPTIONS: Record<number, number> = { 13: 334, 21: 335, 31: 336 };
+
+const getMonsterProgress = (account: any, index: any) => {
+  const optionIndex = GRIMOIRE_LADDER_OPTIONS[index];
+  return optionIndex === undefined ? undefined : getMonsterLadderTarget(account?.accountOptions?.[optionIndex] ?? 0);
+}
+
+// game: Summoning("Grimoire_*") reads FAMINE_O'_FISH x log(SkillStats("FishingEfficiency")) for crits;
+// the efficiency (getSkillEfficiency('fishing', ...)) needs the damage parser, so callers pass it in
+export const getWraithStats = (character: any, account: any, fishingEfficiency = 0) => {
   const { upgrades, totalUpgradeLevels } = account?.grimoire || {};
-  const bulwarkStyle = getTalentBonus(character?.flatTalents, CLASSES.Death_Bringer, 'BULWARK_STYLE');
-  const wraithForm = getTalentBonus(character?.flatTalents, CLASSES.Death_Bringer, 'WRAITH_FORM');
-  const marauderStyle = getTalentBonus(character?.flatTalents, CLASSES.Death_Bringer, 'MARAUDER_STYLE');
-  const famineFishX = getTalentBonus(character?.flatTalents, CLASSES.Death_Bringer, 'FAMINE_O\'_FISH');
-  const famineFishY = getTalentBonus(character?.flatTalents, CLASSES.Death_Bringer, 'FAMINE_O\'_FISH', true);
+  const bulwarkStyle = getTalentBonus(character?.flatTalents, 'BULWARK_STYLE');
+  const wraithForm = getTalentBonus(character?.flatTalents, 'WRAITH_FORM');
+  const marauderStyle = getTalentBonus(character?.flatTalents, 'MARAUDER_STYLE');
+  const famineFishX = getTalentBonus(character?.flatTalents, 'FAMINE_O\'_FISH');
+  const famineFishY = getTalentBonus(character?.flatTalents, 'FAMINE_O\'_FISH', true);
   const hp = (10 + (calcGrimoireBonus(upgrades, 3)
       + (calcGrimoireBonus(upgrades, 19)
         + (calcGrimoireBonus(upgrades, 34)
@@ -213,10 +218,10 @@ export const getWraithStats = (character: any, account: any) => {
       * (totalUpgradeLevels / 100)) / 100);
   const critChance = 10 + (calcGrimoireBonus(upgrades, 10)
     + famineFishX
-    * lavaLog(1)) // TODO: calculate fishing efficiency
+    * lavaLog(fishingEfficiency))
   const critDamage = 1 + (25 + calcGrimoireBonus(upgrades, 20)
     + famineFishY
-    * lavaLog(1)) / 100;
+    * lavaLog(fishingEfficiency)) / 100;
   const baseExtraBones = getExtraBonesBonus(character, account);
 
   return {
@@ -247,27 +252,28 @@ export const getGrimoireTotalUpgradeCost = (account: any, upgrade: any, targetLe
 
 export const getExtraBonesBonus = (character: any, account: any) => {
   const { upgrades } = account?.grimoire || {};
-  const grimoire = getTalentBonus(character?.flatTalents, CLASSES.Death_Bringer, 'GRIMOIRE');
-  const highestLevelDeathBringer = getTalentBonus(character?.flatTalents, CLASSES.Death_Bringer);
-  const graveyardShift = getTalentBonus(character?.flatTalents, CLASSES.Death_Bringer, 'GRAVEYARD_SHIFT');
+  // game GetTalentNumber(1, 196 / 198) and EtcBonuses("76") all read the character itself
+  const grimoire = getTalentBonus(character?.flatTalents, 'GRIMOIRE');
+  const graveyardShift = getTalentBonus(character?.flatTalents, 'GRAVEYARD_SHIFT');
 
-  const { value: gearBonus } = getStatsFromGear(highestLevelDeathBringer, 76, account);
+  const { value: gearBonus } = getStatsFromGear(character, 76, account);
   const emperorBonus = getEmperorBonus(account, 1);
   const charmBonus = getCharmBonus(account, 'Glimmerchain'); // Pristine charm 18
   const arcadeBonus = getArcadeBonus(account?.arcade?.shop, 'Deathbringer_Bones')?.bonus ?? 0;
-  const mainframeBonus = getLabBonus(account?.lab?.labBonuses, 121); // game MainframeBonus(121)
+  // game MainframeBonus(121): ids of 100+ are jewels (121 - 100 = Deadly Wrath Jewel), not lab bonuses
+  const mainframeBonus = getJewelBonus(account?.lab?.jewels, 21);
   const paletteBonus = getPaletteBonus(account, 22) ?? 0;
   const exoticBonus = getExoticMarketBonus(account, 53) ?? 0;
   const bubbleBonus = getBubbleBonus(account, 'BONE_BUBBLE') ?? 0; // AlchBubbles.W13 = BONE_BUBBLE (power, stat tag W13)
   const loreBonus = getLoreBossBonus(account, 0) ?? 0; // Tome epilogue (LoreEpiBon 0)
   const meritocracyBonus = getMeritocracyBonus(account, 25) ?? 0;
-  const { value: allMasterclassDropz, sources: amdSources } = getAllMasterclassDropz(character, account);
+  const { value: allMasterclassDropz, breakdown: masterclassDropsGroup } = getAllMasterclassDropz(character, account);
 
   const gambitMulti = Math.min(2, 1 + getGambitBonus(account, 12));
   const gearMulti = Math.min(1.5, 1 + gearBonus / 100);
-  const upgradeBonus = calcGrimoireBonus(upgrades, 23)
-    + calcGrimoireBonus(upgrades, 48) * lavaLog(account?.accountOptions?.[333] ?? 0)
-    + arcadeBonus + mainframeBonus + paletteBonus + exoticBonus;
+  const grimoireUpgrades = calcGrimoireBonus(upgrades, 23)
+    + calcGrimoireBonus(upgrades, 48) * lavaLog(account?.accountOptions?.[333] ?? 0);
+  const upgradeBonus = grimoireUpgrades + arcadeBonus + mainframeBonus + paletteBonus + exoticBonus;
 
   const value = (1 + charmBonus / 100)
     * (1 + loreBonus / 100)
@@ -282,31 +288,27 @@ export const getExtraBonesBonus = (character: any, account: any) => {
 
   return {
     value,
-    breakdown: {
-      statName: "Extra Bones",
-      totalValue: notateNumber(value, "MultiplierInfo") + 'x',
-      categories: [
-        {
-          name: "Multiplicative Factors",
-          sources: [
-            { name: "Talent (Grimoire)", value: grimoire },
-            { name: "Talent (Graveyard Shift)", value: graveyardShift },
-            { name: "Charm (Glimmerchain)", value: charmBonus },
-            { name: "Tome Epilogue", value: loreBonus },
-            { name: "Meritocracy", value: meritocracyBonus },
-            { name: "Gambit", value: gambitMulti },
-            { name: "Gear", value: gearMulti },
-            { name: "Emperor", value: emperorBonus },
-            { name: "Bubble", value: bubbleBonus },
-            { name: "Grimoire Upgrades", value: upgradeBonus },
-          ],
-        },
-        {
-          name: "All Masterclass Drops (mult)",
-          sources: amdSources,
-        },
-      ],
-    }
+    breakdown: createBreakdown('Extra Bones', notateNumber(value, 'MultiplierInfo') + 'x', [
+      multiplier('Talent (Grimoire)', 1 + grimoire / 100),
+      multiplier('Talent (Graveyard Shift)', 1 + graveyardShift / 100),
+      multiplier('Charm (Glimmerchain)', 1 + charmBonus / 100),
+      multiplier('Tome Epilogue', 1 + loreBonus / 100),
+      multiplier('Meritocracy', 1 + meritocracyBonus / 100),
+      multiplier('Gambit', gambitMulti, { note: 'At most ×2' }),
+      multiplier('Gear', gearMulti, { note: 'At most ×1.5' }),
+      additiveGroup(NUMBERED_GROUP, [
+        percent('Emperor', emperorBonus),
+        percent('Bubble', bubbleBonus)
+      ]),
+      additiveGroup(NUMBERED_GROUP, [
+        percent('Upgrades', grimoireUpgrades),
+        percent('Arcade', arcadeBonus),
+        percent('Lab', mainframeBonus),
+        percent('Palette', paletteBonus),
+        percent('Exotic Market', exoticBonus)
+      ]),
+      masterclassDropsGroup
+    ])
   };
 }
 
@@ -335,7 +337,8 @@ export const getOptimizedGrimoireUpgrades = (character: any, account: any, categ
     categoryInfo,
     getUpgrades: (acc: any) => acc?.grimoire?.upgrades || [],
     getResources: (acc: any) => acc?.grimoire?.bones || [],
-    getCurrentStats: (upgrades: any, char: any, acc: any) => getWraithStats(char, { ...acc, grimoire: { ...acc.grimoire, upgrades } }),
+    getCurrentStats: (upgrades: any, char: any, acc: any, extraArgs: any) =>
+      getWraithStats(char, { ...acc, grimoire: { ...acc.grimoire, upgrades } }, extraArgs?.fishingEfficiency),
     getUpgradeCost: (upgrade: any, index: any, {forceLegendTalent}: any) => getUpgradeCost({ ...upgrade, index, level: upgrade.level, x1: upgrade.x1, x2: upgrade.x2, account, forceLegendTalent }),
     updateResourcesAfterUpgrade: (resources: any, upgrade: any, resourceNames: any, cost: any) => {
       const boneIdx = upgrade.boneType ?? upgrade.x3;

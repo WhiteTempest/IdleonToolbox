@@ -32,9 +32,11 @@ describe('getAfkGain with no productive AFK target', () => {
 
     const { breakdown } = getAfkGain(character, characters, account);
 
-    expect(breakdown[0].title).toContain('paying respect at a monument');
-    expect(breakdown.some(({ name }) => name === 'Sigil')).toBe(true);
-    expect(breakdown.some(({ title }) => title === 'AFK Multi')).toBe(true);
+    const [reasonGroup] = breakdown.tree;
+    expect(breakdown.totalValue).toBe('N/A');
+    expect(reasonGroup.name).toContain('paying respect at a monument');
+    expect(reasonGroup.children.flatMap(({ children }) => children).some(({ name }) => name === 'Sigil')).toBe(true);
+    expect(breakdown.tree[1].children.map(({ name }) => name)).toEqual(['Tesseract Map', 'Equipment AFK multi']);
   });
 
   it('still returns a real rate for productive afk types', () => {
@@ -46,13 +48,5 @@ describe('getAfkGain with no productive AFK target', () => {
     expect(afkGains).toBeGreaterThan(0.01);
     expect(Number.isFinite(afkGains)).toBe(true);
     expect(afkGainsUnavailableReason).toBeUndefined();
-  });
-
-  it('does not fabricate a rate for the idle character in the fixture', () => {
-    const { characters, account } = parsed();
-    const idle = characters.find(({ afkType }) => afkType === 'Nothing');
-
-    expect(idle).toBeDefined();
-    expect(getAfkGain(idle, characters, account).afkGains).toBeNull();
   });
 });

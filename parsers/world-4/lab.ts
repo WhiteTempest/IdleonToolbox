@@ -3,15 +3,24 @@ import { chips, classes, jewels, labBonuses, merits, randomList, talents } from 
 import { liveEntries } from '@parsers/catalog';
 import { getMealsBonusByEffectOrStat } from '@parsers/world-4/cooking';
 import { getCardBonusByEffect } from '@parsers/cards';
-import { isArenaBonusActive, isMasteryBonusUnlocked } from '@parsers/misc';
+import { calculateAfkTime, isArenaBonusActive, isMasteryBonusUnlocked } from '@parsers/misc';
 import { getShinyBonus } from '@parsers/world-4/breeding';
 import { checkCharClass, CLASSES, getTalentBonus, getBestActiveCharacter, getHighestTalentAcrossCharacters } from '@parsers/talents';
 import { getEquinoxBonus } from '@parsers/world-3/equinox';
 import { getWinnerBonus } from '@parsers/world-6/summoning';
 import { calculateItemTotalAmount, getStatsFromGear } from '@parsers/items';
-import { getAllBaseSkillEff, getAllEff } from '@parsers/efficiency';
+import { efficiencyGroupNames, getAllBaseSkillEffBreakdown, getAllEffBreakdown } from '@parsers/efficiency';
+import { NUMBERED_GROUP, additiveGroup, evaluateBreakdownNode, flat, multiplier, percent, productGroup, sumGroup } from '@parsers/breakdown';
 import { getPostOfficeBonus } from '@parsers/world-3/postoffice';
-import { isMajorDivinityActive } from '@parsers/world-5/divinity';
+import { GOD_INDEX, isMajorDivinityActive } from '@parsers/world-5/divinity';
+
+// Game: MainframeBonus(n) adds MainframeBonus(100 + jewel) to these connected bonuses
+// (Animal Farm, No Bubble Left Behind, Fungi Finger, Banking Fury, Slab Sovereignty, Depot Studies)
+const LAB_BONUS_JEWEL_BOOSTS: Record<number, number> = { 0: 1, 3: 7, 9: 13, 11: 17, 15: 18, 17: 20 };
+// Bonuses whose description spells the multiplier out ("1.25x higher")
+const MULTIPLIER_TEXT_LAB_BONUSES = [15, 17];
+// Game: MainframeBonus(100 + n) doubles these jewels while every partner jewel is active
+const JEWEL_SET_PARTNERS: Record<number, number[]> = { 0: [1, 2], 3: [4, 5, 6], 10: [7, 8, 9], 12: [11, 13, 14, 15] };
 
 export const getLab = (idleonData: any, charactersData: any, account: any, updatedCharactersData?: any) => {
   const labRaw = tryToParse(idleonData?.Lab) || idleonData?.Lab;
@@ -74,17 +83,13 @@ const parseLab = (labRaw: any, charactersData: any, account: any, updatedCharact
     });
   });
   const soupedUpSlots = (account?.gemShopPurchases?.find((value: any, index: any) => index === 123) ?? 0) * 2;
+  // King Doot inside Bonus_MAJOR reads the logged-in character's divinity level for every tube.
+  // Raw save characters carry PlayerAwayTime, not the parsed afkTime getBestActiveCharacter orders by.
+  const loggedInCharacter = getBestActiveCharacter(updatedCharactersData)
+    ?? getBestActiveCharacter(charactersData?.map((character: any) => ({ ...character, afkTime: calculateAfkTime(character?.PlayerAwayTime) })));
+  const isArctisMajorActive = (character: any) => isMajorDivinityActive(character, account, GOD_INDEX.Arctis, loggedInCharacter);
   // Game: contains(labAfkList, n) || Divinity("Bonus_MAJOR", n, 2) - Arctis is god bonus index 2.
-  // Lab gets raw save characters, which carry polytheism (talent 505) but not the parsed second
-  // divinity link isMajorDivinityActive reads, so resolve that slot here.
-  const withSecondDeityLink = (character: any) => {
-    const polytheism = Number(character?.SkillLevels?.[505]) || 0;
-    return polytheism > 0
-      ? { ...character, secondLinkedDeityIndex: character?.secondLinkedDeityIndex ?? polytheism % 10 }
-      : character;
-  }
-  const isInTube = (character: any) => character?.AFKtarget === 'Laboratory'
-    || isMajorDivinityActive(withSecondDeityLink(character), account, 2);
+  const isInTube = (character: any) => character?.AFKtarget === 'Laboratory' || isArctisMajorActive(character);
   const labAfkPlayerIds = charactersData?.reduce((res: any[], character: any) => character?.AFKtarget === 'Laboratory'
     ? [...res, character?.playerId]
     : res, []) ?? [];
@@ -102,7 +107,7 @@ const parseLab = (labRaw: any, charactersData: any, account: any, updatedCharact
     const afkRank = labAfkPlayerIds.indexOf(playerId);
     const souped = afkRank !== -1
       ? afkRank < soupedUpSlots
-      : playerId < soupedUpSlots && isMajorDivinityActive(withSecondDeityLink(character), account, 2);
+      : playerId < soupedUpSlots && isArctisMajorActive(character);
     return souped ? [...res, playerId] : res;
   }, []) ?? [];
 
@@ -194,16 +199,25 @@ const parseLab = (labRaw: any, charactersData: any, account: any, updatedCharact
     multiplier: index === 19 ? 1 : spelunkerObolMulti
   }));
 
-  const slabHigherEffect = getJewelBonus(jewelsList, 18);
-  labBonusesList = labBonusesList.map((bonus, index) => {
-    if (index !== 15) return bonus;
-    const updatedBonus = bonus?.bonusOn + slabHigherEffect;
-    return { ...bonus, bonusOn: updatedBonus, description: bonus?.description?.replace('1.25', `1.${updatedBonus}`) }
+  // Game: MainframeBonus(n) = LabMainBonus[n][5] + MainframeBonus(100 + jewel) while connected
+  labBonusesList = labBonusesList.map((bonus: any, index: any) => {
+    const jewelIndex = LAB_BONUS_JEWEL_BOOSTS[index];
+    if (jewelIndex === undefined) return bonus;
+    const jewelBoost = getJewelBonus(jewelsList, jewelIndex);
+    const updatedBonus = bonus?.bonusOn + jewelBoost;
+    const baseMulti = (1 + bonus?.bonusOn / 100).toFixed(2);
+    return {
+      ...bonus,
+      bonusOn: updatedBonus,
+      jewelBoost,
+      description: MULTIPLIER_TEXT_LAB_BONUSES.includes(index)
+        ? bonus?.description?.replace(baseMulti, (1 + updatedBonus / 100).toFixed(2))
+        : bonus?.description
+    };
   })
 
   const totalSpeciesUnlocked = account?.breeding?.pets?.flat()?.filter((pet: any) => pet?.unlocked)?.length ?? 0;
-  const purpleNaveeteBonus = getJewelBonus(jewelsList, 1);
-  const animalFarmMulti = 1 + purpleNaveeteBonus;
+  const animalFarmMulti = labBonusesList?.[0]?.bonusOn;
   labBonusesList = applyBonusDesc(labBonusesList, totalSpeciesUnlocked * animalFarmMulti, 0, animalFarmMulti);
 
   // Game uses the persistent GreenStacks registry length (permanent since 2.3.508), not the live storage count.
@@ -211,13 +225,11 @@ const parseLab = (labRaw: any, charactersData: any, account: any, updatedCharact
   const greenStacks = account?.storage?.greenStacks?.length
     ?? account?.storage?.list?.filter((item: any) => item.amount >= 1e7).length
     ?? 0;
-  const bankerFuryBonusFromJewel = getJewelBonus(jewelsList, 17);
-  labBonusesList = applyBonusDesc(labBonusesList, greenStacks * (2 + bankerFuryBonusFromJewel), 11, 2 + bankerFuryBonusFromJewel)
+  const bankerFuryMulti = labBonusesList?.[11]?.bonusOn;
+  labBonusesList = applyBonusDesc(labBonusesList, greenStacks * bankerFuryMulti, 11, bankerFuryMulti)
 
   const greenMushroomKilled = Math.floor(account?.deathNote?.[0]?.mobs?.[0].kills / 1e6);
-  const fungyFingerBonusFromJewel = (labBonusesList as any)?.[13]?.active ? greenMushroomKilled * 1.6 : 0;
-  const fungyFingerBonus = greenMushroomKilled * labBonusesList?.[9]?.bonusOn;
-  labBonusesList = applyBonusDesc(labBonusesList, fungyFingerBonus + fungyFingerBonusFromJewel, 9);
+  labBonusesList = applyBonusDesc(labBonusesList, greenMushroomKilled * labBonusesList?.[9]?.bonusOn, 9);
 
   playersCords = playersCords?.map((player, index) => {
     const p = playersInTubes?.find(({ playerId }) => playerId === index);
@@ -240,17 +252,10 @@ const parseLab = (labRaw: any, charactersData: any, account: any, updatedCharact
   };
 }
 
-export const isLabEnabledBySorcererRaw = (charData: any, godIndex: any) => {
-  if (classes?.[charData?.CharacterClass] === CLASSES.Elemental_Sorcerer) {
-    const polytheism = charData?.SkillLevels?.[505];
-    return polytheism % 10 === godIndex;
-  }
-}
-
-export const isGodEnabledBySorcerer = (character: any, godIndex: any) => {
+export const isGodEnabledBySorcerer = (character: any, godSlot: any) => {
   if (checkCharClass(character?.class, CLASSES.Elemental_Sorcerer)) {
     const polytheism = character.flatTalents?.find(({ talentId }: any) => talentId === 505);
-    return polytheism?.level % 10 === godIndex;
+    return polytheism?.level % 10 === godSlot;
   }
 }
 
@@ -263,9 +268,14 @@ export const applyBonusDesc = (labBonusesList: any, bonusDesc: any, index: any, 
   } : bonus);
 }
 
+const isJewelActive = (jewels: any, index: number) => !!jewels?.find((jewel: any) => jewel.index === index)?.active;
+
+// game: MainframeBonus(100 + index)
 export const getJewelBonus = (jewels: any, index: any, multiplier = 1) => {
   const jewel = jewels?.find((jewel: any) => jewel.index === index) || {};
-  return jewel?.active ? jewel?.bonus * (jewel?.multiplier || multiplier) : 0;
+  if (!jewel?.active) return 0;
+  const isSetComplete = JEWEL_SET_PARTNERS[index]?.every((partner) => isJewelActive(jewels, partner));
+  return jewel?.bonus * (jewel?.multiplier || multiplier) * (isSetComplete ? 2 : 1);
 }
 
 export const getLabBonus = (labBonuses: any, index: any) => {
@@ -398,26 +408,34 @@ export const getRequirementAmount = (name: any, rawName: any, account: any) => {
   return totalAmount;
 }
 
-export const getLabEfficiency = (character: any, characters: any, account: any, playerInfo: any) => {
-  const allEfficiencies = getAllEff(character, characters, account);
-  const talentBonus = getTalentBonus(character?.flatTalents, 'SKILL_WIZ');
-  const talentBonus2 = getTalentBonus(character?.flatTalents, 'UPLOAD_SQUARED');
-  const talentBonus3 = getTalentBonus(character?.flatTalents, 'SMART_EFFICIENCY');
-  const { value: equipBonus } = getStatsFromGear(character, 63, account);
-  const { value: equipBonus2 } = getStatsFromGear(character, 66, account);
-  const masteryBonus = isMasteryBonusUnlocked(account?.rift, account?.totalSkillsLevels?.laboratory?.rank, 0);
-  const postOfficeBonus = getPostOfficeBonus(character?.postOffice, 'Science_Spare_Parts', 0);
-  const allBaseSkillEff = getAllBaseSkillEff(character, account, characters, playerInfo);
-
-  return allEfficiencies
-    * (200 + (Math.pow(character?.stats?.wisdom, 0.6)
-      * (1 + talentBonus / 100)
-      + (equipBonus
-        + (allBaseSkillEff
-          + postOfficeBonus))))
-    * (1 + (talentBonus2
-      + (equipBonus2
-        + 10 * masteryBonus)) / 100)
-    * (1 + talentBonus3 / 100)
-
+// game: SkillStats("LaboratoryEfficiency")
+// game: SkillStats("LaboratoryEfficiency"): base efficiency * every multiplier
+export const getLabEfficiencyParts = (character: any, characters: any, account: any, playerInfo: any) => {
+  const talents = character?.flatTalents;
+  const { value: baseGear } = getStatsFromGear(character, 63, account);
+  const { value: multiplierGear } = getStatsFromGear(character, 66, account);
+  const names = efficiencyGroupNames('laboratory');
+  const tree = [
+    sumGroup(names.base, [
+      flat('Base', 200, { note: 'Every character starts at 200' }),
+      flat('Wisdom', Math.pow(character?.stats?.wisdom, 0.6) * (1 + getTalentBonus(talents, 'SKILL_WIZ') / 100)),
+      flat('Gear', baseGear),
+      flat('Post office', getPostOfficeBonus(character?.postOffice, 'Science_Spare_Parts', 0)),
+      getAllBaseSkillEffBreakdown(character, account, characters, playerInfo)
+    ]),
+    productGroup(names.bonuses, [
+      getAllEffBreakdown(character, characters, account),
+      additiveGroup(NUMBERED_GROUP, [
+        percent('Upload Squared talent', getTalentBonus(talents, 'UPLOAD_SQUARED')),
+        percent('Gear', multiplierGear),
+        // game: RiftStuff("RiftSkillBonus,11", 1) - the lab's second mastery bonus
+        percent('Skill mastery', 10 * isMasteryBonusUnlocked(account?.rift, account?.totalSkillsLevels?.laboratory?.rank, 1))
+      ]),
+      multiplier('Smart Efficiency talent', 1 + getTalentBonus(talents, 'SMART_EFFICIENCY') / 100)
+    ])
+  ];
+  return { value: evaluateBreakdownNode(tree[0]) * evaluateBreakdownNode(tree[1]), tree };
 }
+
+export const getLabEfficiency = (character: any, characters: any, account: any, playerInfo: any) =>
+  getLabEfficiencyParts(character, characters, account, playerInfo).value;

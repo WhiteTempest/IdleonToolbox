@@ -4,8 +4,9 @@ import { liveEntries } from '@parsers/catalog';
 import { isArtifactAcquired } from '@parsers/world-5/sailing';
 import { getSaltLickBonus } from '@parsers/world-3/saltLick';
 import { getMealsBonusByEffectOrStat } from '@parsers/world-4/cooking';
-import { getJewelBonus, getLabBonus, isGodEnabledBySorcerer } from '@parsers/world-4/lab';
+import { getJewelBonus, getLabBonus } from '@parsers/world-4/lab';
 import { getEventShopBonus, isBundlePurchased, isCompanionBonusActive, isMasteryBonusUnlocked } from '@parsers/misc';
+import { GOD_INDEX, isMajorDivinityActive } from '@parsers/world-5/divinity';
 import { getStampsBonusByEffect } from '@parsers/world-1/stamps';
 import { getArcadeBonus } from '@parsers/world-2/arcade';
 import { isRiftBonusUnlocked } from '@parsers/world-4/rift';
@@ -17,6 +18,7 @@ import { getLegendTalentBonus } from '@parsers/world-7/legendTalents';
 import { getZenithBonus } from '@parsers/world-1/statues';
 import { getSpelunkingBonus } from '@parsers/world-7/spelunking';
 import { getMineheadBonusQTY } from '@parsers/world-7/minehead';
+import { NUMBERED_GROUP, additiveGroup, createBreakdown, flat, info, multiplier, percent, productGroup, sumGroup } from '@parsers/breakdown';
 
 export const MAX_VIAL_LEVEL = 13;
 // One row per cauldron / liquid, in save order: the slug the catalog and the rest of the app key by,
@@ -125,7 +127,8 @@ export const getLiquidCauldrons = (account: any) => {
     const mealBonus = getMealsBonusByEffectOrStat(account, null, `Liquid${index === 0 || index === 1
       ? '12'
       : '34'}`, blackDiamondRhinestone);
-    const skillMasteryBonus = isMasteryBonusUnlocked(account?.rift, account?.totalSkillsLevels?.alchemy?.rank, 4);
+    // game: 5 * RiftStuff("RiftSkillBonus,4", 1), alchemy's second mastery tier (+5% all liquid cap at 200)
+    const skillMasteryBonus = isMasteryBonusUnlocked(account?.rift, account?.totalSkillsLevels?.alchemy?.rank, 1);
     const viaductOfGods = getLabBonus(account?.lab.labBonuses, 6);
     const p2wBonus = account?.alchemy?.p2w?.liquids?.[index]?.capacity?.level ?? 0;
     const stampBonus = getStampsBonusByEffect(account, 'Cap_for_all_Liquids_in_Alchemy');
@@ -134,22 +137,30 @@ export const getLiquidCauldrons = (account: any) => {
     const firstMath = bubbleBonus * Math.max(Math.pow((account?.totalSkillsLevels?.alchemy?.level ?? 0) / 25, 0.3), 0);
     const secondMath = bleachLiquidBonus + (mealBonus + 5 * skillMasteryBonus) / 100;
     const thirdMath = viaductOfGods * (10 + (brewBonus + (vialBonus + (p2wBonus + (firstMath + (stampBonus + Math.ceil(arcadeBonus)))))))
+    const maxLiquid = Math.ceil((1 + secondMath) * thirdMath);
 
     return {
       isDragonic: account?.accountOptions?.[123] > index,
-      maxLiquid: Math.ceil((1 + secondMath) * thirdMath),
-      maxLiquidBreakdown: [
-        { name: 'Bleach / Dragonic', value: bleachLiquidBonus },
-        { name: 'Meal', value: mealBonus / 100 },
-        { name: 'Skill Mastery', value: (5 * skillMasteryBonus) / 100 },
-        { name: 'Lab', value: viaductOfGods },
-        { name: 'Cauldron Cap', value: brewBonus },
-        { name: 'Vial', value: vialBonus },
-        { name: 'P2W', value: p2wBonus },
-        { name: 'Da daily drip', value: firstMath },
-        { name: 'Stamp', value: stampBonus },
-        { name: 'Arcade', value: Math.ceil(arcadeBonus) }
-      ],
+      maxLiquid,
+      maxLiquidBreakdown: createBreakdown(`${LIQUID_INFO[index]?.displayName} capacity`, maxLiquid, [
+        sumGroup('Base capacity', [
+          flat('Base', 10),
+          flat('Cauldron cap', brewBonus),
+          flat('Vial', vialBonus),
+          flat('Pay 2 Win capacity', p2wBonus),
+          flat('Da Daily Drip (Bubble)', firstMath),
+          flat('Stamp', stampBonus),
+          flat('Arcade', Math.ceil(arcadeBonus))
+        ]),
+        productGroup(NUMBERED_GROUP, [
+          multiplier('Viaduct of the Gods (Lab)', viaductOfGods),
+          additiveGroup(NUMBERED_GROUP, [
+            percent('Bleach / Dragonic', 100 * bleachLiquidBonus),
+            percent('Meal', mealBonus),
+            percent('Skill mastery', 5 * skillMasteryBonus)
+          ])
+        ])
+      ], { round: 'ceil' }),
       decantCap: {
         level: decantCapLevelValue,
         progress: decantCapProgress ?? 0,
@@ -333,7 +344,30 @@ export const getActiveBubbleBonus = (equippedBubbles: any, bubbleName: any, acco
   return prismaMultiplier * (growth(bubble?.func, bubble?.level, bubble?.x1, bubble?.x2, false) ?? 0);
 };
 
-// game: "BubbleBonus"
+// Warriors Rule / Archer or Bust / Mage is Best: the class bubble of each class cauldron
+const CLASS_MULTI_BUBBLE_INDEX = 1;
+// Multorange / Premigreen / Severapurple: never scaled by the class bubble
+const CAULDRON_MULTI_BUBBLE_INDEX = 16;
+const CLASS_MULTI_INDEX_LIMIT = 30;
+const CLASS_MULTI_CAULDRONS = new Set(['power', 'quicc', 'high-iq']);
+const CLASS_MULTI_EXCLUDED_STAT_TAGS = ['passz', 'ACTIVE', 'AllCharz'];
+// Carpenter: its description says "Not affected by 'Warriors Rule'"
+const CLASS_MULTI_EXCLUDED_STAT = 'Construction';
+
+// game: TalentCalc(-2) applies the class bubble only to these. It fills AlchBubbles in index order,
+// so index 0 is priced before the class bubble at index 1 exists and never gets it.
+const isClassMultiplied = (bubble: any) => {
+  const { cauldron, index, stat = '' } = bubble ?? {};
+  return CLASS_MULTI_CAULDRONS.has(cauldron)
+    && index > CLASS_MULTI_BUBBLE_INDEX
+    && index !== CAULDRON_MULTI_BUBBLE_INDEX
+    && index < CLASS_MULTI_INDEX_LIMIT
+    && stat !== CLASS_MULTI_EXCLUDED_STAT
+    && !CLASS_MULTI_EXCLUDED_STAT_TAGS.some((tag) => stat.includes(tag));
+};
+
+// game: "BubbleBonus" plus the TalentCalc(-2) multipliers. shouldMultiply = the character is of the
+// cauldron's class; the class bubble only lands on the bubbles that qualify for it.
 export const getBubbleBonus = (account: any, bubbleName: any, shouldRound?: any, shouldMultiply?: any) => {
   const targetBubble = account?.alchemy?.bubblesFlat?.find(
     ({ bubbleName: name }: any) => name === bubbleName
@@ -354,10 +388,9 @@ export const getBubbleBonus = (account: any, bubbleName: any, shouldRound?: any,
     ? getPrismaMulti(account)?.value
     : 1;
 
-  // Calculate primary multiplier from bubble at index 1 (if shouldMultiply is true)
   let primaryMultiplier = 1;
-  if (shouldMultiply) {
-    const primaryMultiBubble = account?.alchemy?.bubbles[targetBubble?.cauldron][1];
+  if (shouldMultiply && isClassMultiplied(targetBubble)) {
+    const primaryMultiBubble = account?.alchemy?.bubbles[targetBubble?.cauldron][CLASS_MULTI_BUBBLE_INDEX];
     if (primaryMultiBubble) {
       const primaryBubbleValue = growth(
         primaryMultiBubble?.func,
@@ -384,7 +417,7 @@ export const getBubbleBonus = (account: any, bubbleName: any, shouldRound?: any,
   const qualifiesForSecondaryMultiplier = (secondaryMultiplierIndexes as Record<string, any>)[targetBubble?.cauldron]?.has(targetBubble?.index);
 
   if (qualifiesForSecondaryMultiplier) {
-    const secondaryBubble = account?.alchemy?.bubbles[targetBubble?.cauldron][16];
+    const secondaryBubble = account?.alchemy?.bubbles[targetBubble?.cauldron][CAULDRON_MULTI_BUBBLE_INDEX];
     if (secondaryBubble) {
       const secondaryBubbleValue = growth(
         secondaryBubble?.func,
@@ -429,7 +462,7 @@ export const getVialsBonusByStat = (vials: any, statName: any) => {
   return vials?.reduce((sum: any, vial: any) => {
     const { func, level, x1, x2, multiplier = 1, stat } = vial;
     if (statName !== stat) return sum;
-    return sum + (growth(func, level, x1, x2) ?? 0) * multiplier;
+    return sum + (growth(func, level, x1, x2, false) ?? 0) * multiplier;
   }, 0);
 };
 
@@ -451,31 +484,14 @@ export const getVialMultiplier = (account: any) => {
 
   return {
     value,
-    breakdown: {
-      statName: 'Vial bonus',
-      totalValue: `${(value || 1).toFixed(3)}x`,
-      categories: [
-        {
-          name: 'Base multi',
-          sources: [
-            { name: 'My First Chemistry Set (Lab)', value: myFirstChemistrySet }
-          ]
-        },
-        {
-          name: 'Additive %',
-          sources: [
-            { name: 'Vial Mastery (Rift)', value: vialMastery, formatted: `${vialMastery}%` },
-            { name: 'Upgrade Vault', value: upgradeVaultBonus, formatted: `${upgradeVaultBonus}%` }
-          ]
-        },
-        {
-          name: 'Multiplicative',
-          sources: [
-            { name: 'Meritocracy (Vote Ballot)', value: meritocracyBonus, formatted: `${meritocracyBonus}%` }
-          ]
-        }
-      ]
-    }
+    breakdown: createBreakdown('Vial bonus', `${(value || 1).toFixed(3)}x`, [
+      multiplier('My First Chemistry Set (Lab)', myFirstChemistrySet),
+      additiveGroup(NUMBERED_GROUP, [
+        percent('Vial Mastery (Rift)', vialMastery),
+        percent('Upgrade Vault', upgradeVaultBonus)
+      ]),
+      multiplier('Meritocracy (Vote Ballot)', 1 + meritocracyBonus / 100)
+    ])
   };
 }
 
@@ -694,8 +710,22 @@ export const applyArtifactBonusOnSigil = (sigils: any, artifacts: any, meritocra
 
 export const vialCostsArray = [0, 100, 1E3, 2500, 1E4, 5E4, 1E5, 5E5, 1000001, 5E6, 25E6, 1E8, 1E9, 5E10]
 
+// game: AtomCollider("AtomBubbleUpgCost", bubbleIndex, cost)
 export const getBubbleAtomCost = (bubbleIndex: any, cost: any) => {
   return Math.floor(cost / 1e9 * (bubbleIndex + 1) * Math.pow(1.04, bubbleIndex) * 100)
+}
+
+const BORON_ATOM_INDEX = 4;
+const PARTICLE_BUBBLE_MIN_COST = 1e8;
+// The bubble panel offers particles (Boron atom) for the FIRST ingredient only, once one level of it costs
+// 1e8 or more, and never when that ingredient is Bits or a W6 item. Returns 0 when particles aren't offered.
+export const getBubbleParticleCost = (account: any, bubbleIndex: number, itemRawName: string, itemIndex: number, cost: number) => {
+  const boronLevel = account?.atoms?.atoms?.[BORON_ATOM_INDEX]?.level ?? 0;
+  if (itemIndex !== 0 || boronLevel <= 0 || cost < PARTICLE_BUBBLE_MIN_COST
+    || itemRawName === 'Bits' || itemRawName?.startsWith('W6item')) {
+    return 0;
+  }
+  return getBubbleAtomCost(bubbleIndex, cost);
 }
 
 export const calcBubbleLevels = (allBubbles: any) => {
@@ -727,23 +757,20 @@ const getNblbBubbles = (acc: any, maxBubbleIndex: any, numberOfBubbles: any) => 
 }
 
 export const getNblbLevel = (acc: any, characters: any, isMin?: any) => {
-  let level;
   const noBubbleLeftBehind = acc?.lab?.labBonuses?.find((bonus: any) => bonus.name === 'No_Bubble_Left_Behind');
-  const spelunkerObolMulti = getLabBonus(acc?.lab.labBonuses, 8); // gem multi
-  const pyriteRhinestone = getJewelBonus(acc?.lab.jewels, 7, spelunkerObolMulti);
-  level = Math.max(1, (noBubbleLeftBehind?.active
-    ? noBubbleLeftBehind?.bonusOn
-    : noBubbleLeftBehind?.bonusOff) + pyriteRhinestone - 1);
+  // game: ArcaneType("NBLB_bubbleLVrangeDisp"); MainframeBonus(3) holds the Pyrite Rhinestone
+  const mainframeBonus = getLabBonus(acc?.lab?.labBonuses, noBubbleLeftBehind?.index);
+  let level = Math.max(1, mainframeBonus - 1);
   if (isMin) {
-    return Math.floor(level);
+    return Math.round(level);
   }
-  level += 1;
+  level = Math.round(level + 1);
 
   const sBundle = isBundlePurchased(acc?.bundles, 'bun_s');
   if (sBundle) {
-    level = Math.round(level + 3);
+    level += 3;
 
-    if (noBubbleLeftBehind?.active && noBubbleLeftBehind?.bonusOn > 0.5) {
+    if (mainframeBonus > 0.5) {
       level += 1;
     }
   }
@@ -760,31 +787,24 @@ export const getNblbLevel = (acc: any, characters: any, isMin?: any) => {
   return level;
 
 }
+const MIN_UPGRADEABLE_BUBBLES = 3;
+const NBLB_BASE_BUBBLES = 2;
+const NBLB_MAINFRAME_BUBBLES_CAP = 4;
+const MAX_UPGRADEABLE_BUBBLES = 10;
+// game: ArcaneType("is_NBLB_on") / ("NBLB_bubbleQTY")
 export const getUpgradeableBubbles = (acc: any, characters: any) => {
-  let upgradeableBubblesAmount = 3;
   const noBubbleLeftBehind = acc?.lab?.labBonuses?.find((bonus: any) => bonus.name === 'No_Bubble_Left_Behind');
-  if (!noBubbleLeftBehind?.active) return {
+  const isNblbOn = noBubbleLeftBehind?.active || isBundlePurchased(acc?.bundles, 'bun_s') || getEventShopBonus(acc, 2) === 1;
+  if (!isNblbOn) return {
     normal: [],
     atomBubbles: [],
     upgradeableBubblesAmount: 0,
-    maxBubblesToUpgrade: 10,
+    maxBubblesToUpgrade: MAX_UPGRADEABLE_BUBBLES,
     minLevel: 0,
     maxLevel: 0,
-    breakdown: {
-      statName: "Upgradeable Bubbles",
-      totalValue: 0,
-      categories: [
-        {
-          name: "Additive",
-          sources: [
-            { name: "Base", value: 0 },
-            { name: "Artifact", value: 0 },
-            { name: "Merit", value: 0 },
-            { name: "Jewel", value: 0 },
-          ],
-        },
-      ],
-    }
+    breakdown: createBreakdown('Upgradeable Bubbles', 0, [
+      info('No Bubble Left Behind (Lab)', 0, { formatted: 'Not active' })
+    ], { combine: 'sum' })
   };
   const allBubbles = Object.values(acc?.alchemy?.bubbles).flatMap((bubbles: any, index: any) => {
     return bubbles.map((bubble: any, bubbleIndex: any) => {
@@ -794,21 +814,20 @@ export const getUpgradeableBubbles = (acc: any, characters: any) => {
 
   const found = allBubbles.filter(({ level, index }) => level >= 2 && index < 15).filter(({ level }) => level < 1e4);
   const sorted = found.sort((a, b) => b.flatIndex - a.flatIndex).sort((a, b) => a.level - b.level);
-  const jewel = acc?.lab?.jewels?.find((jewel: any) => jewel.name === 'Pyrite_Rhinestone');
-  if (jewel?.acquired) {
-    upgradeableBubblesAmount++;
-  }
+  // min(4, MainframeBonus(3) + 2); the Pyrite Rhinestone share of MainframeBonus(3) is split out for the breakdown
+  const mainframeBonus = getLabBonus(acc?.lab?.labBonuses, noBubbleLeftBehind?.index);
+  const pyriteRhinestone = noBubbleLeftBehind?.active ? noBubbleLeftBehind?.jewelBoost ?? 0 : 0;
+  const mainframeBubbles = Math.min(NBLB_MAINFRAME_BUBBLES_CAP, NBLB_BASE_BUBBLES + mainframeBonus);
+  const base = Math.min(mainframeBubbles, NBLB_BASE_BUBBLES + mainframeBonus - pyriteRhinestone);
+  const jewelBonus = mainframeBubbles - base;
   const amberiteArtifact = isArtifactAcquired(acc?.sailing?.artifacts, 'Amberite');
   const multi = amberiteArtifact?.acquired || 1;
-  if (amberiteArtifact) {
-    upgradeableBubblesAmount += amberiteArtifact?.baseBonus * multi;
-  }
+  const artifactBonus = amberiteArtifact ? amberiteArtifact?.baseBonus * multi : 0;
   const moreBubblesFromMerit = acc?.tasks?.[2]?.[3]?.[6]
-  if (moreBubblesFromMerit > 0) {
-    upgradeableBubblesAmount += moreBubblesFromMerit;
-  }
+  const meritBonus = moreBubblesFromMerit > 0 ? moreBubblesFromMerit : 0;
 
-  upgradeableBubblesAmount = Math.min(10, upgradeableBubblesAmount)
+  const upgradeableBubblesAmount = Math.min(MAX_UPGRADEABLE_BUBBLES, Math.max(MIN_UPGRADEABLE_BUBBLES,
+    Math.round(base + jewelBonus + artifactBonus + meritBonus)));
   const normal = sorted.slice(0, upgradeableBubblesAmount);
   const atomBubbles = getNblbBubbles(acc, 30, upgradeableBubblesAmount).map((bubble) => ({ ...bubble, lithium: true }));
 
@@ -819,24 +838,22 @@ export const getUpgradeableBubbles = (acc: any, characters: any) => {
     normal,
     atomBubbles,
     upgradeableBubblesAmount,
-    maxBubblesToUpgrade: 10,
+    maxBubblesToUpgrade: MAX_UPGRADEABLE_BUBBLES,
     minLevel,
     maxLevel,
-    breakdown: {
-      statName: "Upgradeable Bubbles",
-      totalValue: upgradeableBubblesAmount,
-      categories: [
-        {
-          name: "Additive",
-          sources: [
-            { name: "Base", value: 3 },
-            { name: "Artifact", value: (amberiteArtifact?.baseBonus || 0) * multi },
-            { name: "Merit", value: moreBubblesFromMerit },
-            { name: "Jewel", value: jewel?.acquired ? 1 : 0 },
-          ],
-        },
-      ],
-    }
+    breakdown: createBreakdown('Upgradeable Bubbles', upgradeableBubblesAmount, [
+      sumGroup('Bubbles upgraded daily', [
+        flat('Base', base),
+        flat('Artifact', artifactBonus),
+        flat('Merit', meritBonus),
+        flat('Jewel', jewelBonus)
+      ], {
+        min: MIN_UPGRADEABLE_BUBBLES,
+        max: MAX_UPGRADEABLE_BUBBLES,
+        round: 'round',
+        note: `At least ${MIN_UPGRADEABLE_BUBBLES}, at most ${MAX_UPGRADEABLE_BUBBLES}`
+      })
+    ], { combine: 'sum' })
   };
 }
 
@@ -870,11 +887,10 @@ export const getKrukBubbles = (account: any) => {
 
 export const getPossibleZenithMarketBubbles = (account: any, characters: any) => {
   const krukLevelsDaily = getKrukBubblesDaily(account);
-  const hasKrukLinked = characters?.some((character: any) => character.linkedDeity === 8
-    || isGodEnabledBySorcerer(character, 8)
-    || character.secondLinkedDeityIndex === 8
-    || isCompanionBonusActive(account, 0));
-  if (!hasKrukLinked) return [];
+  // game: Divinity("Bonus_MAJOR", 0, 8) at the daily reset, so King Doot follows the logged-in
+  // character's divinity level; the player index only matters for links, and Kattlekruk's is account wide.
+  const hasKrukMajor = isMajorDivinityActive(characters?.[0], account, GOD_INDEX.Kattlekruk, getBestActiveCharacter(characters));
+  if (!hasKrukMajor) return [];
   return getKrukBubbles(account).map((bubble: any) => ({ ...bubble, isZenithMarket: true, dailyLevels: krukLevelsDaily.value, dailyLevelsBreakdown: krukLevelsDaily.breakdown }));
 }
 
@@ -897,36 +913,32 @@ export const getKrukBubblesDaily = (account: any) => {
   const percentBonus = bubbleBonus + arcadeBonus + spelunkBonus;
   const percentMulti = 1 + percentBonus / 100;
 
-  const total = Math.floor(mineheadBonus + (baseAmount + additiveBonus) * meritocracyMulti * eventShopMulti * percentMulti);
+  const scaledLevels = (baseAmount + additiveBonus) * meritocracyMulti * eventShopMulti * percentMulti;
+  const total = Math.floor(mineheadBonus + scaledLevels);
 
   return {
     value: total,
-    breakdown: {
-      statName: "Kruk Bubbles Daily",
-      totalValue: total,
-      categories: [
-        {
-          name: "Additive",
-          sources: [
-            { name: "Minehead", value: mineheadBonus },
-            { name: "Base", value: baseAmount },
-            { name: "Stamp", value: stampBonus },
-            { name: "Legend Talent", value: legendBonus },
-            { name: "Zenith", value: zenithBonus },
-          ],
-        },
-        {
-          name: "Multiplicative",
-          sources: [
-            { name: "Meritocracy", value: meritocracyBonus },
-            { name: "Event Shop", value: eventShopBonus > 0 ? 50 * eventShopBonus : 0 },
-            { name: "Bubble", value: bubbleBonus },
-            { name: "Arcade", value: arcadeBonus },
-            { name: "Spelunk", value: spelunkBonus },
-          ],
-        },
-      ],
-    }
+    breakdown: createBreakdown('Kruk Bubbles Daily', total, [
+      productGroup(NUMBERED_GROUP, [
+        sumGroup('Base levels', [
+          flat('Base', baseAmount),
+          flat('Stamp', stampBonus),
+          flat('Legend Talent', legendBonus),
+          flat('Zenith', zenithBonus)
+        ]),
+        productGroup(NUMBERED_GROUP, [
+          multiplier('Meritocracy', meritocracyMulti),
+          multiplier('Event Shop', eventShopMulti),
+          additiveGroup(NUMBERED_GROUP, [
+            percent('Bubble', bubbleBonus),
+            percent('Arcade', arcadeBonus),
+            percent('Spelunk', spelunkBonus)
+          ])
+        ])
+      ], { unit: 'flat' }),
+      flat('Minehead', mineheadBonus),
+      flat('Rounded down', total - mineheadBonus - scaledLevels)
+    ], { combine: 'sum' })
   };
 }
 

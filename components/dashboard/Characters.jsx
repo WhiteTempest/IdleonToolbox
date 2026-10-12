@@ -411,11 +411,11 @@ const CharacterInfo = ({ account, characters, character, lastUpdated }) => {
     crystalSpawnChance,
     nonConsumeChance
   } = character || {};
-  const { cashMulti } = getCashMulti(character, account, characters) || {};
+  const playerInfo = getMaxDamage(character, characters, account) || {};
+  const { cashMulti } = getCashMulti(character, account, characters, playerInfo) || {};
   const { dropRate } = getDropRate(character, account, characters) || {};
   const { respawnRate } = getRespawnRate(character, account) || {};
   const { afkGains } = getAfkGain(character, characters, account) || {};
-  const playerInfo = getMaxDamage(character, characters, account) || {};
   const isActive = () => {
     const timePassed = new Date().getTime() + (afkTime - lastUpdated);
     const minutes = differenceInMinutes(new Date(), new Date(timePassed));

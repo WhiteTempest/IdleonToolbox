@@ -1,7 +1,6 @@
 import type { IdleonData, Account, ServerVars } from '../types';
 import { growth, tryToParse } from '@utility/helpers';
 import { arcadeShop } from '@website-data';
-import { getMaxClaimTime, getSecPerBall } from '@parsers/dungeons';
 import { isCompanionBonusActive } from '@parsers/misc';
 
 export const getArcade = (idleonData: IdleonData, account: Account, serverVars: ServerVars) => {
@@ -13,7 +12,6 @@ const parseArcade = (arcadeRaw: any, account: Account, serverVars: ServerVars) =
   const balls = (account as any)?.accountOptions?.[74];
   const goldBalls = (account as any)?.accountOptions?.[75];
   const royalBalls = (account as any)?.accountOptions?.[324];
-  const maxBalls = Math.floor(getMaxClaimTime(account) / Math.max(1800, getSecPerBall(account)));
 
   const arcadeShopList = arcadeShop?.map((upgrade: any, index: number) => {
     const { x1, x2, func } = upgrade;
@@ -36,11 +34,14 @@ const parseArcade = (arcadeRaw: any, account: Account, serverVars: ServerVars) =
     balls,
     goldBalls,
     royalBalls,
-    maxBalls,
     totalUpgradeLevels
   }
 }
 
-export const getArcadeBonus = (list: any[] | undefined, effectName: string) => {
-  return list?.find(({ effect }: { effect: string }) => effect.includes(effectName))
+// The name must match the effect exactly, minus its leading "+{%_": a substring match let 'Drop_Rate'
+// reach Marble Drop Rate. Names the shop repeats (Cash_from_Mobs is 10 and 11, Artifact_Find 32 and
+// 66) go by index, as the game's ArcadeBonus(i) does.
+export const getArcadeBonus = (list: any[] | undefined, effectNameOrIndex: string | number) => {
+  if (typeof effectNameOrIndex === 'number') return list?.[effectNameOrIndex];
+  return list?.find(({ effect }: { effect: string }) => effect.replace(/^[^A-Za-z]*/, '') === effectNameOrIndex);
 }

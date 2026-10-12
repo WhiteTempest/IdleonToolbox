@@ -1,21 +1,21 @@
-import { Card, CardContent, Divider, Stack, Typography } from '@mui/material';
+import { Card, CardContent, Stack, Typography } from '@mui/material';
 import React, { useContext } from 'react';
 import { AppContext } from 'components/common/context/AppProvider';
 import { growth, notateNumber, prefix } from 'utility/helpers';
 import styled from '@emotion/styled';
 import Tooltip from '../../../components/Tooltip';
-import { Breakdown, CardTitleAndValue, TitleAndValue } from '@components/common/styles';
-import { isGodEnabledBySorcerer } from '@parsers/world-4/lab';
+import { CardTitleAndValue, TitleAndValue } from '@components/common/styles';
+import { Breakdown } from '@components/common/Breakdown/Breakdown';
 import { NextSeo } from 'next-seo';
-import { CLASSES, getCharacterByHighestTalent, getHighestMaxLevelTalentByClass } from '../../../parsers/talents';
+import { CLASSES, getBestActiveCharacter, getCharacterByHighestTalent, getHighestMaxLevelTalentByClass } from '../../../parsers/talents';
 import { getAtomColliderThreshold } from '@parsers/world-3/atomCollider';
-import { calcTotals } from '@parsers/world-3/printer';
+import { calcTotals, isPrinterWiredIn } from '@parsers/world-3/printer';
 
 const Printer = () => {
   const { state } = useContext(AppContext);
-  const { printer, lab } = state?.account;
+  const { printer } = state?.account;
 
-  const wiredInBonus = lab?.labBonuses?.find((bonus) => bonus.name === 'Wired_In')?.active;
+  const loggedInCharacter = getBestActiveCharacter(state?.characters);
   const atomThreshold = getAtomColliderThreshold(state?.account?.accountOptions?.[133]);
 
   const totals = calcTotals(state?.account);
@@ -27,8 +27,8 @@ const Printer = () => {
       title="Printer | Idleon Toolbox"
       description="Keep track of your printer output with calculated bonuses from various sources"
     />
-    <Typography variant={'caption'} component={'div'} mb={3}>* hover over items to see boosted values (totals section
-      will also show atom per day)</Typography>
+    <Typography variant={'caption'} component={'div'} mb={3}>* hover over items to see boosted values, click a sample for
+      its breakdown (totals section will also show atom per day)</Typography>
 
     <Stack direction={'row'} alignItems={'baseline'} gap={1}>
       <Typography variant={'h5'}>Totals</Typography>
@@ -69,8 +69,7 @@ const Printer = () => {
         const playerName = state?.characters?.[index]?.name;
         const printerSample = Math.min(90, state?.characters?.[index]?.printerSample);
         const extraPrinterSample = state?.characters?.[index]?.printerSample - 90;
-        const labBonusActive = (state?.characters?.[index]?.afkTarget === 'Laboratory' || isGodEnabledBySorcerer(state?.characters?.[index], 1) ||
-          state?.account?.divinity?.linkedDeities?.[index] === 1) && wiredInBonus;
+        const labBonusActive = isPrinterWiredIn(state?.characters?.[index], state?.account, loggedInCharacter);
         return <Card sx={{ width: 'fit-content' }} key={`printer-row-${index}`}>
           <CardContent>
             <Stack direction="row" alignItems={'center'} gap={3}>
@@ -87,25 +86,28 @@ const Printer = () => {
               </Stack>
               <Stack direction={'row'} alignItems={'center'} flexWrap={'wrap'} justifyContent={'center'} gap={3}>
                 {printerSlots?.map((slot, slotIndex) => {
-                  return <Tooltip key={`${slot?.name}-${slotIndex}`} title={<BoostedTooltip {...slot}/>}>
-                    <Card sx={{ borderColor: slot?.active ? 'success.light' : '#424242', borderWidth: 1 }}
-                          variant='outlined'>
-                      <CardContent>
-                        {slot?.item !== 'Blank' ?
-                          <Stack sx={{ width: 50, height: 50 }} position={'relative'} justifyContent={'flex-start'}
-                                 alignItems={'center'}>
-                            <ItemIcon src={`${prefix}data/${slot?.item}.png`} alt="item-icon"/>
-                            <Typography
-                              color={slot?.active && labBonusActive
-                                ? 'multiLight'
-                                : ''}>{notateNumber(slot?.value, 'Big')}</Typography>
-                          </Stack> :
-                          <Stack sx={{ width: 50, height: 50 }} alignItems={'center'}
-                                 justifyContent={'center'}><Typography
-                            variant={'caption'}>EMPTY</Typography></Stack>}
-                      </CardContent>
-                    </Card>
-                  </Tooltip>
+                  const isBlank = slot?.item === 'Blank';
+                  return <Breakdown key={`${slot?.name}-${slotIndex}`} data={isBlank ? null : slot?.breakdown}>
+                    <Tooltip title={isBlank ? '' : <BoostedTooltip {...slot}/>}>
+                      <Card sx={{ borderColor: slot?.active ? 'success.light' : '#424242', borderWidth: 1 }}
+                            variant='outlined'>
+                        <CardContent>
+                          {!isBlank ?
+                            <Stack sx={{ width: 50, height: 50 }} position={'relative'} justifyContent={'flex-start'}
+                                   alignItems={'center'}>
+                              <ItemIcon src={`${prefix}data/${slot?.item}.png`} alt="item-icon"/>
+                              <Typography
+                                color={slot?.active && labBonusActive
+                                  ? 'multiLight'
+                                  : ''}>{notateNumber(slot?.value, 'Big')}</Typography>
+                            </Stack> :
+                            <Stack sx={{ width: 50, height: 50 }} alignItems={'center'}
+                                   justifyContent={'center'}><Typography
+                              variant={'caption'}>EMPTY</Typography></Stack>}
+                        </CardContent>
+                      </Card>
+                    </Tooltip>
+                  </Breakdown>
                 })}
               </Stack>
             </Stack>
@@ -116,15 +118,12 @@ const Printer = () => {
   </>;
 };
 
-const BoostedTooltip = ({ value, boostedValue, breakdown }) => {
+const BoostedTooltip = ({ value, boostedValue }) => {
   return (
     (<Stack>
       <TitleAndValue boldTitle title={'Base value'} value={notateNumber(value, 'Big')}/>
       <TitleAndValue boldTitle title={'Boosted value'} value={notateNumber(boostedValue, 'Big')}/>
-      {breakdown.length > 0 ? <Stack>
-        <Divider flexItem sx={{ my: 1 }}/>
-        <Breakdown breakdown={breakdown} notation={'MultiplierInfo'} />
-      </Stack> : null}
+      <Typography variant={'caption'} color={'text.secondary'} mt={1}>Click the sample for the breakdown</Typography>
     </Stack>)
   );
 }

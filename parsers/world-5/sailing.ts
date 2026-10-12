@@ -2,8 +2,8 @@ import { kFormatter, lavaLog, notateNumber, tryToParse } from '@utility/helpers'
 import { artifacts, captainsBonuses, islands } from '@website-data';
 import {
   getEventShopBonus,
-  getHighestCharacterSkill,
   getHighestLevelCharacter,
+  getLoggedInSkillLevel,
   isCompanionBonusActive,
   isCompanionLvl2Active,
   isMasteryBonusUnlocked
@@ -13,7 +13,7 @@ import { getBubbleBonus, getSigilBonus, getVialsBonusByStat } from '@parsers/wor
 import { getCardBonusByEffect } from '@parsers/cards';
 import { getStampsBonusByEffect } from '@parsers/world-1/stamps';
 import { getMealsBonusByEffectOrStat } from '@parsers/world-4/cooking';
-import { getGodBlessingBonus, getMinorDivinityBonus } from '@parsers/world-5/divinity';
+import { getAccountMinorDivinityBonus, getGodBlessingBonus, GOD_INDEX } from '@parsers/world-5/divinity';
 import { getStatueBonus } from '@parsers/world-1/statues';
 import { getLabBonus } from '@parsers/world-4/lab';
 import { getShinyBonus } from '@parsers/world-4/breeding';
@@ -31,7 +31,7 @@ import { getSchematicBonus } from '@parsers/world-5/caverns/the-well';
 import { getResearchGridBonus } from '@parsers/world-7/research';
 import { getSushiBonus } from '@parsers/world-7/sushiStation';
 import { getJellyBonus } from '@parsers/world-7/jellyOperator';
-import { getWinnerBonus } from '@parsers/world-6/summoning';
+import { getWinnerBonus, getWinnerBonusWithoutLantern } from '@parsers/world-6/summoning';
 import { getKillRoyShopBonus } from '@parsers/misc';
 import { getButtonBonus } from '@parsers/world-7/button';
 import { getBribeBonus } from '@parsers/world-1/bribes';
@@ -44,6 +44,7 @@ import { getUpgradeVaultBonus } from '@parsers/misc/upgradeVault';
 import { getIsland } from '@parsers/world-2/islands';
 import { getStarSignBonus } from '@parsers/starSigns';
 import { getFountainBonusTotal } from '@parsers/world-5/caverns/the-fountain';
+import { NUMBERED_GROUP, additiveGroup, createBreakdown, multiplier, percent, productGroup } from '@parsers/breakdown';
 
 export const getSailing = (idleonData: any, artifactsList: any, charactersData: any, account: any, serverVars: any, charactersLevels: any) => {
   const sailingRaw = tryToParse(idleonData?.Sailing) || idleonData?.Sailing;
@@ -308,6 +309,22 @@ export const isArtifactAcquired = (artifacts: any[] = [], artifactName: any) => 
   return artifacts?.find(({ name, acquired }) => name === artifactName && acquired);
 }
 
+// Sailing[3] grade of an artifact -> its upgraded-form value in ArtifactInfo (2 = ancient ... 6 = transcendent)
+const ARTIFACT_FORM_KEYS: Record<number, string> = {
+  2: 'ancientMultiplier',
+  3: 'eldritchMultiplier',
+  4: 'sovereignMultiplier',
+  5: 'omnipotentMultiplier',
+  6: 'transcendentMultiplier'
+};
+
+// game: Sailing("ArtifactBonus", t, 1). The upgraded-form value only: a plain (grade 1) artifact gives 0.
+export const getArtifactFormBonus = (artifacts: any[] = [], artifactName: string): number => {
+  const artifact = isArtifactAcquired(artifacts, artifactName);
+  const formKey = ARTIFACT_FORM_KEYS[artifact?.acquired];
+  return formKey ? (artifact?.[formKey] ?? 0) : 0;
+}
+
 const getRareTreasureChance = () => {
   return Math.min(0.05, 0.1);
 }
@@ -328,7 +345,8 @@ const getCaptainsAndBoats = (sailingRaw: any, captainsRaw: any, boatsRaw: any, a
   const allCaptains = captainsRaw?.slice(0, captainsUnlocked + 1);
   const captains = allCaptains?.map((captain: any, index: any) => getCaptain(captain, index, false))
   const allBoats = boatsRaw?.slice(0, boatsUnlocked + 1);
-  const boats = allBoats?.map((boat: any, index: any) => getBoat(boat, index, lootPileList, captains, artifactsList, characters, account, baseSpeed, minimumTravelTime));
+  const tierSixCaptains = getTierSixCaptainCount(captainsRaw);
+  const boats = allBoats?.map((boat: any, index: any) => getBoat(boat, index, lootPileList, captains, artifactsList, characters, account, baseSpeed, minimumTravelTime, tierSixCaptains));
   const captainsOnBoats = boats?.reduce((res: any, { captainMappedIndex }: any, index: any) => ({
     ...res,
     [captainMappedIndex]: index
@@ -354,14 +372,19 @@ const getDaveyJonesBonus = (account: any, lootLevel = 0, speedLevel = 0) => {
   return baseDJ * undeadMulti;
 }
 
-const getBoat = (boat: any, boatIndex: any, lootPile: any, captains: any, artifactsList: any, characters: any, account: any, baseSpeed: any, minimumTravelTime = 120) => {
+// game: NONdummies[60], set at load: how many of the first 30 captain slots hold a type 6 captain.
+// Boat loot and artifact find each add 25% per one.
+const getTierSixCaptainCount = (captainsRaw: any) =>
+  (captainsRaw ?? []).slice(0, 30).filter((captain: any) => Number(captain?.[0]) === 6).length;
+
+const getBoat = (boat: any, boatIndex: any, lootPile: any, captains: any, artifactsList: any, characters: any, account: any, baseSpeed: any, minimumTravelTime = 120, tierSixCaptains = 0) => {
   const [captainIndex, islandIndex, , lootLevel, distanceTraveled, speedLevel] = boat;
   const captain = captains?.[captainIndex];
   const island = islands?.[islandIndex];
   const boatObj: any = {
     rawName: `Boat_Frame_${getBoatFrame(lootLevel + speedLevel, account)}`,
     level: lootLevel + speedLevel,
-    artifactChance: getBoatArtifactChance(artifactsList, captains[captainIndex], account, characters, lootLevel, speedLevel),
+    artifactChance: getBoatArtifactChance(artifactsList, captains[captainIndex], account, characters, lootLevel, speedLevel, tierSixCaptains),
     captainIndex,
     captainMappedIndex: captain?.captainIndex,
     lootLevel, speedLevel,
@@ -374,7 +397,7 @@ const getBoat = (boat: any, boatIndex: any, lootPile: any, captains: any, artifa
   const daveyJones = getDaveyJonesBonus(account, lootLevel, speedLevel);
   boatObj.resources = getBoatResources(boatObj, lootPile, account);
   boatObj.breakpointResources = getBoatBreakdownResources(boatObj, lootPile, account);
-  boatObj.loot = getBoatLootValue(characters, account, artifactsList, boatObj, captain, daveyJones);
+  boatObj.loot = getBoatLootValue(characters, account, artifactsList, boatObj, captain, daveyJones, tierSixCaptains);
   const frame = getBoatFrame(lootLevel + speedLevel, account);
   boatObj.speed = getBoatSpeedValue(captain, island, speedLevel, baseSpeed * daveyJones, minimumTravelTime, frame)
   boatObj.maxTime = island ? (island.distance / boatObj.speed?.value) * 3600 * 1000 : undefined;
@@ -383,8 +406,7 @@ const getBoat = (boat: any, boatIndex: any, lootPile: any, captains: any, artifa
 }
 
 const getBaseSpeed = (account: any, characters: any, artifactsList: any) => {
-  const purrmepPlayer = characters?.find(({ linkedDeity }: any) => linkedDeity === 6); // purrmep is limited to only 1 player linked.
-  const divinityMinorBonus = getMinorDivinityBonus(purrmepPlayer, account, 6, characters);
+  const divinityMinorBonus = getAccountMinorDivinityBonus(account, characters, GOD_INDEX.Purrmep);
   const cardBonus = getCardBonusByEffect(account?.cards, 'Sailing_Speed_(Passive)');
   const stampBonus = getStampsBonusByEffect(account, 'Sailing_Speed')
   const mealBonus = getMealsBonusByEffectOrStat(account, null, 'Sailing');
@@ -398,6 +420,9 @@ const getBaseSpeed = (account: any, characters: any, artifactsList: any) => {
   const statueBonus = getStatueBonus(account, 24)
   const voteBonus = getVoteBonus(account, 24);
   const msaBonus = account?.msaTotalizer?.sailing?.value ?? 0;
+  // game: DNSM.StarSigns[63], the logged-in character's signs
+  const starSignBonus = getStarSignBonus(getBestActiveCharacter(characters), account, 'Sailing_SPD');
+  const vaultBonus62 = getUpgradeVaultBonus(account?.upgradeVault?.upgrades, 62);
   // DaveyJones is now per-boat - applied separately in getBoat
   return (1 + (divinityMinorBonus
     + (cardBonus
@@ -412,7 +437,7 @@ const getBaseSpeed = (account: any, characters: any, artifactsList: any) => {
             + (mealBonus
               + (vialBonus
                 + (17 * skillMasteryBonus
-                  + (msaBonus)))))))) / 125);
+                  + (msaBonus + starSignBonus + vaultBonus62)))))))) / 125);
 }
 
 const getCaptain = (captain: any, index: any, isShop: any) => {
@@ -528,17 +553,18 @@ const getFinalBoatLoot = ({
   daveyJonesBonus,
   lampBonus,
   sushiBonus57,
-  treasureBoost
+  treasureBoost,
+  tierSixCaptains = 0
 }: any) => {
   return (5 + lootLevelMath * lootLevel)
-    * (1 + (lootPileSigil + ((firstCaptainBonus + secondCaptainBonus) + (artifactBonus + (25 * Math.min(30, 0)) + (arcadeBonus + vaultBonus67)))) / 100)
+    * (1 + (lootPileSigil + ((firstCaptainBonus + secondCaptainBonus) + (artifactBonus + (25 * Math.min(30, tierSixCaptains)) + (arcadeBonus + vaultBonus67)))) / 100)
     * (1 + talentBonus / 100)
     * daveyJonesBonus
     * (1 + lampBonus / 100)
     * (1 + sushiBonus57 / 100)
     * (1 + (treasureBoost ?? 0) / 100);
 }
-const getBoatLootValue = (characters: any, account: any, artifactsList: any, boat: any, captain: any, daveyJonesBonus?: any) => {
+const getBoatLootValue = (characters: any, account: any, artifactsList: any, boat: any, captain: any, daveyJonesBonus?: any, tierSixCaptains = 0) => {
   const unendingLootSearch = getHighestTalentAcrossCharacters(characters, 'UNENDING_LOOT_SEARCH', getBestActiveCharacter(characters));
   const talentBonus = unendingLootSearch;
   const nextBreakpoint = boat?.lootLevel + (8 - (boat?.lootLevel % 8));
@@ -571,7 +597,8 @@ const getBoatLootValue = (characters: any, account: any, artifactsList: any, boa
     daveyJonesBonus,
     lampBonus,
     sushiBonus57,
-    treasureBoost
+    treasureBoost,
+    tierSixCaptains
   });
   const nextLevelValue = getFinalBoatLoot({
     lootLevelMath: nextLevelMath,
@@ -586,7 +613,8 @@ const getBoatLootValue = (characters: any, account: any, artifactsList: any, boa
     daveyJonesBonus,
     lampBonus,
     sushiBonus57,
-    treasureBoost
+    treasureBoost,
+    tierSixCaptains
   });
   let nextBreakpointValue;
   if (nextBreakpoint !== boat?.lootLevel + 1) {
@@ -603,7 +631,8 @@ const getBoatLootValue = (characters: any, account: any, artifactsList: any, boa
       daveyJonesBonus,
       lampBonus,
       sushiBonus57,
-      treasureBoost
+      treasureBoost,
+      tierSixCaptains
     });
   }
   return {
@@ -619,16 +648,11 @@ const getCaptainExpReq = (captain: any, account?: any) => {
   return math * moreMath * Math.pow(1.5, Math.max(captain?.level - 10, 0));
 }
 
-// game: "CaptainEXPgain"
-export const getCaptainExpGain = (account: any) => {
-  return 1 * (1 + getSushiBonus(account, 45) / 100);
-}
-
 const getCaptainDisplayBonus = (captain: any, value: any) => {
   return Math.round(captain?.level * value * 10) / 10;
 }
 
-const getBoatArtifactChance = (artifacts: any, captain: any, account: any, characters: any, lootLevel = 0, speedLevel = 0) => {
+const getBoatArtifactChance = (artifacts: any, captain: any, account: any, characters: any, lootLevel = 0, speedLevel = 0, tierSixCaptains = 0) => {
   const holesObject = account?.hole?.holesObject;
 
   // --- Additive group (÷ 100) ---
@@ -639,20 +663,22 @@ const getBoatArtifactChance = (artifacts: any, captain: any, account: any, chara
   const fractalIsland = getIsland(account, 'Fractal');
   const fractalBonus = fractalIsland?.shop?.find(({ effect }: any) => effect === '1.20x_Chance_to_find_Sailing_Artifacts')?.unlocked ? 20 : 0;
   const bribeBonus = getBribeBonus(account?.bribes, 'Artifact_Pilfering');
-  const arcadeBonus = account?.arcade?.shop
-    ?.filter(({ effect }: any) => effect?.includes('+{%_Artifact_Find'))
-    ?.reduce((sum: any, { bonus }: any) => sum + (bonus ?? 0), 0) ?? 0;
+  // game: ArcadeBonus(32) + ArcadeBonus(66)
+  const arcadeBonus = (getArcadeBonus(account?.arcade?.shop, 32)?.bonus ?? 0)
+    + (getArcadeBonus(account?.arcade?.shop, 66)?.bonus ?? 0);
   const holeBuildingBonus = getSchematicBonus({ holesObject: account?.hole?.holesObject, t: 55, i: 0 });
   const stickerBonus = getStickerBonus(account, 2);
   const researchGridBonus = getResearchGridBonus(account, 109, 0);
 
   const vaultBonus63 = getUpgradeVaultBonus(account?.upgradeVault?.upgrades, 63);
+  const tierSixCaptainBonus = 25 * Math.min(30, tierSixCaptains);
 
   const additive = fauxoryTusk + captainBonus + shinyBonus + fractalBonus
-    + bribeBonus + arcadeBonus + holeBuildingBonus + stickerBonus + researchGridBonus + vaultBonus63;
+    + bribeBonus + tierSixCaptainBonus + arcadeBonus + holeBuildingBonus + stickerBonus + researchGridBonus + vaultBonus63;
 
   // --- Multiplicative factors ---
-  const starSignBonus = getStarSignBonus(characters?.[0], account, 'Artifact_Find', false, true);
+  // game: DNSM.StarSigns[61], the logged-in character's signs, chip and summoning level
+  const starSignBonus = getStarSignBonus(getBestActiveCharacter(characters), account, 'Artifact_Find');
   // Pet Mart+: Glimbo (154) upgraded adds a flat +1 (CompLV2 flag) inside the outer max but outside
   // the inner min - it deliberately lets the multiplier exceed the old 2x cap.
   const glimboLvl2Bonus = isCompanionLvl2Active(account, 154) ? 1 : 0;
@@ -702,54 +728,46 @@ const getBoatArtifactChance = (artifacts: any, captain: any, account: any, chara
     * (1 + sushiBonus / 100)
     * (1 + getButtonBonus(account, 3) / 100);
 
-  const breakdown = {
-    statName: 'Artifact Find Chance',
-    totalValue: Math.round(total * 100) / 100,
-    categories: [
-      {
-        name: 'Additive',
-        sources: [
-          { name: 'Fauxory Tusk', value: fauxoryTusk },
-          { name: 'Captain', value: captainBonus },
-          { name: 'Shiny Pet', value: shinyBonus },
-          { name: 'Fractal Island', value: fractalBonus },
-          { name: 'Bribe - Artifact Pilfering', value: bribeBonus },
-          { name: 'Arcade', value: arcadeBonus },
-          { name: 'Hole - Tune of Artifaction', value: holeBuildingBonus },
-          { name: 'Sticker', value: stickerBonus },
-          { name: 'Research Grid', value: researchGridBonus },
-          { name: 'Vault Upgrade', value: vaultBonus63 },
-        ]
-      },
-      {
-        name: 'Multiplicative',
-        sources: [
-          { name: 'Star Sign - Artifosho', value: 1 + starSignBonus / 100 },
-          { name: 'Companion - Glimbo', value: glimboCompanion },
-          { name: 'Killroy Bonus', value: killroyBonus },
-          { name: 'The Maw (Grid 106)', value: 1 + researchGrid106 / 100 },
-          { name: 'Vial - Turtle Tisane', value: 1 + turtleVial / 100 },
-          { name: 'Purple Chest Slugs', value: purpleChestSlugs },
-          { name: 'Summoning - Win Bonus', value: 1 + winnerBonus / 100 },
-          { name: 'Jelly Operator', value: 1 + jellyBonus / 100 },
-          { name: 'Gem Shop (Davey Jones)', value: daveyJonesBonus },
-          { name: 'Lab - Artifact Attraction', value: 1 + labBonus / 100 },
-          { name: 'Tome', value: 1 + loreBonus / 100 },
-          { name: 'Sneaking - Glowing Veil', value: 1 + pristineBonus / 100 },
-          { name: 'Summoning - Vote Bonus', value: 1 + voteBonus / 100 },
-          { name: 'Companion - Litterfish', value: 1 + litterfishCompanion },
-          { name: 'Monument', value: 1 + monumentBonus / 100 },
-          { name: 'Exotic Market', value: 1 + exoticBonus / 100 },
-          { name: 'Palette Bonus', value: 1 + paletteBonus / 100 },
-          { name: 'Spelunking Discoveries', value: Math.max(1, spelunkSuperbit) },
-          { name: 'Sushi Station', value: 1 + sushiBonus / 100 },
-          { name: 'Button Bonus', value: 1 + getButtonBonus(account, 3) / 100 },
-        ]
-      }
-    ]
-  };
+  const value = total > 1e4 ? notateNumber(total, 'Big') : notateNumber(total, 'MultiplierInfo');
+  const breakdown = createBreakdown('Artifact Find Chance', value, [
+    additiveGroup(NUMBERED_GROUP, [
+      percent('Fauxory Tusk', fauxoryTusk),
+      percent('Captain', captainBonus),
+      percent('Shiny Pet', shinyBonus),
+      percent('Fractal Island', fractalBonus),
+      percent('Bribe - Artifact Pilfering', bribeBonus),
+      percent('Tier 6 Captains', tierSixCaptainBonus),
+      percent('Arcade', arcadeBonus),
+      percent('Hole - Tune of Artifaction', holeBuildingBonus),
+      percent('Sticker', stickerBonus),
+      percent('Research Grid', researchGridBonus),
+      percent('Vault Upgrade', vaultBonus63)
+    ]),
+    productGroup(NUMBERED_GROUP, [
+      multiplier('Star Sign - Artifosho', 1 + starSignBonus / 100),
+      multiplier('Companion - Glimbo', glimboCompanion),
+      multiplier('Killroy Bonus', killroyBonus),
+      multiplier('The Maw (Grid 106)', 1 + researchGrid106 / 100),
+      multiplier('Vial - Turtle Tisane', 1 + turtleVial / 100),
+      multiplier('Purple Chest Slugs', purpleChestSlugs),
+      multiplier('Summoning - Win Bonus', 1 + winnerBonus / 100),
+      multiplier('Jelly Operator', 1 + jellyBonus / 100),
+      multiplier('Gem Shop (Davey Jones)', daveyJonesBonus),
+      multiplier('Lab - Artifact Attraction', 1 + labBonus / 100),
+      multiplier('Tome', 1 + loreBonus / 100),
+      multiplier('Sneaking - Glowing Veil', 1 + pristineBonus / 100),
+      multiplier('Summoning - Vote Bonus', 1 + voteBonus / 100),
+      multiplier('Companion - Litterfish', 1 + litterfishCompanion),
+      multiplier('Monument', 1 + monumentBonus / 100),
+      multiplier('Exotic Market', 1 + exoticBonus / 100),
+      multiplier('Palette Bonus', 1 + paletteBonus / 100),
+      multiplier('Spelunking Discoveries', Math.max(1, spelunkSuperbit)),
+      multiplier('Sushi Station', 1 + sushiBonus / 100),
+      multiplier('Button Bonus', 1 + getButtonBonus(account, 3) / 100)
+    ])
+  ]);
 
-  return { value: total > 1e4 ? notateNumber(total, 'Big') : notateNumber(total, 'MultiplierInfo'), breakdown };
+  return { value, rawValue: total, breakdown };
 }
 
 const getCaptainBonus = (bonusIndex: any, captain: any, captainBonusIndex: any, bonusValue: any) => {
@@ -781,9 +799,7 @@ const getLootPile = (lootPile: any) => {
 const getArtifact = (artifact: any, acquired: any, lootPile: any, index: any, charactersData: any, account: any) => {
   let additionalData, bonus = artifact?.baseBonus, baseBonus = artifact?.baseBonus,
     upgradedForm = acquired === 2 || acquired === 3 || acquired === 4 || acquired === 5 || acquired === 6, formMultiplier = acquired,
-    multiplierType = acquired === 2 ? 'ancientMultiplier' : acquired === 3 ? 'eldritchMultiplier' : acquired === 4
-      ? 'sovereignMultiplier' : acquired === 5 ? 'omnipotentMultiplier' : acquired === 6 ? 'transcendentMultiplier'
-        : 'baseBonus';
+    multiplierType = ARTIFACT_FORM_KEYS[acquired] ?? 'baseBonus';
 
   let fixedDescription = artifact?.description;
   if (artifact?.name === 'Maneki_Kat' || artifact?.name === 'Ashen_Urn') {
@@ -813,15 +829,16 @@ const getArtifact = (artifact: any, acquired: any, lootPile: any, index: any, ch
     bonus = everyXMulti && multiplierType !== 'baseBonus' ? artifact?.baseBonus * math : math;
   }
   else if (artifact?.name === 'Fauxory_Tusk' || artifact?.name === 'Genie_Lamp') {
+    // game: scaled by Lv0[13], the logged-in character's sailing level
     const isGenie = artifact?.name === 'Genie_Lamp';
-    const highestSailing = getHighestCharacterSkill(charactersData, 'sailing');
-    bonus = isGenie ? highestSailing * artifact?.baseBonus : highestSailing;
-    additionalData = `Sailing level: ${highestSailing}`;
+    const sailingLevel = getLoggedInSkillLevel(charactersData, 'sailing');
+    bonus = isGenie ? sailingLevel * artifact?.baseBonus : sailingLevel;
+    additionalData = `Sailing level: ${sailingLevel}`;
   }
   else if (artifact?.name === 'Weatherbook') {
-    const highestGaming = getHighestCharacterSkill(charactersData, 'gaming');
-    additionalData = `Gaming level: ${highestGaming}`;
-    bonus = highestGaming * artifact?.baseBonus;
+    const gamingLevel = getLoggedInSkillLevel(charactersData, 'gaming');
+    additionalData = `Gaming level: ${gamingLevel}`;
+    bonus = gamingLevel * artifact?.baseBonus;
   }
   else if (artifact?.name === 'Triagulon') {
     const ownedTurkey = account?.cooking?.meals?.[0]?.amount;
@@ -833,7 +850,14 @@ const getArtifact = (artifact: any, acquired: any, lootPile: any, index: any, ch
   }
   else if (artifact?.name === 'Fun_Hippoete') {
     // Construction is parsed after sailing, so this resolves on the second serialization pass.
-    bonus = artifact?.baseBonus * lavaLog(account?.construction?.playersBuildRate ?? 0)
+    // game: sums raw WorkbenchStuff("PlayerBuildSpd"), while the saved Player_ cogs also carry
+    // ExtraBuildSPDmulti; and the artifact rebuild reaches this slot before The Winz Lantern (32), so
+    // winner bonus 13 inside PlayerBuildSpd is read without the lantern
+    const winnerBonus13 = getWinnerBonus(account, '<x Construct SPD');
+    const lanternShare = (1 + getWinnerBonusWithoutLantern(account, 13) / 100) / (1 + winnerBonus13 / 100);
+    const rawBuildRate = (account?.construction?.playersBuildRate ?? 0)
+      / (account?.construction?.extraBuildSpeedMulti || 1) * lanternShare;
+    bonus = artifact?.baseBonus * lavaLog(rawBuildRate)
   }
   else if (artifact?.name === 'The_True_Lantern') {
     bonus = artifact?.baseBonus * lavaLog(account?.atoms?.particles ?? 0);
@@ -930,6 +954,7 @@ export const calcArtifactsAcquired = (boats: any) => {
 }
 
 export const getSlabBonus = (account: any, index: any) => {
+  // Game: Ninja("EmporiumBonus", 17 / 18) - the unlock flags
   const jadeEmporiumBonus = getJadeEmporiumBonus(account, 'Jade_Coin_Magnetism');
   const jadeEmporiumBonus2 = getJadeEmporiumBonus(account, 'Essence_Confetti');
   const superbitBonus = isSuperbitUnlocked(account, 'Slabby_Spelunking');

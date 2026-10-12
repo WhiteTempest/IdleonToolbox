@@ -1,8 +1,8 @@
 import { differenceInHours, differenceInMinutes, isPast } from 'date-fns';
-import { getPostOfficeBonus } from '@parsers/world-3/postoffice';
 import { carryBags, items, randomList } from '@website-data';
 import { getExpReq, isArenaBonusActive, isCompanionBonusActive } from '../../parsers/misc';
 import { getPlayerAnvil, getTimeTillCap } from '@parsers/world-1/anvil';
+import { isMeditatingOnClaim } from '@parsers/world-5/divinity';
 import {
   checkCharClass,
   CLASSES,
@@ -210,9 +210,7 @@ const getLibraryUpgradableTalents = (character) => {
 }
 export const isTalentReady = (character, options) => {
   const { talents } = options;
-  const { postOffice, afkTime, cooldowns, flatTalents } = character;
-  const cooldownBonus = getPostOfficeBonus(postOffice, 'Magician_Starterpack', 2);
-  const cdReduction = Math.max(0, cooldownBonus);
+  const { afkTime, cooldowns, flatTalents } = character;
   const timePassed = (new Date().getTime() - afkTime) / 1000;
   if (!cooldowns || !talents?.talents?.checked) return [];
   return Object.entries(cooldowns || {})?.reduce((res, [tId, talentCd]) => {
@@ -223,8 +221,7 @@ export const isTalentReady = (character, options) => {
       [name.camelToTitleCase()?.replace(/ /g, '_')?.toUpperCase()]: val
     }), {});
     if (!talent || !configTalents?.[talent?.name]) return res;
-    const calculatedCooldown = talentCd;
-    const actualCd = calculatedCooldown - timePassed;
+    const actualCd = talentCd - timePassed;
     const cooldown = actualCd < 0 ? actualCd : new Date().getTime() + actualCd * 1000;
     if (!talents?.alwaysShowTalents?.checked && !isPast(cooldown)) return res;
     return [...res,
@@ -274,9 +271,7 @@ export const hasAvailableToolUpgrade = (character) => {
 }
 export const getDivinityAlert = (account, characters, character, lastUpdated, options) => {
   if (!options.divinityStyle.checked) return null;
-  const pocketLinked = account?.hole?.godsLinks?.find(({ index }) => index === 4);
-  const isMeditating = character?.afkTarget === 'Divinity' || (character?.afkTarget === 'Laboratory' &&
-    (account?.divinity?.linkedDeities?.[character?.playerId] === 4 || character?.secondLinkedDeityIndex === 4 || pocketLinked || isCompanionBonusActive(account, 0)));
+  const isMeditating = isMeditatingOnClaim(character, account);
   if (isMeditating && character?.skillsInfo?.divinity?.level >= 80 && character?.divStyle?.name !== 'Mindful') {
     return { text: 'doesn\'t have mindful style equipped', icon: 'Div_Style_7' };
   }

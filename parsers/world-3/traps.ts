@@ -6,13 +6,14 @@ import { getArcadeBonus } from '@parsers/world-2/arcade';
 import { getPrayerBonusAndCurse } from '@parsers/world-3/prayers';
 import { getMeritocracyBonus } from '@parsers/world-2/voteBallot';
 import { getTrappingStuff } from '@parsers/character';
-import { getFoodBonus, isMasteryBonusUnlocked } from '@parsers/misc';
+import { getFoodBonus, getSkillCardBonus } from '@parsers/misc';
 import { cleanUnderscore, notateNumber } from '@utility/helpers';
 import { checkCharClass, CLASSES, getCharacterByHighestTalent, getTalentBonus } from '@parsers/talents';
 import { getCompassBonus } from '@parsers/class-specific/compass';
 import { getAtomBonus } from '@parsers/world-3/atomCollider';
 import { getArmorSetBonus } from '@parsers/world-3/armorSmithy';
 import { getPaletteBonus } from '@parsers/world-5/gaming';
+import { NUMBERED_GROUP, additiveGroup, createBreakdown, info, listGroup, multiplier, percent, productGroup, sumGroup } from '@parsers/breakdown';
 
 export const getTraps = (rawCharactersData: any) => {
   return parseTraps(rawCharactersData);
@@ -87,29 +88,31 @@ export const getTrapsBonuses = (account: any, characters: any) => {
       name: character?.name,
       critter: critterBonuses?.[index] ?? 1,
       exp: expBonuses?.[index] ?? 1,
-      breakdown: {
-        statName: 'Critter Collect Rates',
-        categories: [
-          collectRateCategory('Critters', critterBonuses?.[index] ?? 1, critterInfos?.[index]?.sources),
-          collectRateCategory('EXP', expBonuses?.[index] ?? 1, expInfos?.[index]?.sources)
-        ]
-      }
+      breakdown: createBreakdown('Critter Collect Rates',
+        `${Math.round((critterBonuses?.[index] ?? 1) * 100)}% and ${Math.round((expBonuses?.[index] ?? 1) * 100)}% EXP`, [
+          collectRateGroup('Critter collect rate', critterInfos?.[index]?.sources),
+          collectRateGroup('EXP collect rate', expInfos?.[index]?.sources)
+        ], { combine: 'list' })
     })) ?? []
   }
 }
 
-const collectRateCategory = (name: string, value: number, sources: any) => ({
-  name: `${name} (${Math.round(value * 100)}%)`,
-  sources: [
-    { name: 'Talent - Eagle Eye', value: sources?.talent, formatted: formatPercent(sources?.talent) },
-    { name: 'Vial - Trapovision', value: sources?.vials, formatted: formatPercent(sources?.vials) },
-    { name: 'Compass', value: sources?.compass, formatted: formatPercent(sources?.compass) },
-    { name: 'Atom - Magnesium', value: sources?.atom, formatted: formatPercent(sources?.atom) },
-    { name: 'Dementia Set', value: sources?.dementiaSet, formatted: formatPercent(sources?.dementiaSet) },
-    { name: 'Palette', value: sources?.palette, formatted: formatPercent(sources?.palette) },
-    { name: 'Minimum', value: sources?.floor, formatted: `${sources?.floor}%` }
-  ].filter(({ value }) => value !== undefined)
-});
+// Sums to the rate in percent points (166 = 166%), the floor included
+const collectRateGroup = (name: string, sources: any) => {
+  const lines = [
+    percent('Talent - Eagle Eye', sources?.talent),
+    percent('Vial - Trapovision', sources?.vials),
+    percent('Compass', sources?.compass),
+    percent('Atom - Magnesium', sources?.atom),
+    percent('Dementia Set', sources?.dementiaSet),
+    percent('Palette', sources?.palette)
+  ].filter(({ value }) => value !== undefined);
+  const sum = lines.reduce((total, { value }) => total + value, 0);
+  return sumGroup(name, [
+    ...lines,
+    percent('Minimum', Math.max(0, sources?.floor - sum), { note: `Raised to ${sources?.floor}% at least` })
+  ]);
+};
 
 export const calcCrittersBonus = (args: any) => calcCrittersBonusInfo(args).value;
 
@@ -169,7 +172,9 @@ const calcShinyMultiplier = (character: any, account: any) => {
   const stampBonus = getStampsBonusByStat(account, 'ShinyChance', character) ?? 0;
   // "Come 'ere Critters!" - +2% shiny chance per completion
   const taskBonus = 2 * (account?.tasks?.[1]?.[2]?.[5] ?? 0);
-  const bubbleMulti = Math.max(getBubbleBonus(account, 'CUZ_I_CATCH_EM_ALL') || 0, 1);
+  // Archers get the quicc class multiplier on top (TalentCalc(-2) Gpassz)
+  const isArcher = checkCharClass(character?.class, CLASSES.Archer);
+  const bubbleMulti = Math.max(getBubbleBonus(account, 'CUZ_I_CATCH_EM_ALL', false, isArcher) || 0, 1);
   const vialsBonus = (getVialsBonusByStat(account?.alchemy?.vials, 'Shiny1') ?? 0)
     + (getVialsBonusByStat(account?.alchemy?.vials, 'Shiny2') ?? 0);
   const talentBonus = Math.max(1, getTalentBonus(character?.flatTalents, 'REFLECTIVE_EYESIGHT'));
@@ -180,10 +185,7 @@ const calcShinyMultiplier = (character: any, account: any) => {
   // signs - skip it entirely when no food is equipped, where the game would sum to 0 anyway.
   const foodBonus = character?.food?.length ? getFoodBonus(character, account, 'TrappingSpeedBoosts') : 0;
   // Trapping mastery tier 2 turns every owned Shiny Critter card into a passive.
-  const cardsArePassives = isMasteryBonusUnlocked(account?.rift, account?.totalSkillsLevels?.trapping?.rank, 2);
-  const cardBonus = (cardsArePassives
-    ? getCardBonusByEffect(account?.cards, 'Shiny_Critter_Chance')
-    : getCardBonusByEffect(character?.cards?.equippedCards, 'Shiny_Critter_Chance')) ?? 0;
+  const cardBonus = getSkillCardBonus(character, account, 'trapping', 'Shiny_Critter_Chance');
   const minigameBonus = (getTrappingStuff('TrapMGbonus', 2, account) ?? 0) + (getTrappingStuff('TrapMGbonus', 5, account) ?? 0);
   const arcadeBonus = getArcadeBonus(account?.arcade?.shop, 'Shiny_Chance')?.bonus ?? 0;
   const onOpenBonus = foodBonus + cardBonus + minigameBonus + arcadeBonus;
@@ -245,8 +247,6 @@ const formatChance = (value: number) => {
 
 const formatMulti = (value: number) => `x${notateNumber(value, 'MultiplierInfo')}`;
 
-const formatPercent = (value: number) => `+${notateNumber(value, 'Big')}%`;
-
 // The shiny chance is per character - the talent, its trapping-level repeat, the equipped boost
 // food and the Shiny Snitch prayer are all character-bound - so the caller picks whose to show,
 // falling back to the best one when nothing is selected.
@@ -262,78 +262,35 @@ export const getShinyChanceInfo = (account: any, characters: any, selectedCharac
     ? perCharacter.find(({ name }: any) => name === selectedCharacter?.name) ?? getShinyChance(selectedCharacter, account)
     : best)
     ?? getShinyChance(null, account);
-  const { multiplier, bundleSize, critters, sources } = selected;
+  const { multiplier: shinyMulti, bundleSize, critters, sources } = selected;
 
-  const breakdown = {
-    statName: 'Shiny Critter Chance',
-    totalValue: formatMulti(multiplier),
-    categories: [
-      {
-        name: 'On placement',
-        sources: [
-          { name: 'Stamps', value: sources?.stampBonus, formatted: formatPercent(sources?.stampBonus) },
-          {
-            name: `Task - Come 'ere Critters!`,
-            value: sources?.taskBonus,
-            formatted: formatPercent(sources?.taskBonus)
-          },
-          {
-            name: 'Bubble - Cuz I Catch Em All',
-            value: sources?.bubbleMulti,
-            formatted: formatMulti(sources?.bubbleMulti)
-          },
-          {
-            name: 'Vials - Fur Refresher + Orange Malt',
-            value: sources?.vialsBonus,
-            formatted: formatPercent(sources?.vialsBonus)
-          },
-          {
-            name: `Talent - Reflective Eyesight (${formatMulti(sources?.talentBonus)} every 10 trapping lv)`,
-            value: sources?.talentMulti,
-            formatted: formatMulti(sources?.talentMulti)
-          }
-        ]
-      },
-      {
-        name: 'On collection',
-        sources: [
-          {
-            name: 'Boost food - Critter Numnums',
-            value: sources?.foodBonus,
-            formatted: formatPercent(sources?.foodBonus)
-          },
-          { name: 'Cards', value: sources?.cardBonus, formatted: formatPercent(sources?.cardBonus) },
-          {
-            name: 'Trapping minigame',
-            value: sources?.minigameBonus,
-            formatted: formatPercent(sources?.minigameBonus)
-          },
-          { name: 'Arcade', value: sources?.arcadeBonus, formatted: formatPercent(sources?.arcadeBonus) },
-          {
-            name: 'Prayer - Shiny Snitch',
-            value: sources?.prayerDivider,
-            formatted: `/${sources?.prayerDivider}`
-          }
-        ]
-      },
-      {
-        name: 'Chance per critter (with a x1 trap)',
-        sources: critters?.map(({ name, chance }: any) => ({
-          name: cleanUnderscore(name),
-          value: chance,
-          formatted: formatChance(chance)
-        }))
-      },
-      {
-        name: 'Per character',
-        sources: perCharacter?.map(({ name, multiplier: charMulti }: any) => ({
-          name,
-          value: charMulti,
-          formatted: formatMulti(charMulti)
-        }))
-      }
-    ]
-  };
+  // The two list groups are reference values, not factors of the total
+  const breakdown = createBreakdown('Shiny Critter Chance', formatMulti(shinyMulti), [
+    productGroup('On placement', [
+      additiveGroup(NUMBERED_GROUP, [
+        percent('Stamps', sources?.stampBonus),
+        percent(`Task - Come 'ere Critters!`, sources?.taskBonus)
+      ]),
+      multiplier('Bubble - Cuz I Catch Em All', sources?.bubbleMulti),
+      multiplier('Vials - Fur Refresher + Orange Malt', 1 + sources?.vialsBonus / 100),
+      multiplier('Talent - Reflective Eyesight', sources?.talentMulti, {
+        note: `${formatMulti(sources?.talentBonus)} every 10 trapping levels`
+      })
+    ]),
+    productGroup('On collection', [
+      additiveGroup(NUMBERED_GROUP, [
+        percent('Boost food - Critter Numnums', sources?.foodBonus),
+        percent('Cards', sources?.cardBonus),
+        percent('Trapping minigame', sources?.minigameBonus),
+        percent('Arcade', sources?.arcadeBonus)
+      ]),
+      multiplier('Prayer - Shiny Snitch', 1 / sources?.prayerDivider, { formatted: `/${sources?.prayerDivider}` })
+    ]),
+    listGroup('Chance by critter (x1 trap)', critters?.map(({ name, chance }: any) =>
+      info(cleanUnderscore(name) as string, chance, { formatted: formatChance(chance) })) ?? []),
+    listGroup('By character', perCharacter?.map(({ name, multiplier: charMulti }: any) =>
+      info(name, charMulti, { formatted: formatMulti(charMulti) })) ?? [])
+  ]);
 
-  return { multiplier, bundleSize, critters, perCharacter, breakdown };
+  return { multiplier: shinyMulti, bundleSize, critters, perCharacter, breakdown };
 }

@@ -24,9 +24,8 @@ import { getBitsMulti } from '@parsers/world-5/gaming';
 import { getGoldenFoodMulti } from '@parsers/misc';
 import { NextSeo } from 'next-seo';
 import { getDoubleStatueDrop, getDoubleGoldenFoodDrop } from '@parsers/misc';
-import Tooltip from '@components/Tooltip';
 import { IconInfoCircleFilled } from '@tabler/icons-react';
-import { Breakdown } from '@components/common/styles';
+import { Breakdown } from '@components/common/Breakdown/Breakdown';
 
 const Formulas = () => {
   const { state } = useContext(AppContext);
@@ -37,7 +36,7 @@ const Formulas = () => {
   const cashMulti = getCashMulti(selectedChar, state?.account, state?.characters);
   const expMulti = getClassExpMulti(selectedChar, state?.account, state?.characters);
   const dropRate = getDropRate(selectedChar, state?.account, state?.characters);
-  const cropEvo = getCropEvolution(state?.account, selectedChar, state?.account?.farming?.plot?.[0])
+  const cropEvo = getCropEvolution(state?.account, selectedChar, state?.account?.farming?.plot?.[0], false, state?.characters)
   const printerMulti = getPrinterMulti(state?.account, state?.characters);
   const bitMulti = state?.account?.gaming ? getBitsMulti(state?.account, state?.characters) : null;
   const goldenFoodMulti = getGoldenFoodMulti(selectedChar, state?.account, state?.characters);
@@ -262,13 +261,12 @@ const Formulas = () => {
                   <Typography>
                     {formula.renderValue ? formula.renderValue(formula.value) : formula.value}
                   </Typography>
-                  {formula.breakdown && formula.breakdown.length > 0 ? (
-                    <Tooltip
-                      title={<Breakdown breakdown={formula.breakdown} notation="Big" titleStyle={{ width: 180 }} />}
-                      maxWidth={500}
-                    >
-                      <IconInfoCircleFilled size={18} />
-                    </Tooltip>
+                  {formula.breakdown ? (
+                    <Breakdown data={formula.breakdown}>
+                      <Stack alignContent={'center'}>
+                        <IconInfoCircleFilled size={18} />
+                      </Stack>
+                    </Breakdown>
                   ) : null}
                 </Stack>
               </Stack>

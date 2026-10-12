@@ -14,7 +14,7 @@ import { getStudyBonus } from '@parsers/world-5/hole';
 
 export const getWisdom = (holesObject: any,  accountData: any) => {
   const opalChance = Math.min(0.5, Math.pow(0.5, holesObject?.opalsPerCavern?.[12])
-    * (1 + getMonumentHourBonus({ holesObject, t: 2, i: 5 }) / 100));
+    * (1 + getMonumentBonus({ holesObject, t: 2, i: 5 }) / 100));
   const rewardMulti = getMonumentMultiReward(holesObject, 2, accountData) || 0;
   const timeForNextFight = 72E3 * (1 - rewardMulti);
   const hours = holesObject?.braveryMonument?.[4] || 0;
@@ -66,7 +66,7 @@ export const getWisdom = (holesObject: any,  accountData: any) => {
     attemptsGainPerRound: getAttemptsGainPerRound(holesObject),
     timePerMatch: getTimePerMatch(),
     instantMatches: getInstantMatch(holesObject),
-    monumentAfkReq: getMonumentAfkReq(afkPercent?.value, nextHourBreakpoint?.hours, hours)
+    monumentAfkReq: getMonumentAfkReq(afkPercent?.value, nextHourBreakpoint?.hours, hours, afkPercent?.multi)
   };
 }
 

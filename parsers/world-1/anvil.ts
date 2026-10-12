@@ -9,6 +9,9 @@ import { getStatueBonus } from '@parsers/world-1/statues';
 import { getPostOfficeBonus } from '@parsers/world-3/postoffice';
 import { getUpgradeVaultBonus } from '@parsers/misc/upgradeVault';
 import { getAllSkillsExp } from '@parsers/character';
+import { createBreakdown, evaluateBreakdownNode, flat, sumGroup } from '@parsers/breakdown';
+import type { BreakdownGroup, BreakdownLine } from '@parsers/breakdown';
+import { cleanUnderscore, notateNumber } from '@utility/helpers';
 
 export const getAnvilSpeed = (agility = 0, speedPoints: any, stampBonus = 0, poBoxBonus = 0, hammerHammerBonus = 0, statueBonus = 0, starSignTownSpeed = 0, talentTownSpeed = 0, upgradeVaultBonus = 0) => {
   const boxAndStatueMath = 1 + ((poBoxBonus + statueBonus + upgradeVaultBonus) / 100);
@@ -155,10 +158,8 @@ export const getPlayerAnvil = (character: any, characters: any, account: any) =>
     capPoints
   };
 
-  const anvilnomicsBubbleBonus = getBubbleBonus(account, 'ANVILNOMICS');
   const isArcher = checkCharClass(character?.class, CLASSES.Archer);
-  const archerMultiBubble = isArcher ? getBubbleBonus(account, 'ARCHER_OR_BUST') : 1;
-  const anvilCostReduction = anvilnomicsBubbleBonus * archerMultiBubble;
+  const anvilCostReduction = getBubbleBonus(account, 'ANVILNOMICS', false, isArcher);
   const anvilCost = getAnvilUpgradeCostItem(pointsFromMats);
 
   stats.anvilCost = {
@@ -234,16 +235,24 @@ export const getTimeTillCap = ({
     return stats?.anvilCapacity / productionRate;
   }
 
-  const timePassed = (Date.now() - afkTime) / 1000;
-
-  const futureProduction = Math.min(
-    Math.round(
-      currentAmount + ((currentProgress + timePassed * stats?.anvilSpeed / 3600) / requiredAmount) * (hammers ?? 0)
-    ),
-    stats?.anvilCapacity
-  );
+  const futureProduction = getAnvilFutureProduction({ hammers, currentAmount, currentProgress, requiredAmount, afkTime, stats });
 
   return (stats?.anvilCapacity - futureProduction) / productionRate;
+};
+
+// game: AFKcode("AnvilPA") adds ProductionSpeed * seconds to the product's progress once per hammer on it,
+// then turns whole requiredAmount chunks into items, floored and capped at the anvil capacity
+export const getAnvilFutureProduction = ({
+                                           hammers,
+                                           currentAmount = 0,
+                                           currentProgress = 0,
+                                           requiredAmount,
+                                           afkTime,
+                                           stats
+                                         }: any) => {
+  const timePassed = (Date.now() - afkTime) / 1000;
+  const progress = currentProgress + (hammers ?? 0) * timePassed * stats?.anvilSpeed / 3600;
+  return Math.min(currentAmount + Math.floor(progress / requiredAmount), stats?.anvilCapacity);
 };
 export const getAnvilProductCatalog = () => Object.values(anvilProducts as Record<string, any>)
   .map((product: any) => ({
@@ -251,20 +260,26 @@ export const getAnvilProductCatalog = () => Object.values(anvilProducts as Recor
     displayName: items?.[product?.rawName]?.displayName ?? product?.rawName
   }));
 
-export const calcTotals = (account: any, characters: any) => {
-  return account?.anvil?.reduce((result: any, anvil: any, index: any) => {
+// Each product's hourly output, one line per character producing it
+const getAnvilProductionGroups = (account: any, characters: any): Record<string, BreakdownGroup> => {
+  const lines: Record<string, BreakdownLine[]> = {};
+  account?.anvil?.forEach((_: any, index: any) => {
     const { stats, production } = getPlayerAnvil(characters?.[index], characters, account);
-    const activeProduction = production?.filter(({ hammers }: any) => hammers > 0);
-    activeProduction?.forEach((slot: any) => {
-      const { hammers, rawName, requiredAmount } = slot;
+    production?.filter(({ hammers }: any) => hammers > 0)?.forEach(({ hammers, rawName, requiredAmount }: any) => {
       const perHour = Math.min(stats?.anvilSpeed * hammers / requiredAmount, stats?.anvilCapacity);
-      if (result?.[rawName]) {
-        result[rawName] += perHour;
-      }
-      else {
-        result[rawName] = perHour
-      }
-    })
-    return result;
-  }, {})
+      (lines[rawName] ??= []).push(flat(characters?.[index]?.name ?? `Character ${index + 1}`, perHour));
+    });
+  });
+  return Object.fromEntries(Object.entries(lines).map(([rawName, productLines]) =>
+    [rawName, sumGroup('Anvil output', productLines)]));
 }
+
+export const calcTotals = (account: any, characters: any) => Object.fromEntries(Object.entries(getAnvilProductionGroups(account, characters))
+  .map(([rawName, group]) => [rawName, evaluateBreakdownNode(group)]));
+
+export const getAnvilTotalsBreakdowns = (account: any, characters: any) => Object.fromEntries(Object.entries(getAnvilProductionGroups(account, characters))
+  .map(([rawName, group]) => {
+    const perHour = evaluateBreakdownNode(group);
+    const name = cleanUnderscore((items as any)?.[rawName]?.displayName ?? rawName);
+    return [rawName, createBreakdown(`${name} per hour`, `${notateNumber(perHour, 'Big')} / hr`, group.children, { combine: 'sum' })];
+  }));

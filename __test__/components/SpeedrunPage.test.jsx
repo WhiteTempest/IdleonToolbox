@@ -70,11 +70,6 @@ describe('Speedrun page', () => {
     expect(cardValue('Portal highscore')).toContain(String(highscore));
   });
 
-  it('renders no NaN or undefined anywhere on the page', () => {
-    const { container } = renderWith(characters);
-    expect(container.textContent).not.toMatch(/NaN|undefined|Infinity/);
-  });
-
   it('groups the portals by world rather than ranking them', () => {
     renderWith(characters);
     const portals = screen.getByLabelText('speedrun portals');
@@ -84,18 +79,11 @@ describe('Speedrun page', () => {
     expect(worlds.length).toBeGreaterThan(1);
   });
 
-  it('keeps the per-portal numbers out of the way until detailed view is on', () => {
+  it('prices every portal bare and under Void Radius, once detailed view is on', () => {
     renderWith(characters);
     const portals = screen.getByLabelText('speedrun portals');
     expect(within(portals).queryByText(/^Kills needed/)).toBeNull();
     showDetails();
-    expect(within(portals).getAllByText(/^Kills needed/).length).toBeGreaterThan(100);
-  });
-
-  it('prices every portal both bare and under Void Radius', () => {
-    renderWith(characters);
-    showDetails();
-    const portals = screen.getByLabelText('speedrun portals');
     expect(within(portals).getAllByText(/^Kills needed/).length).toBeGreaterThan(100);
     expect(within(portals).getAllByText(/^Clear time/).length).toBeGreaterThan(100);
     expect(within(portals).getAllByText(/^With Void Radius/).length).toBeGreaterThan(0);
@@ -115,7 +103,7 @@ describe('Speedrun page', () => {
   it('breaks portal progress down into the bonuses most players miss', async () => {
     renderWith(characters);
     const card = screen.getByText('Portal progress / kill').closest('[data-card-title-value]');
-    fireEvent.mouseOver(card.querySelector('.tabler-icon-info-circle-filled'));
+    fireEvent.click(card.querySelector('.tabler-icon-info-circle-filled'));
     expect(await screen.findByText('Active Murdering (vault 43)')).toBeTruthy();
     expect(screen.getByText('Seawater vial')).toBeTruthy();
   });

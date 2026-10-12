@@ -22,7 +22,8 @@ import TheTemple from '@components/account/Worlds/World5/Hole/Caverns/TheTemple'
 import TheFountain from '@components/account/Worlds/World5/Hole/Caverns/TheFountain';
 import TheBottomlessTrench from '@components/account/Worlds/World5/Hole/Caverns/TheBottomlessTrench';
 import CrystalGlunkoCove from '@components/account/Worlds/World5/Hole/Caverns/CrystalGlunkoCove';
-import { CardWithBreakdown, ExpRateCard } from '@components/account/Worlds/World5/Hole/commons';
+import { ExpRateCard } from '@components/account/Worlds/World5/Hole/commons';
+import { CardWithBreakdown } from '@components/common/Breakdown/CardWithBreakdown';
 
 const Explore = ({ hole }) => {
   const [explore] = hole?.villagers || [];
@@ -38,8 +39,8 @@ const Explore = ({ hole }) => {
       <CardTitleAndValue title={'Opals invested'} value={explore?.opalInvested || '0'} icon={'data/Opal.png'}
                          imgStyle={{ width: 22, height: 22 }}/>
       <CardTitleAndValue title={'Unlocked caverns'} value={hole?.unlockedCaverns}/>
-      <CardWithBreakdown title={'Total Monument Afk'} value={`${hole?.caverns?.bravery?.afkPercent?.value.toFixed(2)}%`} 
-      breakdown={hole?.caverns?.bravery?.afkPercent?.breakdown} notation={'MultiplierInfo'}/>
+      <CardWithBreakdown title={'Total Monument Afk'} value={`${hole?.caverns?.bravery?.afkPercent?.effectiveValue.toFixed(2)}%`} 
+      breakdown={hole?.caverns?.bravery?.afkPercent?.breakdown}/>
     </Stack>
     <Divider sx={{ mb: 3 }}/>
     <Tabber

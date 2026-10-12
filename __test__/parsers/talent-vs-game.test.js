@@ -20,6 +20,9 @@ const TALENTS = [
   ["Voidwalker", "ENHANCEMENT_ECLIPSE", 49, 267],
   ["Voidwalker", "POWER_ORB", 50, 12.864077669902912],
   ["Voidwalker", "EXP_CULTIVATION", 55, 0],
+  // Added with the worship soul reward fix: getbonus2(1, 57, -1) read live on 2026-10-11 against
+  // latest.json with IAmTheHunterrr playing; this fixture answers the same.
+  ["Voidwalker", "SPECIES_EPOCH", 57, 1.452991452991453],
   ["Voidwalker", "VOODOO_STATUFICATION", 56, 99.24433249370277],
   ["Voidwalker", "MASTER_OF_THE_SYSTEM", 58, 4.126984126984127],
   ["Voidwalker", "BLOOD_MARROW", 59, 1.0230769230769232],
@@ -27,6 +30,11 @@ const TALENTS = [
   ["Siege_Breaker", "THE_FAMILY_GUY", 144, 34.091580502215656],
   ["Divine_Knight", "1000_HOURS_PLAYED", 176, 49.20863309352518],
   ["Divine_Knight", "BITTY_LITTY", 177, 17.045790251107828],
+  // Added with the printer multi and crop evolution fixes. Pinned to the fixture's own values with
+  // Nine active: the lookup was checked live on 2026-10-11 against latest.json with IAmTheHunterrr
+  // playing (getbonus2(1, 178, -1) = 3.7373737373737375, getbonus2(1, 205, -1) = 29.753541076487252).
+  ["Divine_Knight", "KING_OF_THE_REMEMBERED", 178, 3.762376237623762],
+  ["Death_Bringer", "MASS_IRRIGATION", 205, 30.108635097493035],
   // Added with the Daily ribbons section: matches the live client's getbonus2(1, 204, -1) with Nine
   // active, read 2026-10-09.
   ["Death_Bringer", "RIBBON_WINNING", 204, 174.6518105849582],
@@ -40,13 +48,17 @@ const TALENTS = [
   ["Beast_Master", "SHINING_BEACON_OF_EGG", 372, 74.87437185929649],
   ["Wind_Walker", "CURVITURE_OF_THE_PAW", 373, 1.9029702970297029],
   ["Wind_Walker", "SHINY_MEDALLIONS", 429, 2.686991869918699],
+  // id 431 is not banned, so this one takes added levels: before 2.3.525 the ban list saw its
+  // holder's base LEVEL of 50, which is banned, and it stayed frozen at 177.5 whoever was playing
   ["Wind_Walker", "SNEAKY_SKILLING", 431, 2168.1],
   ["Wind_Walker", "GENERATIONAL_GEMSTONES", 432, 2.440207972270364],
   ["Wind_Walker", "DUSTWALKER", 433, 18.721804511278197],
   ["Wind_Walker", "SLAYER_ABOMINATOR", 434, 1.031203007518797],
   // pinned to the fixture (level 220, bigBase(4000, 1000)) rather than to the live client, which
   // reads 372000 now that the account has levelled it further
-  ["Wizard", "CHARGE_SYPHON", 475, 224000, true],
+  // Fixture value with Nine playing: raw 220 plus added levels. The y-variant was verified live on
+  // 2026-10-10 to take added levels (getbonus2(2, 475, -1) = 360000 on the newer save).
+  ["Wizard", "CHARGE_SYPHON", 475, 372000, true],
   ["Elemental_Sorcerer", "SHARED_BELIEFS", 506, 84.27672955974843],
   ["Elemental_Sorcerer", "GODS_CHOSEN_CHILDREN", 507, 7.282608695652174],
   ["Elemental_Sorcerer", "WORMHOLE_EMPEROR", 508, 1.1720116618075802],
@@ -129,41 +141,13 @@ describe('every talent used by a parser matches the game', () => {
   });
 });
 
-// Read from a fresh account in the live client on 2026-08-20 (4 characters, none of these talents
-// levelled). getbonus2 still evaluates growth() at level 0, so an unowned talent answers with its
-// identity rather than zero - 0 for add/decay, 1 for decayMulti, x1 for bigBase. Returning 0 for a
-// multiplier is the empty-account trap: tesseract reads `100 * (talent - 1)` and lands on -100.
-const UNOWNED = [
-  ['ENHANCEMENT_ECLIPSE', 'add', 0],
-  ['POWER_ORB', 'decay', 0],
-  ['DANK_RANKS', 'decayMulti', 1],
-  ['CURVITURE_OF_THE_PAW', 'decayMulti', 1],
-  ['SHINY_MEDALLIONS', 'decayMulti', 1],
-  ['GENERATIONAL_GEMSTONES', 'decayMulti', 1],
-  ['SLAYER_ABOMINATOR', 'decayMulti', 1],
-  ['OVERWHELMING_ENERGY', 'decayMulti', 1],
-  ['PASSION_OF_THE_SUMMON', 'decayMulti', 1],
-  ['SNEAKY_SKILLING', 'add', 0],
-  ['SHARED_BELIEFS', 'decay', 0]
-];
-
-describe('a talent nobody owns answers with its level-0 value, not zero', () => {
-  const characters = [{ name: 'a', addedLevels: 13, flatTalents: [] }];
-
-  it.each(UNOWNED)('%s (%s) -> %d', (talent, _func, expected) => {
-    expect(getHighestTalentAcrossCharacters(characters, talent, characters[0])).toBe(expected);
-  });
-
-  // getbonus2(2, 475, -1) === 4000 on that account: bigBase(4000, 1000) at level 0.
-  it('CHARGE_SYPHON y-variant answers 4000', () => {
-    expect(getHighestTalentAcrossCharacters(characters, 'CHARGE_SYPHON', characters[0], 'y')).toBe(4000);
-  });
-});
-
-// The same account parsed for real, rather than through a hand-built stub. 'Two' is the character
+// A fresh account, read in the live client on 2026-08-20 (4 characters). 'Two' is the character
 // that was logged in when these were read, and its addedLevels (13) matches the client's
 // AllTalentLVz exactly. Most rows are 0 because nobody owns the talent; the non-zero ones are
-// either level-0 identities or the three talents this account has actually levelled.
+// either level-0 identities or the three talents this account has actually levelled. getbonus2
+// still evaluates growth() at level 0, so an unowned talent answers with its identity rather than
+// zero: 0 for add/decay, 1 for decayMulti, x1 for bigBase. Returning 0 for a multiplier is the
+// empty-account trap: tesseract reads `100 * (talent - 1)` and lands on -100.
 // [talent, talentId, expected, yBonus?]
 const FRESH = [
   ["ENHANCEMENT_ECLIPSE", 49, 0],

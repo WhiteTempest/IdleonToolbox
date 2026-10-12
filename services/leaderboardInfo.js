@@ -1,6 +1,8 @@
 import { getCashMulti, getDropRate } from '@parsers/character';
 import { getMaxDamage } from '@parsers/damage';
 import { calcTotalBoatLevels } from '@parsers/world-5/sailing';
+import { getMaps } from '@parsers/class-specific/tesseract';
+import { highestArcaneMapMulti, outpostInfo } from './leaderboardMasterclass';
 import { differenceInYears } from 'date-fns';
 
 // Kept out of services/profiles.js on purpose: profiles.js is imported eagerly by
@@ -8,8 +10,8 @@ import { differenceInYears } from 'date-fns';
 // (9.8MB JSON) with it. Consumers import this module lazily or at page level.
 export const expandLeaderboardInfo = (account, characters) => {
   const dropRate = Math.max(...characters.map(character => getDropRate(character, account, characters)?.dropRate || 0));
-  const cashMulti = Math.max(...characters.map(character => getCashMulti(character, account, characters)?.cashMulti || 0));
   const playersInfo = characters.map(character => getMaxDamage(character, characters, account));
+  const cashMulti = Math.max(...characters.map((character, index) => getCashMulti(character, account, characters, playersInfo[index])?.cashMulti || 0));
   const defence = Math.max(...playersInfo.map(({ defence }) => defence?.value));
   const accuracy = Math.max(...playersInfo.map(({ accuracy }) => accuracy));
   const hp = Math.max(...playersInfo.map(({ maxHp }) => maxHp));
@@ -44,9 +46,17 @@ export const expandLeaderboardInfo = (account, characters) => {
     accountAge: differenceInYears(new Date(), new Date(account?.accountCreateTime)),
     currentWorld: account?.currentWorld,
     cashMulti: withDefault(cashMulti),
-    highestSpelunkingPower: withDefault(account?.spelunking?.power?.value)
+    highestSpelunkingPower: withDefault(account?.spelunking?.power?.value),
+    ...outpostInfo(account?.royalGuardian?.outposts),
+    highestArcaneMapMulti: highestArcaneMapMulti(arcaneMaps(account, characters))
   }
 }
+
+// getMaps destructures account.tesseract, so an account without it gets no maps.
+const arcaneMaps = (account, characters) => {
+  if (!account?.tesseract) return [];
+  return characters.map((character) => getMaps(account, characters, character) ?? []);
+};
 
 const withDefault = (value, defaultValue = 0) => {
   return isNaN(value) ? defaultValue : value;

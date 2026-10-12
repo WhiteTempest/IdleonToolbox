@@ -6,7 +6,8 @@ import Tooltip from '../Tooltip';
 import React from 'react';
 import ProgressBar from '../common/ProgressBar';
 import { getSkillExpMulti } from '@parsers/character';
-import { Breakdown } from '@components/common/styles';
+import { getSkillEfficiency } from '@parsers/efficiency';
+import { Breakdown } from '@components/common/Breakdown/Breakdown';
 import { getMaxDamage } from '@parsers/damage';
 
 const getRankColor = (rank) => {
@@ -55,13 +56,6 @@ const skillIconStyle = {
   display: 'block'
 };
 
-const normalizeBreakdown = (breakdown) => {
-  if (!breakdown || Array.isArray(breakdown)) return breakdown;
-  return breakdown?.categories?.flatMap((category) => [
-    ...(category?.sources ?? []),
-    ...(category?.subSections?.flatMap((sub) => sub?.sources ?? []) ?? [])
-  ]) ?? [];
-};
 const Skills = ({ skills, charName, account, characters, character, showSkillsRankOneOnly }) => {
   const hasRankOne = Object.keys(skills || {})?.filter((skillName) => skills[skillName]?.rank === 1)?.length > 0;
   const playerInfo = getMaxDamage(character, characters, account);
@@ -87,28 +81,31 @@ const Skills = ({ skills, charName, account, characters, character, showSkillsRa
             const { level, rank, icon } = skills[skillName];
             if (skillName === 'character' || (showSkillsRankOneOnly && rank !== 1)) return null;
             const expMulti = getSkillExpMulti(skillName, character, characters, account, playerInfo);
+            const efficiency = getSkillEfficiency(skillName, character, characters, account, playerInfo);
             const showRankBadge = !globalSkills[skillName];
             return <Box key={index} sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', py: '4px' }}>
-              <Tooltip title={<SkillTooltip {...skills?.[skillName]} skillName={skillName} charName={charName}
-                                            expMulti={expMulti}/>}>
-                <Badge
-                  badgeContent={level}
-                  max={999999}
-                  overlap="rectangular"
-                  anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-                  sx={levelBadgeSx}
-                >
+              <Breakdown data={[expMulti?.breakdown, efficiency?.breakdown]}>
+                <Tooltip title={<SkillTooltip {...skills?.[skillName]} skillName={skillName} charName={charName}
+                                              expMulti={expMulti} efficiency={efficiency}/>}>
                   <Badge
-                    badgeContent={rank}
-                    invisible={!showRankBadge}
+                    badgeContent={level}
+                    max={999999}
                     overlap="rectangular"
-                    anchorOrigin={{ vertical: 'top', horizontal: 'left' }}
-                    sx={rankBadgeSx(rank)}
+                    anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+                    sx={levelBadgeSx}
                   >
-                    <img src={`${prefix}data/${icon}.png`} style={skillIconStyle} alt=""/>
+                    <Badge
+                      badgeContent={rank}
+                      invisible={!showRankBadge}
+                      overlap="rectangular"
+                      anchorOrigin={{ vertical: 'top', horizontal: 'left' }}
+                      sx={rankBadgeSx(rank)}
+                    >
+                      <img src={`${prefix}data/${icon}.png`} style={skillIconStyle} alt=""/>
+                    </Badge>
                   </Badge>
-                </Badge>
-              </Tooltip>
+                </Tooltip>
+              </Breakdown>
             </Box>;
           })}
         </Box>
@@ -117,7 +114,7 @@ const Skills = ({ skills, charName, account, characters, character, showSkillsRa
   </Stack>
 };
 
-const SkillTooltip = ({ exp, expReq, expMulti, charName, skillName, level, rank }) => {
+const SkillTooltip = ({ exp, expReq, expMulti, efficiency, charName, skillName, level, rank }) => {
   const percent = exp / expReq * 100;
   return <Stack gap={.5}>
     <Typography variant={'h5'} fontWeight={'bold'}>{charName}</Typography>
@@ -131,18 +128,15 @@ const SkillTooltip = ({ exp, expReq, expMulti, charName, skillName, level, rank 
     <ProgressBar percent={percent} bgColor={'#f3dd4c'}/>
     <Typography variant={'body1'}>{notateNumber(exp, 'Big')} / {notateNumber(expReq, 'Big')}</Typography>
 
-    {expMulti && <>
+    {expMulti || efficiency ? <>
       <Divider sx={{ my: 1 }}/>
-      <Typography variant={'body1'}>Exp
-        multi: {expMulti?.formattedValue || notateNumber(expMulti?.value, 'MultiplierInfo') || 0}x</Typography>
-      {skillName === 'sneaking' ? <>
-        <Divider sx={{ my: 1 }}/>
-        <Typography variant={'caption'}>* inaccurate</Typography>
-      </> : null}
-      <Divider sx={{ my: 1 }}/>
-      <Breakdown breakdown={normalizeBreakdown(expMulti?.breakdown)} title={'Exp multi breakdown'}
-                 notation={'MultiplierInfo'}/>
-    </>}
+      {expMulti ? <Typography variant={'body1'}>Exp
+        multi: {expMulti?.formattedValue || notateNumber(expMulti?.value, 'MultiplierInfo') || 0}x</Typography> : null}
+      {efficiency ? <Typography variant={'body1'}>Efficiency: {efficiency.formattedValue}</Typography> : null}
+      {expMulti?.breakdown || efficiency?.breakdown ? <Typography variant={'caption'} color={'text.secondary'}>
+        Click the skill for the breakdown
+      </Typography> : null}
+    </> : null}
 
   </Stack>
 }

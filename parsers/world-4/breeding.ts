@@ -9,11 +9,12 @@ import { getStarSignBonus } from '@parsers/starSigns';
 import { getWinnerBonus } from '@parsers/world-6/summoning';
 import { getLampBonus } from '@parsers/world-5/caverns/the-lamp';
 import { getUpgradeVaultBonus } from '@parsers/misc/upgradeVault';
-import { getCharacterByHighestSkillLevel } from '@parsers/misc';
+import { getLoggedInSkillLevel } from '@parsers/misc';
 import { CLASSES, getBestActiveCharacter, getHighestTalentAcrossCharacters } from '@parsers/talents';
 import { getArcadeBonus } from '@parsers/world-2/arcade';
 import { getSushiBonus } from '@parsers/world-7/sushiStation';
 import { getMineheadBonusQTY } from '@parsers/world-7/minehead';
+import { NUMBERED_GROUP, additiveGroup, createBreakdown, multiplier, percent } from '@parsers/breakdown';
 
 export const getBreeding = (idleonData: any, account: any, processedData: any) => {
   const breedingRaw = tryToParse(idleonData?.Breeding) || idleonData?.Breeding;
@@ -382,61 +383,39 @@ export const calcHighestPower = (breeding: any) => {
 
 export const calcBreedabilityMulti = (account: any, characters: any) => {
   const breedingBonus = calcUpgradeBonus(account?.breeding?.petUpgrades?.[3], 3, account);
-  const starSignBonus = characters?.reduce((acc: any, character: any) => {
-    const bonus = getStarSignBonus(character, account, 'Breedable_Spd') ?? 0;
-    if (bonus > acc) {
-      return bonus;
-    }
-    return acc;
-  }, 0);
+  // game: DNSM.StarSigns of the logged-in character
+  const starSignBonus = getStarSignBonus(getBestActiveCharacter(characters), account, 'Breedable_Spd') ?? 0;
   const mealBonus = getMealsBonusByEffectOrStat(account, null, 'Breed')
   const lampBonus = getLampBonus({ holesObject: account?.hole?.holesObject, t: 0, i: 1, account });
   const arcadeBonus = getArcadeBonus(account?.arcade?.shop, 'Breedability_Rate')?.bonus ?? 0;
   const cropDepotShinyBonus = account?.farming?.cropDepot?.shiny?.value ?? 0;
 
+  const achievementBonus = 20 * getAchievementStatus(account?.achievements, 218);
   const value = (1 + (breedingBonus + (mealBonus
-      + (20 * getAchievementStatus(account?.achievements, 218) + starSignBonus))) / 100)
+      + (achievementBonus + starSignBonus))) / 100)
     * (1 + cropDepotShinyBonus / 100)
     * (1 + lampBonus / 100)
     * (1 + arcadeBonus / 100);
   return {
     value,
-    breakdown: {
-      statName: 'Breedability multi',
-      totalValue: notateNumber(value, 'MultiplierInfo'),
-      categories: [
-        {
-          name: 'Additive',
-          sources: [
-            { name: 'Breeding bonus', value: breedingBonus / 100 },
-            { name: 'Meal bonus', value: mealBonus / 100 },
-            { name: 'Achievement bonus', value: (20 * getAchievementStatus(account?.achievements, 218)) / 100 },
-            { name: 'Starsign bonus', value: starSignBonus / 100 }
-          ]
-        },
-        {
-          name: 'Multiplicative',
-          sources: [
-            { name: 'Crop bonus', value: cropDepotShinyBonus / 100 },
-            { name: 'Lamp bonus', value: lampBonus / 100 },
-            { name: 'Arcade bonus', value: arcadeBonus / 100 }
-          ]
-        }
-      ]
-    }
+    breakdown: createBreakdown('Breedability multi', notateNumber(value, 'MultiplierInfo'), [
+      additiveGroup(NUMBERED_GROUP, [
+        percent('Breeding bonus', breedingBonus),
+        percent('Meal bonus', mealBonus),
+        percent('Achievement bonus', achievementBonus),
+        percent('Starsign bonus', starSignBonus)
+      ]),
+      multiplier('Crop bonus', 1 + cropDepotShinyBonus / 100),
+      multiplier('Lamp bonus', 1 + lampBonus / 100),
+      multiplier('Arcade bonus', 1 + arcadeBonus / 100)
+    ])
   }
 }
 export const calcShinyLvMulti = (account: any, characters: any) => {
   const spelunkerObolMulti = getLabBonus(account?.lab.labBonuses, 8); // gem multi
   const emeraldUlthuriteBonus = getJewelBonus(account?.lab.jewels, 15, spelunkerObolMulti);
   const fasterShinyLevelBonus = getShinyBonus(account?.breeding?.pets, 'Faster_Shiny_Mob_Lv_Up_Rate');
-  const starSign = characters?.reduce((acc: any, character: any) => {
-    const bonus = getStarSignBonus(character, account, 'Shiny_Pet_LV_spd') ?? 0;
-    if (bonus > acc) {
-      return bonus;
-    }
-    return acc;
-  }, 0);
+  const starSign = getStarSignBonus(getBestActiveCharacter(characters), account, 'Shiny_Mob_LV_spd') ?? 0;
   const summoningBonus = getWinnerBonus(account, '<x Shiny EXP', false);
   const lampBonus = getLampBonus({ holesObject: account?.hole?.holesObject, t: 0, i: 1, account });
   const breedingBonus = calcUpgradeBonus(account?.breeding?.petUpgrades?.[12], 12, account);
@@ -451,35 +430,23 @@ export const calcShinyLvMulti = (account: any, characters: any) => {
 
   return {
     value,
-    breakdown: {
-      statName: 'Shiny level multiplier',
-      totalValue: notateNumber(value, 'MultiplierInfo'), // Optional: sum of all sources if needed
-      categories: [
-        {
-          name: 'Additive',
-          sources: [
-            { name: 'Jewel bonus', value: emeraldUlthuriteBonus / 100 },
-            { name: 'Shiny bonus', value: fasterShinyLevelBonus / 100 },
-            { name: 'Starsign bonus', value: starSign / 100 },
-            { name: 'Crop bonus', value: cropDepotShinyBonus / 100 },
-            { name: 'Breeding bonus', value: breedingBonus / 100 }
-          ]
-        },
-        {
-          name: 'Multiplicative',
-          sources: [
-            { name: 'Summoning bonus', value: summoningBonus / 100 },
-            { name: 'Lamp bonus', value: lampBonus / 100 }
-          ]
-        }
-      ]
-    }
+    breakdown: createBreakdown('Shiny level multiplier', notateNumber(value, 'MultiplierInfo'), [
+      additiveGroup(NUMBERED_GROUP, [
+        percent('Jewel bonus', emeraldUlthuriteBonus),
+        percent('Shiny bonus', fasterShinyLevelBonus),
+        percent('Starsign bonus', starSign),
+        percent('Crop bonus', cropDepotShinyBonus),
+        percent('Breeding bonus', breedingBonus)
+      ]),
+      multiplier('Summoning bonus', 1 + summoningBonus / 100),
+      multiplier('Lamp bonus', 1 + lampBonus / 100)
+    ])
   };
 }
 
 export const getEggsPowerRange = (characters: any) => {
-  const highestBreedingBM = getCharacterByHighestSkillLevel(characters, CLASSES.Wind_Walker, 'breeding');
-  const breedingLevel = highestBreedingBM?.skillsInfo?.breeding?.level ?? 0;
+  // game: PetQTYonBreed reads Lv0[11], the logged-in character's breeding level, whatever its class
+  const breedingLevel = getLoggedInSkillLevel(characters, 'breeding');
   // Game maxes this talent across all characters (getbonus2(1, 373, -1)); decayMulti already includes the base 1
   const baseTalentBonus = getHighestTalentAcrossCharacters(characters, 'CURVITURE_OF_THE_PAW', getBestActiveCharacter(characters));
   const base = Math.pow(4 * breedingLevel + Math.pow(breedingLevel / 2, 3), 0.85);

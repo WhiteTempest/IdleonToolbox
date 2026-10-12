@@ -4,7 +4,8 @@ import Timer from '@components/common/Timer';
 import React from 'react';
 import LockIcon from '@mui/icons-material/Lock';
 import { getCropEvolution, getProductDoubler, getTotalCrop } from '@parsers/world-6/farming';
-import { Breakdown, CardTitleAndValue } from '@components/common/styles';
+import { CardTitleAndValue } from '@components/common/styles';
+import { Breakdown } from '@components/common/Breakdown/Breakdown';
 import Tooltip from '@components/Tooltip';
 import { IconInfoCircleFilled } from '@tabler/icons-react';
 
@@ -61,7 +62,7 @@ const Plot = ({ plot, market, ranks, lastUpdated, account, characters, selectedC
         } = crop;
         nextOGChance = Math.min(100, 100 * nextOGChance);
         nextOGChance = nextOGChance >= 10 ? nextOGChance : 10 * nextOGChance / 10;
-        const nextEvoChance = getCropEvolution(account, selectedCharacter, crop, enableNano);
+        const nextEvoChance = getCropEvolution(account, selectedCharacter, crop, enableNano, characters);
         return <Card key={'plot-' + index} sx={{ width: 200, mt: 1 }}>
           <CardContent>
             <Stack direction={'row'} alignItems={'center'} gap={2}>
@@ -85,10 +86,11 @@ const Plot = ({ plot, market, ranks, lastUpdated, account, characters, selectedC
                   <Typography variant={'caption'}>Crop evo: {nextEvoChance?.isLocked
                     ? 'Locked'
                     : `${nextEvoChance?.value}%`}</Typography>
-                  <Tooltip
-                    title={<Breakdown breakdown={nextEvoChance?.breakdown} titleStyle={{ width: 160 }} skipNotation/>}>
-                    <IconInfoCircleFilled size={16}/>
-                  </Tooltip>
+                  <Breakdown data={nextEvoChance?.breakdown}>
+                    <Stack alignContent={'center'}>
+                      <IconInfoCircleFilled size={16}/>
+                    </Stack>
+                  </Breakdown>
                 </Stack>
               </Stack>
               {isLocked ? <LockIcon sx={{ ml: 'auto' }}/> : null}

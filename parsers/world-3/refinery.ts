@@ -2,12 +2,10 @@ import { growth, tryToParse } from '@utility/helpers';
 import { items, randomList, refinery } from '@website-data';
 import { liveEntries } from '@parsers/catalog';
 import { calculateItemTotalAmount } from '@parsers/items';
-import { getPostOfficeBonus } from '@parsers/world-3/postoffice';
 import { getVialsBonusByEffect } from '@parsers/world-2/alchemy';
 import { getStampsBonusByEffect } from '@parsers/world-1/stamps';
 import { getShinyBonus } from '@parsers/world-4/breeding';
-import { isRiftBonusUnlocked } from '@parsers/world-4/rift';
-import { constructionMasteryThresholds } from '@parsers/world-3/construction';
+import { CONSTRUCT_MASTERY, getConstructionMasteryBonus } from '@parsers/world-3/construction';
 import { getArcadeBonus } from '@parsers/world-2/arcade';
 import { checkCharClass, CLASSES } from '@parsers/talents';
 import { getFamilyBonusesOfActive } from '@parsers/family';
@@ -18,6 +16,8 @@ import { isCompanionBonusActive } from '@parsers/misc';
 import { getResearchGridBonus } from '@parsers/world-7/research';
 import { getMealsBonusByEffectOrStat } from '@parsers/world-4/cooking';
 import type { IdleonData, Account } from '../types';
+import { NUMBERED_GROUP, additiveGroup, createBreakdown, flat, multiplier, percent, productGroup } from '@parsers/breakdown';
+import type { BreakdownNode } from '@parsers/breakdown';
 
 export const getRefinery = (idleonData: IdleonData, storage: any[], tasks: any) => {
   const refineryRaw = tryToParse(idleonData?.Refinery) || idleonData?.Refinery;
@@ -103,20 +103,14 @@ export const hasMissingMats = (saltIndex: number, rank: number, cost: any[], acc
 }
 
 export const getRefineryCycleBonuses = (account: Account, characters: any[]) => {
-  const { alchemy, saltLick, charactersLevels, breeding, rift, towers } = account;
+  const { alchemy, saltLick, charactersLevels, breeding } = account;
   const vials = alchemy?.vials;
   const redMaltVial = getVialsBonusByEffect(vials, 'Refinery_Cycle_Speed');
   const saltLickUpgrade = getSaltLickBonus(saltLick, 2);
   const sigilRefinerySpeed = alchemy?.p2w?.sigils?.find((sigil: any) => sigil?.name === 'PIPE_GAUGE')?.bonus || 0;
   const stampRefinerySpeed = getStampsBonusByEffect(account, 'Faster_refinery_cycles');
   const shinyRefineryBonus = getShinyBonus(breeding?.pets, 'Faster_Refinery_Speed');
-  let constructionMastery = 0;
-  const isConstructUnlocked = isRiftBonusUnlocked(rift, 'Construct_Mastery');
-  if (isConstructUnlocked) {
-    constructionMastery = towers?.totalLevels >= constructionMasteryThresholds?.[0]
-      ? Math.floor(towers?.totalLevels / 10)
-      : 0
-  }
+  const constructionMastery = getConstructionMasteryBonus(account, CONSTRUCT_MASTERY.REFINERY_SPEED);
   const arcadeBonus = getArcadeBonus(account?.arcade?.shop, 'Refinery_Speed')?.bonus ?? 0;
   // FamBonusQTYs[24]: buffed by the account's best THE_FAMILY_GUY, whoever is played
   const amplifiedFamilyBonus = getFamilyBonusesOfActive(charactersLevels, characters)?.[CLASSES.Divine_Knight] ?? 0;
@@ -124,16 +118,16 @@ export const getRefineryCycleBonuses = (account: Account, characters: any[]) => 
   const researchGridBonus1 = getResearchGridBonus(account, 49, 0);
 
   const bonusBreakdown = [
-    { name: 'Vials', value: redMaltVial / 100 },
-    { name: 'Salt lick', value: saltLickUpgrade / 100 },
-    { name: 'Family', value: amplifiedFamilyBonus / 100 },
-    { name: 'Sigils', value: sigilRefinerySpeed / 100 },
-    { name: 'Stamps', value: stampRefinerySpeed / 100 },
-    { name: 'Shinies', value: shinyRefineryBonus / 100 },
-    { name: 'Const mastery', value: constructionMastery / 100 },
-    { name: 'Arcade', value: arcadeBonus / 100 },
-    { name: 'Vote', value: voteBonus / 100 },
-    { name: 'Polymer Refinery', value: researchGridBonus1 / 100 }
+    percent('Red Malt (Vial)', redMaltVial),
+    percent('Salt lick', saltLickUpgrade),
+    percent('Family', amplifiedFamilyBonus),
+    percent('Pipe Gauge (Sigil)', sigilRefinerySpeed),
+    percent('Stamps', stampRefinerySpeed),
+    percent('Shinies', shinyRefineryBonus),
+    percent('Construction mastery', constructionMastery),
+    percent('Arcade', arcadeBonus),
+    percent('Vote', voteBonus),
+    percent('Polymer Refinery (Research)', researchGridBonus1)
   ]
   return {
     bonusBreakdown,
@@ -142,6 +136,15 @@ export const getRefineryCycleBonuses = (account: Account, characters: any[]) => 
       + constructionMastery + arcadeBonus + voteBonus + researchGridBonus1
   }
 }
+// Seconds per cycle before any speed bonus
+const REFINERY_BASE_CYCLE_TIMES = { combustion: 900, synthesis: 3600, polymerize: 14400 * 25 };
+
+const formatCycleTime = (seconds: number) => {
+  const rounded = Math.ceil(seconds);
+  const minutes = Math.floor(rounded / 60);
+  return `${minutes}m:${String(rounded % 60).padStart(2, '0')}s`;
+}
+
 // Exported so one alert evaluation can compute the stamp/shiny/vial/talent stack once and feed it
 // to both getSaltMatsTimeLeft and getSaltsBalance.
 export const getRefineryCycleTimes = (account: Account, characters: any[]) => computeRefineryCycleTimes(account, characters);
@@ -162,9 +165,9 @@ const computeRefineryCycleTimes = (account: Account, characters: any[]) => {
     labCycleBonus,
     mealBonus,
     researchGridBonus,
-    combustionTime: 900 / baseSpeedFactor,
-    synthesisTime: 3600 / baseSpeedFactor,
-    polymerizeTime: (14400 * 25) / (baseSpeedFactor * (1 + (researchGridBonus + mealBonus) / 100))
+    combustionTime: REFINERY_BASE_CYCLE_TIMES.combustion / baseSpeedFactor,
+    synthesisTime: REFINERY_BASE_CYCLE_TIMES.synthesis / baseSpeedFactor,
+    polymerizeTime: REFINERY_BASE_CYCLE_TIMES.polymerize / (baseSpeedFactor * (1 + (researchGridBonus + mealBonus) / 100))
   };
 }
 
@@ -181,9 +184,7 @@ export const getRefineryCycles = (account: Account, characters: any[], lastUpdat
   } = computeRefineryCycleTimes(account, characters);
   const squires = characters?.filter((character) => checkCharClass(character?.class, CLASSES.Squire) || checkCharClass(character?.class, CLASSES.Divine_Knight));
   const squiresDataTemp = squires.reduce((res, character) => {
-    const { name, talents, cooldowns, postOffice, afkTime } = character;
-    const cooldownBonus = getPostOfficeBonus(postOffice, 'Magician_Starterpack', 2);
-    const cdReduction = Math.max(0, cooldownBonus);
+    const { name, talents, cooldowns, afkTime } = character;
     const refineryThrottle = talents?.[2]?.orderedTalents.find((talent: any) => talent?.name === 'REFINERY_THROTTLE');
     let cyclesNum = 0;
     if (refineryThrottle?.maxLevel > 0) {
@@ -191,8 +192,8 @@ export const getRefineryCycles = (account: Account, characters: any[], lastUpdat
     }
 
     const timePassed = (new Date().getTime() - afkTime) / 1000;
-    const calculatedCooldown = (1 - cdReduction / 100) * (cooldowns?.[130]);
-    const actualCd = calculatedCooldown - timePassed;
+    // The saved cooldown already has every reduction applied when the skill was cast
+    const actualCd = (cooldowns?.[130] ?? 0) - timePassed;
     return {
       squiresCycles: res?.squiresCycles + cyclesNum,
       squiresCooldowns: [...res?.squiresCooldowns, {
@@ -202,32 +203,39 @@ export const getRefineryCycles = (account: Account, characters: any[], lastUpdat
     };
   }, { squiresCycles: 0, squiresCooldowns: [] });
   const timePassed = (new Date().getTime() - (lastUpdated ?? 0)) / 1000;
-  const breakdown = [
-    ...bonusBreakdown,
-    { title: 'Multiplicative' },
-    { name: '' },
-    { name: 'Lab', value: labCycleBonus },
-    { name: 'Legend', value: legendBonus / 100 }
+  const speedLines = [
+    additiveGroup(NUMBERED_GROUP, bonusBreakdown),
+    multiplier('Gilded Cyclical Tubing (Lab)', labCycleBonus),
+    multiplier('Legend talent', 1 + legendBonus / 100)
   ];
+  // The cycle time is the base time over the speed, rounded up to whole seconds
+  const cycleBreakdown = (name: string, baseTime: number, time: number, extraSpeed: BreakdownNode[] = []) =>
+    createBreakdown(`${name} cycle time`, formatCycleTime(time), [
+      flat('Base time', baseTime, { formatted: formatCycleTime(baseTime) }),
+      productGroup('Refinery speed', [...speedLines, ...extraSpeed])
+    ], { combine: 'divide', round: 'ceil' });
   const combustion = {
     name: 'Combustion',
     time: Math.ceil(combustionTime),
     timePast: (account?.refinery?.timePastCombustion ?? 0) + timePassed,
-    breakdown: [{ title: 'Additive' }, { name: '' }, { name: 'Base', value: 900 }, ...breakdown]
+    breakdown: cycleBreakdown('Combustion', REFINERY_BASE_CYCLE_TIMES.combustion, combustionTime)
   };
   const synthesis = {
     name: 'Synthesis',
     time: Math.ceil(synthesisTime),
     timePast: (account?.refinery?.timePastSynthesis ?? 0) + timePassed,
-    breakdown: [{ title: 'Additive' }, { name: '' }, { name: 'Base', value: 3600 }, ...breakdown]
+    breakdown: cycleBreakdown('Synthesis', REFINERY_BASE_CYCLE_TIMES.synthesis, synthesisTime)
   }
   const polymerize = {
     name: 'Polymerize',
     time: Math.ceil(polymerizeTime),
     timePast: (account?.refinery?.timePastPolymerize ?? 0) + timePassed,
-    breakdown: [{ title: 'Additive' }, { name: '' }, { name: 'Base', value: 360000 }, ...breakdown,
-      { name: 'Materials Science', value: (researchGridBonus + mealBonus) / 100 }
-    ]
+    breakdown: cycleBreakdown('Polymerize', REFINERY_BASE_CYCLE_TIMES.polymerize, polymerizeTime, [
+      additiveGroup('Polymerize-only bonuses', [
+        percent('Materials Science (Research)', researchGridBonus),
+        percent('Tasty Treat (Meal)', mealBonus)
+      ])
+    ])
   }
   return {
     ...squiresDataTemp,

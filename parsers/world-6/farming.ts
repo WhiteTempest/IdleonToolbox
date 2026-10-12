@@ -1,9 +1,9 @@
 import { notateNumber, tryToParse } from '@utility/helpers';
-import { exoticMarketInfo, marketInfo, ninjaExtraInfo, research as researchData, seedInfo } from '@website-data';
+import { exoticMarketInfo, mapPortals, marketInfo, ninjaExtraInfo, research as researchData, seedInfo } from '@website-data';
 import { getCharmBonus, isJadeBonusUnlocked } from '@parsers/world-6/sneaking';
 import { getStarSignBonus } from '@parsers/starSigns';
 import { getBubbleBonus, getVialsBonusByEffect, getVialsBonusByStat } from '@parsers/world-2/alchemy';
-import { getJewelBonus, getLabBonus } from '@parsers/world-4/lab';
+import { getLabBonus } from '@parsers/world-4/lab';
 import { getWinnerBonus } from '@parsers/world-6/summoning';
 import { getAchievementStatus } from '@parsers/achievements';
 import { getVoteBonus } from '@parsers/world-2/voteBallot';
@@ -11,8 +11,8 @@ import { getGrimoireBonus } from '@parsers/class-specific/grimoire';
 import { getTalentBonus, getBestActiveCharacter, getHighestTalentAcrossCharacters } from '@parsers/talents';
 import {
   getEventShopBonus,
-  getHighestCharacterSkill,
   getKillroyBonus,
+  getLoggedInSkillLevel,
   isCompanionBonusActive,
   isMasteryBonusUnlocked
 } from '@parsers/misc';
@@ -23,7 +23,7 @@ import { getMineheadBonusQTY } from '@parsers/world-7/minehead';
 import { getStampsBonusByEffect } from '@parsers/world-1/stamps';
 import { getEmperorBonus } from './emperor';
 import { getResearchGridBonus } from '@parsers/world-7/research';
-import { isSuperbitUnlocked } from '@parsers/world-5/gaming';
+import { getMegacropSuperbitMulti, isSuperbitUnlocked } from '@parsers/world-5/gaming';
 import { getArcadeBonus } from '@parsers/world-2/arcade';
 import { getUpgradeVaultBonus } from '@parsers/misc/upgradeVault';
 import { getSushiBonus } from '@parsers/world-7/sushiStation';
@@ -31,7 +31,9 @@ import { getJellyBonus } from '@parsers/world-7/jellyOperator';
 import { getButtonBonus } from '@parsers/world-7/button';
 import { getCardBonusByEffect } from '@parsers/cards';
 import { getLegendTalentBonus } from '@parsers/world-7/legendTalents';
+import { getTomeBubbleMulti } from '@parsers/world-4/tome';
 import LavaRand from '../../utility/lavaRand';
+import { NUMBERED_GROUP, additiveGroup, createBreakdown, evaluateBreakdownNode, flat, multiplier, percent, productGroup } from '@parsers/breakdown';
 
 /** Level needed to reach the given percent of cap for exotic capped formula: value = baseValue * level / (1000 + level). */
 export const findExoticCappedThresholdLevel = (percent: any, _unused1?: any) => {
@@ -395,8 +397,9 @@ export const getNextOGEta = (crop: any, nextOGChance: number, maxTimeLeft: numbe
   return maxTimeLeft / chance;
 }
 
+// The depot also carries the magic bean count under 'beans' (the market pays in it), which is not a crop.
 const getCropsWithStockEqualOrGreaterThan = (cropDepot: any, stockLimit: any) => {
-  return Object.values(cropDepot)?.filter((value: any) => value >= stockLimit).length;
+  return Object.entries(cropDepot || {}).filter(([type, value]: any) => type !== 'beans' && value >= stockLimit).length;
 }
 
 const getMarketUpgradeBonusValue = (marketUpgrades: any, cropDepot: any, upgradeId: any): any => {
@@ -449,7 +452,7 @@ const getStickerOddsMulti = (characters: any, account: any) => {
   const sticker5bonus = getStickerBonus(account, 5);
   const arcade64 = getArcadeBonus(account?.arcade?.shop, 'Megacrop_Chance')?.bonus ?? 0;
   const superBit55 = isSuperbitUnlocked(account, 'Mo_Stickers_Mo_Bonusers') ? 1 : 0;
-  const farmingLevel = getHighestCharacterSkill(characters, 'farming') ?? 0;
+  const farmingLevel = getLoggedInSkillLevel(characters, 'farming');
   const sushiBonus55 = getSushiBonus(account, 55);
   // Gelatinous Cuboid (109): bonus 9 (19 upgraded) -> 10x (20x) sticker odds
   const cuboidCompanion = isCompanionBonusActive(account, 109) ? (account?.companions?.list?.at(109)?.bonus ?? 0) : 0;
@@ -461,7 +464,7 @@ const getStickerOddsMulti = (characters: any, account: any) => {
     * (1 + grid88bonus / 100)
     * (1 + sticker5bonus / 100)
     * (1 + arcade64 / 100)
-    * (1 + 0.02 * superBit55 * Math.max(0, farmingLevel - 300))
+    * (superBit55 ? getMegacropSuperbitMulti(farmingLevel) : 1)
     * (1 + sushiBonus55 / 100)
     * (1 + cuboidCompanion);
 };
@@ -495,20 +498,15 @@ export const updateFarming = (characters: any, account: any) => {
   const growthRate = Math.max(1, speedGMO)
     * (1 + (marketGrowthRate + vialBonus + exoticGrowth) / 100)
     * (1 + summoningBonus / 100);
-  const growthSpeedBreakdown = {
-    statName: 'Growth Speed',
-    totalValue: growthRate,
-    categories: [{
-      name: 'Multiplicative',
-      sources: [
-        { name: 'Speed GMO', value: Math.max(1, speedGMO) },
-        { name: 'Nutritious Soil', value: 1 + marketGrowthRate / 100 },
-        { name: 'Vial', value: 1 + vialBonus / 100 },
-        { name: 'Gogogrow (Exotic)', value: 1 + exoticGrowth / 100 },
-        { name: 'Summoning', value: 1 + summoningBonus / 100 }
-      ]
-    }]
-  };
+  const growthSpeedBreakdown = createBreakdown('Growth Speed', growthRate, [
+    multiplier('Speed GMO', Math.max(1, speedGMO)),
+    additiveGroup(NUMBERED_GROUP, [
+      percent('Nutritious Soil', marketGrowthRate),
+      percent('Vial', vialBonus),
+      percent('Gogogrow (Exotic)', exoticGrowth)
+    ]),
+    multiplier('Summoning', 1 + summoningBonus / 100)
+  ]);
   const maxTimes = [0, 1, 2, 3, 4, 5, 6].map((seedType, index) => {
     const growthReq = index === 6 ? 25200 * growthRate : 14400 * Math.pow(1.5, seedType);
     const value = growthReq / growthRate;
@@ -518,7 +516,7 @@ export const updateFarming = (characters: any, account: any) => {
   // OG Chance (multiplier portion, without per-plot 0.4^OG base)
   const marketOGChance = getMarketBonus(account?.farming?.market, 'OG_FERTILIZER');
   const charmOGBonus = getCharmBonus(account, 'Taffy_Disc');
-  const ogStarSignBonus = getStarSignBonus(characters?.[0], account, 'OG_Chance');
+  const ogStarSignBonus = getStarSignBonus(getBestActiveCharacter(characters), account, 'OG_Chance');
   const ogAchievementBonus = getAchievementStatus(account?.achievements, 365);
   const ogLandRankBonus = getLandRankTotalBonus(account, 3);
   const ogTaskBonus = 2 * (account?.tasks?.[2]?.[5]?.[2] ?? 0);
@@ -532,23 +530,16 @@ export const updateFarming = (characters: any, account: any) => {
     * (1 + ogLandRankBonus / 100)
     * (1 + ogExotic26 / 100)
     * (1 + ogExotic27 / 100);
-  const ogChanceBreakdown = {
-    statName: 'OG Chance Multiplier',
-    totalValue: ogMultiplier,
-    categories: [{
-      name: 'Multiplicative',
-      sources: [
-        { name: 'OG Fertilizer (Market)', value: Math.max(1, marketOGChance) },
-        { name: 'Taffy Disc (Charm)', value: 1 + charmOGBonus / 100 },
-        { name: 'Star Sign', value: 1 + ogStarSignBonus / 100 },
-        { name: 'Task', value: 1 + ogTaskBonus / 100 },
-        { name: 'Achievement', value: 1 + (15 * ogAchievementBonus) / 100 },
-        { name: 'Land Rank', value: 1 + ogLandRankBonus / 100 },
-        { name: 'Evergrow I (Exotic)', value: 1 + ogExotic26 / 100 },
-        { name: 'Evergrow II (Exotic)', value: 1 + ogExotic27 / 100 }
-      ]
-    }]
-  };
+  const ogChanceBreakdown = createBreakdown('OG Chance Multiplier', ogMultiplier, [
+    multiplier('OG Fertilizer (Market)', Math.max(1, marketOGChance)),
+    multiplier('Taffy Disc (Charm)', 1 + charmOGBonus / 100),
+    multiplier('Star Sign', 1 + ogStarSignBonus / 100),
+    multiplier('Task', 1 + ogTaskBonus / 100),
+    multiplier('Achievement', 1 + (15 * ogAchievementBonus) / 100),
+    multiplier('Land Rank', 1 + ogLandRankBonus / 100),
+    multiplier('Evergrow I (Exotic)', 1 + ogExotic26 / 100),
+    multiplier('Evergrow II (Exotic)', 1 + ogExotic27 / 100)
+  ]);
 
   const newPlot = account?.farming?.plot?.map((crop: any) => {
     const nextOGChance = Math.pow(0.4, crop?.currentOG + 1) * ogMultiplier;
@@ -616,22 +607,17 @@ const getLandRankExpBreakdown = (account: any, characters: any) => {
     * (1 + exotic12 / 100)
     * (1 + exotic13 / 100);
 
-  return {
-    statName: 'Land Rank EXP',
-    totalValue: value,
-    categories: [{
-      name: 'Multiplicative',
-      sources: [
-        { name: 'Talent (Ag. Appreciation)', value: 1 + talentBonus / 100 },
-        { name: 'Rank Boost (Market)', value: 1 + marketBonus / 100 },
-        { name: 'Stableroot I (Exotic)', value: 1 + exotic9 / 100 },
-        { name: 'Stableroot II (Exotic)', value: 1 + exotic10 / 100 },
-        { name: 'Stableroot III (Exotic)', value: 1 + exotic11 / 100 },
-        { name: 'Vigouroot I (Exotic)', value: 1 + exotic12 / 100 },
-        { name: 'Vigouroot II (Exotic)', value: 1 + exotic13 / 100 }
-      ]
-    }]
-  };
+  return createBreakdown('Land Rank EXP', value, [
+    multiplier('Talent (Ag. Appreciation)', 1 + talentBonus / 100),
+    additiveGroup(NUMBERED_GROUP, [
+      percent('Rank Boost (Market)', marketBonus),
+      percent('Stableroot I (Exotic)', exotic9),
+      percent('Stableroot II (Exotic)', exotic10),
+      percent('Stableroot III (Exotic)', exotic11)
+    ]),
+    multiplier('Vigouroot I (Exotic)', 1 + exotic12 / 100),
+    multiplier('Vigouroot II (Exotic)', 1 + exotic13 / 100)
+  ]);
 };
 
 const getCropsOnVineBreakdown = (account: any) => {
@@ -644,21 +630,19 @@ const getCropsOnVineBreakdown = (account: any) => {
   const totalBonus = marketBonus + 20 * gemVineBonus + exotic31 + exotic32 + exotic33;
   const value = Math.floor(1 + totalBonus / 100);
 
-  return {
-    statName: 'Crops on Vine',
-    totalValue: value,
-    categories: [{
-      name: 'Additive (% toward +1 crop)',
-      sources: [
-        { name: 'Stronger Vines (Market)', value: marketBonus },
-        { name: 'Gem Shop (Vineyard)', value: 20 * gemVineBonus },
-        { name: 'Bountiful I (Exotic)', value: exotic31 },
-        { name: 'Bountiful II (Exotic)', value: exotic32 },
-        { name: 'Bountiful III (Exotic)', value: exotic33 }
-      ]
-    }]
-  };
+  return createBreakdown('Crops on Vine', value, [
+    additiveGroup(NUMBERED_GROUP, [
+      percent('Stronger Vines (Market)', marketBonus),
+      percent('Gem Shop (Vineyard)', 20 * gemVineBonus),
+      percent('Bountiful I (Exotic)', exotic31),
+      percent('Bountiful II (Exotic)', exotic32),
+      percent('Bountiful III (Exotic)', exotic33)
+    ], { unit: 'flat', round: 'floor', note: 'Rounded down to whole crops' })
+  ]);
 };
+
+// Stalk Value exotics raise this
+const CROP_VALUE_BASE_CAP = 10000;
 
 const getCropValueBreakdown = (account: any, market: any) => {
   const landRankTotal = getLandRankTotalBonus(account, 1);
@@ -671,36 +655,30 @@ const getCropValueBreakdown = (account: any, market: any) => {
   const avgRank = (account?.farming?.plot?.reduce((sum: any, p: any) => sum + (p?.rank ?? 0), 0) ?? 0)
     / (account?.farming?.plot?.length || 1);
 
-  const cap = 10000 * (1 + (exotic23 + exotic24 + exotic25) / 100);
+  const cap = CROP_VALUE_BASE_CAP * (1 + (exotic23 + exotic24 + exotic25) / 100);
   const uncappedValue = (1 + landRankTotal / 100)
     * Math.max(1, valueGMO)
     * (1 + (landRankPerPlot * avgRank + voteBonus) / 100);
   const value = Math.min(cap, Math.round(uncappedValue));
 
-  return {
-    statName: 'Crop Value',
-    totalValue: value,
-    categories: [
-      {
-        name: 'Multiplicative',
-        sources: [
-          { name: 'Land Rank Total', value: 1 + landRankTotal / 100 },
-          { name: 'Value GMO (Market)', value: Math.max(1, valueGMO) },
-          { name: 'Land Rank (per plot avg)', value: 1 + (landRankPerPlot * avgRank) / 100 },
-          { name: 'Vote', value: 1 + voteBonus / 100 }
-        ]
-      },
-      {
-        name: 'Cap',
-        sources: [
-          { name: 'Base Cap', value: 10000 },
-          { name: 'Stalk Value I (Exotic)', value: 1 + exotic23 / 100 },
-          { name: 'Stalk Value II (Exotic)', value: 1 + exotic24 / 100 },
-          { name: 'Stalk Value III (Exotic)', value: 1 + exotic25 / 100 }
-        ]
-      }
-    ]
-  };
+  return createBreakdown('Crop Value', value, [
+    productGroup(NUMBERED_GROUP, [
+      multiplier('Land Rank Total', 1 + landRankTotal / 100),
+      multiplier('Value GMO (Market)', Math.max(1, valueGMO)),
+      additiveGroup(NUMBERED_GROUP, [
+        percent('Land Rank (per plot avg)', landRankPerPlot * avgRank),
+        percent('Vote', voteBonus)
+      ])
+    ], { round: 'round', note: 'Rounded to a whole number' }),
+    productGroup('Crop value cap', [
+      flat('Base cap', CROP_VALUE_BASE_CAP),
+      additiveGroup(NUMBERED_GROUP, [
+        percent('Stalk Value I (Exotic)', exotic23),
+        percent('Stalk Value II (Exotic)', exotic24),
+        percent('Stalk Value III (Exotic)', exotic25)
+      ])
+    ], { unit: 'flat' })
+  ], { combine: 'min' });
 };
 
 const getMagicBeanBreakdown = (account: any, market: any) => {
@@ -727,32 +705,22 @@ const getMagicBeanBreakdown = (account: any, market: any) => {
     * (1 + exotic19 / 100)
     * (1 + exotic20 / 100);
 
-  return {
-    statName: 'Magic Bean Trade',
-    totalValue: value,
-    categories: [
-      {
-        name: 'Base',
-        sources: [
-          { name: 'Crop Value', value: baseValue }
-        ]
-      },
-      {
-        name: 'Multiplicative',
-        sources: [
-          { name: 'More Beenz (Market)', value: 1 + marketBonus / 100 },
-          { name: 'Deal Sweetening (Jade)', value: 1 + (25 * jadeUpgrade) / 100 },
-          { name: 'Achievement', value: 1 + (5 * achievementBonus) / 100 },
-          { name: 'Legumioso I (Exotic)', value: 1 + exotic16 / 100 },
-          { name: 'Legumioso II (Exotic)', value: 1 + exotic17 / 100 },
-          { name: 'Legumioso III (Exotic)', value: 1 + exotic18 / 100 },
-          { name: 'Vault', value: 1 + vaultBonus85 / 100 },
-          { name: 'Largumes I (Exotic)', value: 1 + exotic19 / 100 },
-          { name: 'Largumes II (Exotic)', value: 1 + exotic20 / 100 }
-        ]
-      }
-    ]
-  };
+  return createBreakdown('Magic Bean Trade', value, [
+    flat('Crop Value', baseValue),
+    productGroup(NUMBERED_GROUP, [
+      multiplier('More Beenz (Market)', 1 + marketBonus / 100),
+      additiveGroup(NUMBERED_GROUP, [
+        percent('Deal Sweetening (Jade)', 25 * jadeUpgrade),
+        percent('Achievement', 5 * achievementBonus),
+        percent('Legumioso I (Exotic)', exotic16),
+        percent('Legumioso II (Exotic)', exotic17),
+        percent('Legumioso III (Exotic)', exotic18),
+        percent('Vault', vaultBonus85)
+      ]),
+      multiplier('Largumes I (Exotic)', 1 + exotic19 / 100),
+      multiplier('Largumes II (Exotic)', 1 + exotic20 / 100)
+    ])
+  ]);
 };
 
 const getNextUpgradesReq = ({
@@ -820,13 +788,12 @@ const getCropType = ({ index, cropId, cropIdIncrement, level }: any) => {
 
 const getCropDepotBonuses = (account: any) => {
   // 'CropSCbonus' == e
+  // MainframeBonus(17): Depot Studies PhD plus the Pure Opal Rhombol
   const labBonus = getLabBonus(account?.lab?.labBonuses, 17);
-  const spelunkerObolMulti = getLabBonus(account?.lab.labBonuses, 8); // gem multi
-  const pureOpalRhombolJewel = getJewelBonus(account?.lab?.jewels, 20, spelunkerObolMulti);
   const grimoireBonus = getGrimoireBonus(account?.grimoire?.upgrades, 22);
   const exoticBonus40 = getExoticMarketBonus(account, 40) ?? 0;
   const vaultBonus79 = getUpgradeVaultBonus(account?.upgradeVault?.upgrades, 79);
-  const extraBonus = (1 + (labBonus + pureOpalRhombolJewel) / 100)
+  const extraBonus = (1 + labBonus / 100)
     * (1 + (grimoireBonus + exoticBonus40 + vaultBonus79) / 100);
 
   let bonuses = {
@@ -899,20 +866,23 @@ export const getLandRank = (ranks: any, index: any, characters?: any, activeChar
   return calcRankBonus(index, apocalypseWow, exoticMulti, base, upgradeLevel);
 }
 
-export const getLandRankTotalBonus = (account: any, index: any) => {
-  return 0 === index ? (1 + getLandRank(account?.farming?.ranks, 3) / 100)
-    * (1 + getLandRank(account?.farming?.ranks, 10) / 100) *
-    (1 + getLandRank(account?.farming?.ranks, 15) / 100) :
-    1 === index ? getLandRank(account?.farming?.ranks, 8)
-      + getLandRank(account?.farming?.ranks, 17) :
-      2 === index ? getLandRank(account?.farming?.ranks, 6)
-        + getLandRank(account?.farming?.ranks, 13) :
-        3 === index ? getLandRank(account?.farming?.ranks, 7)
-          + (getLandRank(account?.farming?.ranks, 11)
-            + getLandRank(account?.farming?.ranks, 18))
-          : 4 === index ? getLandRank(account?.farming?.ranks, 5)
-            + (getLandRank(account?.farming?.ranks, 12) +
-              getLandRank(account?.farming?.ranks, 16)) : 1;
+// The ranks scale with DANK_RANKS, which the game reads as the active character sees it: pass the
+// character to get its view, or leave it out for the value stored at parse time.
+export const getLandRankTotalBonus = (account: any, index: any, characters?: any, character?: any) => {
+  const rank = (rankIndex: number) => getLandRank(account?.farming?.ranks, rankIndex, characters, character);
+  return 0 === index ? (1 + rank(3) / 100)
+    * (1 + rank(10) / 100) *
+    (1 + rank(15) / 100) :
+    1 === index ? rank(8)
+      + rank(17) :
+      2 === index ? rank(6)
+        + rank(13) :
+        3 === index ? rank(7)
+          + (rank(11)
+            + rank(18))
+          : 4 === index ? rank(5)
+            + (rank(12) +
+              rank(16)) : 1;
 }
 
 /**
@@ -1154,12 +1124,32 @@ export const getProductDoubler = (market: any) => {
   return { productDoubler, percent, multi: Math.max(2, Math.floor(multi) + 1) };
 }
 
-export const getCropEvolution = (account: any, character: any, crop: any, forceStarSign: any) => {
+const CROP_EVO_MAX_CHANCE = 100;
+// The chance is rounded to one decimal
+const CROP_EVO_CHANCE_STEP = 0.1;
+
+// game: TalentCalc counts, across every character, the 13 World 6 maps (251-263) with no kills left
+const WORLD_6_FIRST_MAP = 251;
+const WORLD_6_MAP_COUNT = 13;
+const getClearedWorld6Maps = (characters: any[] = []) => characters.reduce((sum, { kills }: any) => {
+  for (let map = WORLD_6_FIRST_MAP; map < WORLD_6_FIRST_MAP + WORLD_6_MAP_COUNT; map++) {
+    // kills holds kills done, so "less than 1 kill left" is kills > requirement - 1
+    if ((kills?.[map] ?? 0) > parseFloat(mapPortals?.[map]?.[0] as any) - 1) sum++;
+  }
+  return sum;
+}, 0);
+
+// characters: getbonus2(1, 205, -1) and the World 6 map count read every character; without them the
+// viewed character's own Mass Irrigation is used and Cropius Mapper counts nothing
+export const getCropEvolution = (account: any, character: any, crop: any, forceStarSign: any, characters?: any[]) => {
   const marketBonus1 = getMarketBonus(account?.farming?.market, 'BIOLOGY_BOOST');
   const winBonus = getWinnerBonus(account, '<x Crop EVO');
   const lampBonus = getLampBonus({ holesObject: account?.hole?.holesObject, t: 2, i: 0, account });
-  const bubbleBonus1 = getBubbleBonus(account, 'W10AllCharz', false);
-  const bubbleBonus2 = getBubbleBonus(account, 'CROPIUS_MAPPER', false);
+  // AlchBubbles.W10AllCharz
+  const tomePoints = account?.tome?.totalPoints ?? 0;
+  const bubbleBonus1 = getBubbleBonus(account, 'CROP_CHAPTER', false) * getTomeBubbleMulti(tomePoints);
+  // AlchBubbles.Y6: per cleared World 6 map, every character
+  const bubbleBonus2 = getBubbleBonus(account, 'CROPIUS_MAPPER', false) * getClearedWorld6Maps(characters);
   const vialBonus = getVialsBonusByEffect(account?.alchemy?.vials, null, '6FarmEvo');
   const mealBonus1 = getMealsBonusByEffectOrStat(account, null, 'zCropEvo');
   const mealBonus2 = getMealsBonusByEffectOrStat(account, null, 'zCropEvoSumm');
@@ -1167,10 +1157,13 @@ export const getCropEvolution = (account: any, character: any, crop: any, forceS
   const stampBonus = getStampsBonusByEffect(account, 'Crop_Evolution_Chance', character);
   const grimoireBonus = getGrimoireBonus(account?.grimoire?.upgrades, 14);
   const killroyBonus = getKillroyBonus(account, 3);
-  const marketBonus2 = getMarketBonus(account?.farming?.market, 'EVOLUTION_GMO');
+  // BasketUpgQTY(99, 1): the GMO compounds per crop type stocked, so it is the computed value, not the level bonus
+  const marketBonus2 = getMarketBonus(account?.farming?.market, 'EVOLUTION_GMO', 'value');
   const skillMasteryBonus = isMasteryBonusUnlocked(account?.rift, account?.totalSkillsLevels?.farming?.rank, 1);
   const starSignBonus = getStarSignBonus(character, account, 'Crop_Evo', forceStarSign);
-  const talentBonus = getTalentBonus(character?.flatTalents, 'MASS_IRRIGATION');
+  const talentBonus = characters?.length
+    ? getHighestTalentAcrossCharacters(characters, 'MASS_IRRIGATION', character) ?? 0
+    : getTalentBonus(character?.flatTalents, 'MASS_IRRIGATION');
   const voteBonus = getVoteBonus(account, 29);
   const vaultBonus78 = getUpgradeVaultBonus(account?.upgradeVault?.upgrades, 78);
   const cardBonus = getCardBonusByEffect(account?.cards, 'Farming_EVO_Multi_(Passive)');
@@ -1199,84 +1192,61 @@ export const getCropEvolution = (account: any, character: any, crop: any, forceS
   const summoningMealBonus = mealBonus2 * Math.ceil((summoningLevel + 1) / 50);
   const landRankPerPlot = getLandRank(account?.farming?.ranks, 0) * (account?.farming?.plot?.[crop?.index]?.rank ?? 0) + voteBonus;
 
-  const nextCropChance = crop?.seed?.nextCropChance ?? 0;
+  // The game fills its per-seed base chance list with SeedInfo[0][5] for every seed, so all seeds share it
+  const nextCropChance = crop?.seed ? seedInfo?.[0]?.nextCropChance ?? 0 : 0;
   const nextCropDecay = crop?.seed?.nextCropDecay ?? 0;
   const baseCropType = crop?.baseCropType ?? 0;
 
-  let value = (1 + marketBonus1 / 100)
-    * (1 + winBonus / 100)
-    * (1 + lampBonus / 100)
-    * (1 + bubbleBonus1 / 100)
-    * (1 + bubbleBonus2 / 100)
-    * (1 + vialBonus / 100)
-    * (1 + cardBonus / 100)
-    * (1 + mealBonus1 / 100)
-    * (1 + vaultBonus78 / 100)
-    * (1 + monumentBonus / 100)
-    * (1 + stampBonus / 100)
-    * (1 + grimoireBonus / 100)
-    * (1 + summoningMealBonus / 100)
-    * (1 + (5 * achievementBonus) / 100)
-    * Math.max(1, killroyBonus)
-    * Math.max(1, marketBonus2)
-    * (1 + (15 * skillMasteryBonus) / 100)
-    * (1 + (starSignBonus * farmingLevel) / 100)
-    * Math.max(1, getLandRankTotalBonus(account, 0))
-    * Math.max(1, talentBonus)
-    * (1 + landRankPerPlot / 100)
-    * (1 + exotic0 / 100)
-    * (1 + buttonBonus / 100)
-    * (1 + exotic1 / 100)
-    * (1 + stickerBonus / 100)
-    * (1 + exotic2 / 100)
-    * (1 + exotic3 / 100)
-    * (1 + scalingExotics / 100)
-    * (1 + sushiBonus / 100)
-    * nextCropChance
-    * Math.pow(nextCropDecay, baseCropType);
+  // In percent, so the product of both sections is the chance shown
+  const baseChance = productGroup('Base evolution chance', [
+    flat('Seed', 100 * nextCropChance),
+    multiplier('Crop tier decay', Math.pow(nextCropDecay, baseCropType))
+  ], { unit: 'flat' });
+  const multipliers = productGroup(NUMBERED_GROUP, [
+    multiplier('Biology Boost (Market)', 1 + marketBonus1 / 100),
+    multiplier('Evolution GMO (Market)', Math.max(1, marketBonus2)),
+    multiplier('Summoning', 1 + winBonus / 100),
+    multiplier('Lamp', 1 + lampBonus / 100),
+    multiplier('Crop Chapter (Bubble)', 1 + bubbleBonus1 / 100),
+    multiplier('Cropius Mapper (Bubble)', 1 + bubbleBonus2 / 100),
+    multiplier('Vial', 1 + vialBonus / 100),
+    multiplier('Card', 1 + cardBonus / 100),
+    multiplier('Meal', 1 + mealBonus1 / 100),
+    multiplier('Summoning meal', 1 + summoningMealBonus / 100),
+    multiplier('Upgrade vault', 1 + vaultBonus78 / 100),
+    multiplier('Monument', 1 + monumentBonus / 100),
+    multiplier('Stamp', 1 + stampBonus / 100),
+    multiplier('Grimoire', 1 + grimoireBonus / 100),
+    multiplier('Achievement', 1 + (5 * achievementBonus) / 100),
+    multiplier('Killroy', Math.max(1, killroyBonus)),
+    multiplier('Skill mastery', 1 + (15 * skillMasteryBonus) / 100),
+    multiplier('Star sign', 1 + (starSignBonus * farmingLevel) / 100),
+    multiplier('Land rank total', Math.max(1, getLandRankTotalBonus(account, 0))),
+    multiplier('Mass Irrigation (Talent)', Math.max(1, talentBonus)),
+    multiplier('Land rank and vote', 1 + landRankPerPlot / 100),
+    multiplier('Sproutluck I', 1 + exotic0 / 100),
+    multiplier('Button', 1 + buttonBonus / 100),
+    multiplier('Sproutluck II', 1 + exotic1 / 100),
+    multiplier('Sticker', 1 + stickerBonus / 100),
+    multiplier('Sproutluck III', 1 + exotic2 / 100),
+    multiplier('Sproutluck IV', 1 + exotic3 / 100),
+    multiplier('Geneology (level scaling)', 1 + scalingExotics / 100),
+    multiplier('Sushi', 1 + sushiBonus / 100)
+  ]);
 
-  value = Math.min(100, 100 * value);
-  value = Math.round(10 * value) / 10;
+  const uncappedChance = evaluateBreakdownNode(baseChance) * evaluateBreakdownNode(multipliers);
+  let value = Math.round(10 * Math.min(CROP_EVO_MAX_CHANCE, uncappedChance)) / 10;
   // A plot's lock is exactly this roll's off switch - the game skips the crop type increment
   // while it's set, and shows "NO" in place of the percentage. The bonuses below are still worth
   // seeing, so only the chance itself is zeroed.
   const isLocked = Boolean(crop?.isLocked);
   if (isLocked) value = 0;
+  if (uncappedChance > CROP_EVO_MAX_CHANCE) multipliers.note = `Capped at ${CROP_EVO_MAX_CHANCE}%`;
 
   return {
     value,
     isLocked,
-    breakdown: [
-      { title: 'Additive' },
-      { name: 'Base Chance', value: nextCropChance.toExponential(3) },
-      { name: 'Decay Rate', value: Math.pow(nextCropDecay, baseCropType).toExponential(3) },
-      { name: 'Market', value: Number(((1 + marketBonus1 / 100) * Math.max(1, marketBonus2)).toFixed(3)) },
-      { name: 'Summoning', value: Number((1 + winBonus / 100).toFixed(3)) },
-      { name: 'Lamp', value: Number((1 + lampBonus / 100).toFixed(3)) },
-      { name: 'Bubble', value: Number(((1 + bubbleBonus1 / 100) * (1 + bubbleBonus2 / 100)).toFixed(3)) },
-      { name: 'Vial', value: Number((1 + vialBonus / 100).toFixed(3)) },
-      { name: 'Card', value: Number((1 + cardBonus / 100).toFixed(3)) },
-      { name: 'Meal', value: Number(((1 + mealBonus1 / 100) * (1 + summoningMealBonus / 100)).toFixed(3)) },
-      { name: 'Monument', value: Number((1 + monumentBonus / 100).toFixed(3)) },
-      { name: 'Stamp', value: Number((1 + stampBonus / 100).toFixed(3)) },
-      { name: 'Grimoire', value: Number((1 + grimoireBonus / 100).toFixed(3)) },
-      { name: 'Achievement', value: Number((1 + (5 * achievementBonus) / 100).toFixed(3)) },
-      { name: 'Vault', value: Number((1 + vaultBonus78 / 100).toFixed(3)) },
-      { name: 'Sushi', value: Number((1 + sushiBonus / 100).toFixed(3)) },
-      { title: 'Multiplicative' },
-      { name: 'Killroy', value: Number(Math.max(1, killroyBonus).toFixed(3)) },
-      { name: 'Skill Mastery', value: Number((1 + (15 * skillMasteryBonus) / 100).toFixed(3)) },
-      { name: 'Star Sign', value: Number((1 + (starSignBonus * farmingLevel) / 100).toFixed(3)) },
-      { name: 'Land Rank Total', value: Number(Math.max(1, getLandRankTotalBonus(account, 0)).toFixed(3)) },
-      { name: 'Talent', value: Number(Math.max(1, talentBonus).toFixed(3)) },
-      { name: 'Land Rank + Vote', value: Number((1 + landRankPerPlot / 100).toFixed(3)) },
-      { name: 'Sproutluck I', value: Number((1 + exotic0 / 100).toFixed(3)) },
-      { name: 'Button', value: Number((1 + buttonBonus / 100).toFixed(3)) },
-      { name: 'Sproutluck II', value: Number((1 + exotic1 / 100).toFixed(3)) },
-      { name: 'Sticker', value: Number((1 + stickerBonus / 100).toFixed(3)) },
-      { name: 'Sproutluck III', value: Number((1 + exotic2 / 100).toFixed(3)) },
-      { name: 'Sproutluck IV', value: Number((1 + exotic3 / 100).toFixed(3)) },
-      { name: 'Geneology (Lvl Scaling)', value: Number((1 + scalingExotics / 100).toFixed(3)) }
-    ]
+    breakdown: createBreakdown('Crop evolution chance', isLocked ? 'Locked' : `${value}%`, [baseChance, multipliers],
+      isLocked ? { combine: 'list' } : { max: CROP_EVO_MAX_CHANCE, round: 'round', step: CROP_EVO_CHANCE_STEP })
   }
 }

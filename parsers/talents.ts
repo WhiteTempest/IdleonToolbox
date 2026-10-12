@@ -3,7 +3,7 @@ import { isTalentBannedForAllLevels } from '@utility/talentBans';
 import { classes, talents } from '@website-data';
 import { getAchievementStatus } from './achievements';
 import { isCompanionBonusActive } from './misc';
-import { getMinorDivinityBonus } from './world-5/divinity';
+import { getCharacterMinorDivinityBonus, GOD_INDEX } from './world-5/divinity';
 import { getEquinoxBonus } from './world-3/equinox';
 import { getStampsBonusByEffect } from '@parsers/world-1/stamps';
 import { getGuildBonusBonus } from '@parsers/guild';
@@ -21,6 +21,7 @@ import { getTesseractBonus } from '@parsers/class-specific/tesseract';
 import { isSuperbitUnlocked } from '@parsers/world-5/gaming';
 import { getLegendTalentBonus } from './world-7/legendTalents';
 import { getZenithBonus } from './world-1/statues';
+import { createBreakdown, flat, listGroup } from '@parsers/breakdown';
 
 
 export const getTalentBonus = (talents: any = [], talentName?: any, yBonus?: any, useMaxLevel?: any, addedLevels?: any, useMaxAndAddedLevels?: any, forceTalent = false) => {
@@ -59,6 +60,7 @@ export const getTalentBonusIfActive = (activeBuffs: any, tName: any, variant = '
 }
 
 import { CLASSES, talentPagesMap, getBaseClass } from './classDefinitions';
+import { getCharacterFamilyBonus } from './family';
 
 // Re-exported so the many modules importing these from talents.ts keep working. Modules that
 // need ONLY these should import from ./classDefinitions instead, to avoid pulling this file
@@ -187,12 +189,31 @@ export const getBestActiveCharacter = (characters: any) => {
   ), null);
 };
 
+// The game's `UserInfo[0] == GetPlayersUsernames[i]` check: is this the character being played
+export const isActiveCharacter = (character: any, characters: any) =>
+  (getBestActiveCharacter(characters) ?? character)?.name === character?.name;
+
+// A talent at its raw SkillLevels, without added or super talent levels (the game's
+// ArbitraryCode5Inputs(TalentDescriptions[id][1], SkillLevels[id]) and explicit-index lookups)
+export const getBaseTalentBonus = (talents: any = [], talentName: string) => {
+  const talent = talents?.find?.(({ name }: any) => name === talentName);
+  return growth(talent?.funcX, talent?.baseLevel ?? talent?.level ?? 0, talent?.x1, talent?.x2, false) ?? 0;
+};
+
 // getbonus2(1, id, -1) walks every character and never looks at class - filtering by class only
 // matches it because most talent ids belong to a single class. THE_FAMILY_GUY is id 144 on six
 // different class pages, so for that one the class filter throws away the real maximum. Pass a null
 // className to get the game's actual behaviour.
 export const getHighestTalentAcrossCharacters = (characters: any, talentName?: any, activeCharacter?: any, yBonus?: any) => {
   return getHighestTalentByClass(characters, null, talentName, yBonus, false, false, false, activeCharacter);
+};
+
+// TalentCalc's `0 < GetTalentNumber(1, id) ? GetTalentNumber(1, id) : getbonus2(1, id, -1)`: the
+// logged-in character's own bonus whenever it has one, even below the account's best, and the
+// account-wide highest only when it has none (ids 59 BLOOD_MARROW and 430 PRICE_RECESSION).
+export const getOwnOrHighestTalent = (characters: any, talentName: any, loggedInCharacter: any) => {
+  const ownBonus = getTalentBonus(loggedInCharacter?.flatTalents, talentName);
+  return ownBonus > 0 ? ownBonus : getHighestTalentAcrossCharacters(characters, talentName, loggedInCharacter);
 };
 
 // getbonus2 evaluates growth() for every character including the ones sitting at level 0, so a
@@ -227,11 +248,10 @@ export const getHighestTalentByClass = (characters: any, className: any, talentN
       // Mimic game's getbonus2(1, id, -1):
       // - talentIndex >= 100 and the character has levels in it: growth(baseLevel + AllTalentLVz(id))
       // - anything else: growth(baseLevel) - no addedLevels adjustment
-      // The y-variant is a separate branch in the game that reads SkillLevels straight, so added
-      // levels never reach it whatever the talent id.
+      // getbonus2(2, id, -1), the y-variant, takes the same branch (checked live: Sneaky Skilling).
       const talentObj = flatTalents?.find(({ name }: any) => name === talentName);
       if (talentObj) {
-        const level = talentObj.talentId >= 100 && talentObj.baseLevel > 0 && !yBonus
+        const level = talentObj.talentId >= 100 && talentObj.baseLevel > 0
           ? talentObj.baseLevel + getAllTalentAddedLevels(talentObj.talentId, activeCharacter, character)
           : talentObj.baseLevel;
         const func = yBonus ? talentObj.funcY : talentObj.funcX;
@@ -287,9 +307,13 @@ export const getSuperTalentAddedLevels = (account: any) => {
   return Math.round(50 + getLegendTalentBonus(account, 7) + getZenithBonus(account, 5));
 }
 
-export const getTalentAddedLevels = (talents: any, presetIndex: any, linkedDeity: any, secondLinkedDeity: any, deityMinorBonus: any, secondDeityMinorBonus: any, familyEffBonus: any, account: any, character: any) => {
+// accountOptions[232] is the ninja mastery tier; the third one gives every talent these levels
+const NINJA_MASTERY_TALENT_TIER = 3;
+const NINJA_MASTERY_TALENT_LEVELS = 5;
+const TESSERACT_TALENT_LEVELS_CAP = 5;
+
+export const getTalentAddedLevels = (talents: any, presetIndex: any, familyEffBonus: any, account: any, character: any) => {
   // "AllTalentLV" == e
-  let addedLevels = 0, breakdown;
   const superTalentBonus = getSuperTalentAddedLevels(account);
   let superTalentsInfo: any = {
     talents: [] as any[],
@@ -316,92 +340,42 @@ export const getTalentAddedLevels = (talents: any, presetIndex: any, linkedDeity
     }
   }
 
-  const pocketLinked = account?.hole?.godsLinks?.find(({ index }: any) => index === 1);
-  if (isCompanionBonusActive(account, 0) || pocketLinked) {
-    addedLevels += Math.ceil(getMinorDivinityBonus(character, account, 1));
-  }
-  else {
-    if (linkedDeity === 1) {
-      addedLevels += Math.ceil(deityMinorBonus);
-    }
-    else if (secondLinkedDeity === 1) {
-      addedLevels += Math.ceil(secondDeityMinorBonus);
-    }
-  }
-  breakdown = [{ name: 'God Bonus', value: Math.ceil(addedLevels) }];
+  // Arctis' minor bonus is the only one the game ceils into talent levels.
+  const godBonus = Math.ceil(getCharacterMinorDivinityBonus(character, account, GOD_INDEX.Arctis));
   const symbolTalent = talents?.[3]?.orderedTalents?.find(({ name }: any) => name.includes('SYMBOLS_OF_BEYOND_'));
-  let symbolAddedLevel = 0;
-  if (symbolTalent && symbolTalent?.level > 0) {
-    symbolAddedLevel = growth(symbolTalent?.funcX, symbolTalent?.level, symbolTalent?.x1, symbolTalent?.x2, false) ?? 0;
-    addedLevels += symbolAddedLevel;
-  }
-  if (getAchievementStatus(account?.achievements, 291)) {
-    addedLevels += 1;
-  }
-  if (familyEffBonus) {
-    addedLevels += Math.floor(familyEffBonus);
-  }
-  if (isCompanionBonusActive(account, 1)) {
-    addedLevels += account?.companions?.list?.at(1)?.bonus;
-  }
-  if (account.accountOptions?.[232] >= 3) { // ninja mastery
-    addedLevels += 5;
-  }
-  addedLevels += getEquinoxBonus(account?.equinox?.upgrades, 'Equinox_Symbols');
-  addedLevels += getGrimoireBonus(account?.grimoire?.upgrades, 39);
-  addedLevels += getArmorSetBonus(account, 'KATTLEKRUK_SET');
-  addedLevels += Math.min(5, getTesseractBonus(account, 57));
+  const symbolAddedLevel = symbolTalent && symbolTalent?.level > 0
+    ? growth(symbolTalent?.funcX, symbolTalent?.level, symbolTalent?.x1, symbolTalent?.x2, false) ?? 0
+    : 0;
+  const achievementBonus = getAchievementStatus(account?.achievements, 291) ? 1 : 0;
+  const familyBonus = familyEffBonus ? Math.floor(familyEffBonus) : 0;
+  const companionBonus = isCompanionBonusActive(account, 1) ? account?.companions?.list?.at(1)?.bonus : 0;
+  const ninjaMasteryBonus = account.accountOptions?.[232] >= NINJA_MASTERY_TALENT_TIER ? NINJA_MASTERY_TALENT_LEVELS : 0;
+  const equinoxBonus = getEquinoxBonus(account?.equinox?.upgrades, 'Equinox_Symbols');
+  const grimoireBonus = getGrimoireBonus(account?.grimoire?.upgrades, 39);
+  const armorSetBonus = getArmorSetBonus(account, 'KATTLEKRUK_SET');
+  const rawTesseractBonus = getTesseractBonus(account, 57);
+  const tesseractBonus = Math.min(TESSERACT_TALENT_LEVELS_CAP, rawTesseractBonus);
   const superbit = isSuperbitUnlocked(account, 'Timmy_Talented') ? 1 : 0;
   const superbitBonus = Math.max(0, Math.floor(((character?.level - 500) / 100) * superbit));
-  addedLevels += superbitBonus;
+  const addedLevels = godBonus + symbolAddedLevel + achievementBonus + familyBonus + companionBonus + ninjaMasteryBonus
+    + equinoxBonus + grimoireBonus + armorSetBonus + tesseractBonus + superbitBonus;
 
-  breakdown = {
-    statName: "Added levels",
-    totalValue: addedLevels,
-    categories: [
-      {
-        name: "Additive",
-        sources: [
-          ...breakdown,
-          { name: 'Symbol of Beyond', value: symbolAddedLevel },
-          { name: 'Family', value: Math.floor(familyEffBonus) },
-          { name: 'Achievement', value: getAchievementStatus(account?.achievements, 291) ? 1 : 0 },
-          {
-            name: 'Companion',
-            value: isCompanionBonusActive(account, 1) ? account?.companions?.list?.at(1)?.bonus : 0
-          },
-          {
-            name: 'Equinox',
-            value: getEquinoxBonus(account?.equinox?.upgrades, 'Equinox_Symbols')
-          },
-          {
-            name: 'Grimoire',
-            value: getGrimoireBonus(account?.grimoire?.upgrades, 39)
-          },
-          {
-            name: 'Kattlekruk set',
-            value: getArmorSetBonus(account, 'KATTLEKRUK_SET')
-          },
-          {
-            name: 'Tesseract',
-            value: Math.min(5, getTesseractBonus(account, 57))
-          },
-          {
-            name: 'Ninja mastery',
-            value: account.accountOptions?.[232] >= 3 ? 5 : 0
-          },
-          {
-            name: 'Superbit',
-            value: superbitBonus
-          },
-          {
-            name: 'Super talent (per talent)',
-            value: superTalentsInfo.bonus
-          }
-        ],
-      },
-    ],
-  }
+  const breakdown = createBreakdown('Added levels', addedLevels, [
+    flat('God Bonus', godBonus),
+    flat('Symbol of Beyond', symbolAddedLevel),
+    flat('Family', familyBonus),
+    flat('Achievement', achievementBonus),
+    flat('Companion', companionBonus),
+    flat('Equinox', equinoxBonus),
+    flat('Grimoire', grimoireBonus),
+    flat('Kattlekruk set', armorSetBonus),
+    flat('Tesseract', tesseractBonus,
+      { note: rawTesseractBonus > TESSERACT_TALENT_LEVELS_CAP ? `Capped at ${TESSERACT_TALENT_LEVELS_CAP}` : undefined }),
+    flat('Ninja mastery', ninjaMasteryBonus),
+    flat('Superbit', superbitBonus),
+    // Only the talents picked as super talents get these, so they are not part of the total
+    listGroup('Super talents', [flat('Added levels per super talent', superTalentsInfo.bonus)])
+  ], { combine: 'sum' });
   return {
     value: addedLevels,
     breakdown,
@@ -499,12 +473,11 @@ export const getVoidWalkerTalentEnhancements = (characters: any, account: any, p
     talentList.push(35);
   }
   if (talentList.indexOf(index) !== -1) {
-    if (index === 42 || index === 79) {
+    if (index === 42 || index === 43 || index === 79) {
       return true;
     }
     if (index === 146) {
-      const bloodBerserkers = characters?.filter((character: any) => checkCharClass(character?.class, CLASSES.Blood_Berserker));
-      const lastBerserker = bloodBerserkers.at(-1);
+      const lastBerserker = getLastBloodBerserkerLine(characters);
       if (!lastBerserker) return Math.pow(1.1, 0);
       const superChows = lastBerserker?.chow.finished?.[1];
       return Math.pow(1.1, superChows ?? 0);
@@ -531,6 +504,12 @@ export const getVoidWalkerTalentEnhancements = (characters: any, account: any, p
 export const checkCharClass = (charClass: any, className: any) => {
   return talentPagesMap[charClass]?.includes(className);
 }
+
+// TalentCalc's CalcTalentDT1: the LAST character in save order whose class line runs through Blood
+// Berserker (a Death Bringer counts). CalcTalentMAP[209] (Apocalypse Wow) and ["49_4"] count its
+// kill milestones, whoever holds the talent.
+export const getLastBloodBerserkerLine = (characters: any) =>
+  characters?.filter((character: any) => checkCharClass(character?.class, CLASSES.Blood_Berserker))?.at(-1);
 
 export const getBubonicGreenTube = (character: any, characters: any, account: any) => {
   const charCords = account?.lab?.playersCords?.[character?.playerId];
@@ -578,7 +557,7 @@ export const calcTotalStarTalent = (characters: any, account: any) => {
     const secondTalentBonus = getTalentBonus(character?.flatStarTalents, 'STONKS!');
     const thirdTalentBonus = getTalentBonus(character?.flatTalents, 'SUPERNOVA_PLAYER');
     // FamBonusQTYs[64], the Wizard family bonus, as the played character sees it
-    const familyEffBonus = character?.familyBonuses?.[CLASSES.Wizard] ?? 0;
+    const familyEffBonus = getCharacterFamilyBonus(character, CLASSES.Wizard);
     const stampBonus = getStampsBonusByEffect(account, 'Talent_Points_for_Star_Tab')
     const guildBonus = getGuildBonusBonus(account?.guild?.guildBonuses, 11);
     const flurboBonus = getDungeonFlurboStatBonus(account?.dungeons?.upgrades, 'Talent_Pts');
@@ -625,17 +604,22 @@ export const getCrystalCountdownSkills = () => {
     .reduce((res, { icon }) => ({ ...res, [icon]: true }), {})
 }
 
-export const getMaestroHand = (character: any, skillName: any, characters: any, account: any, hand: any) => {
-  const bestMaestro = characters?.filter((character: any) => checkCharClass(character?.class, CLASSES.Maestro))?.at(-1);
-  let leftHandOfLearningTalentBonus = getTalentBonus(bestMaestro?.flatTalents, hand, false, true);
-  const voidWalkerEnhancementEclipse = getTalentBonus(bestMaestro?.flatTalents, 'ENHANCEMENT_ECLIPSE');
-  const leftHandEnhancement = getVoidWalkerTalentEnhancements(characters, account, voidWalkerEnhancementEclipse, 42);
-  if (checkCharClass(character?.class, CLASSES.Maestro) && leftHandEnhancement) {
-    leftHandOfLearningTalentBonus *= 2;
-  }
-  if (character?.skillsInfo?.[skillName]?.level > bestMaestro?.skillsInfo?.[skillName]?.level) {
-    leftHandOfLearningTalentBonus = 0;
-  }
+const MAESTRO_HAND_TALENT_IDS: Record<string, number> = { LEFT_HAND_OF_LEARNING: 42, RIGHT_HAND_OF_ACTION: 43 };
 
-  return leftHandOfLearningTalentBonus;
+// game: TalentCalc's CalcTalentMAP[42] / [43], built for the logged-in character (the one viewed here).
+// The source is the LAST Maestro line character, read at its raw SkillLevels (no added levels). Anyone
+// else gets it on skills where they sit strictly below that Maestro. The Maestro itself gets nothing,
+// unless ENHANCEMENT_ECLIPSE (getbonus2(1, 49, -1), the account's best) enhances the hand: then double.
+export const getMaestroHand = (character: any, skillName: any, characters: any, account: any, hand: any) => {
+  const lastMaestro = characters?.filter((char: any) => checkCharClass(char?.class, CLASSES.Maestro))?.at(-1);
+  if (!lastMaestro) return 0;
+  const handBonus = getBaseTalentBonus(lastMaestro?.flatTalents, hand);
+  if (lastMaestro?.name !== character?.name) {
+    return (character?.skillsInfo?.[skillName]?.level ?? 0) < (lastMaestro?.skillsInfo?.[skillName]?.level ?? 0)
+      ? handBonus
+      : 0;
+  }
+  const enhancementEclipse = getHighestTalentAcrossCharacters(characters, 'ENHANCEMENT_ECLIPSE', character);
+  const enhanced = getVoidWalkerTalentEnhancements(characters, account, enhancementEclipse, MAESTRO_HAND_TALENT_IDS[hand]);
+  return enhanced ? 2 * handBonus : 0;
 }

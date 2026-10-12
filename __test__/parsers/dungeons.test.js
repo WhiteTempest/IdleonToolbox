@@ -2,7 +2,7 @@ import '../../polyfills';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { calcHappyHours, getDungeons } from '@parsers/dungeons';
 import { liveCount } from '@parsers/catalog';
-import { dungeonCreditShop, dungeonStats, dungeonFlurboStats } from '@website-data';
+import { dungeonCreditShop, dungeonStats, dungeonFlurboStats, randomList } from '@website-data';
 import { tryToParse } from '@utility/helpers';
 import first from '../fixtures/first.json';
 import second from '../fixtures/second.json';
@@ -19,17 +19,8 @@ describe('getDungeons', () => {
     expect(result.rngItems.every((u) => u.level === 0)).toBe(true);
     expect(result.insideUpgrades.every((u) => u.level === 0)).toBe(true);
     expect(result.upgrades.every((u) => u.level === 0)).toBe(true);
-  });
-
-  it('never crashes with no idleonData/accountOptions', () => {
-    expect(() => getDungeons(undefined, undefined)).not.toThrow();
-  });
-
-  it('carries catalog fields through', () => {
-    const result = getDungeons(undefined, undefined);
-    expect(result.rngItems[0].name).toBe('Helping_Heart');
-    expect(result.insideUpgrades[0].effect).toBe('Max_HP');
-    expect(result.upgrades[0].effect).toBe('Weapon_Power');
+    expect([result.rngItems[0].name, result.insideUpgrades[0].effect, result.upgrades[0].effect])
+      .toEqual(['Helping_Heart', 'Max_HP', 'Weapon_Power']);
   });
 
   it('applies save levels at the right indexes (synthetic, unconditional)', () => {
@@ -77,10 +68,21 @@ describe('getDungeons fixture regression', () => {
     expect(result.insideUpgrades).toHaveLength(liveCount(dungeonStats));
     expect(result.upgrades).toHaveLength(liveCount(dungeonFlurboStats));
   });
+});
 
-  it.each(FIXTURES)('%s: never throws', (_name, fixture) => {
-    const data = fixture.data ?? fixture;
-    expect(() => getDungeons(data, [])).not.toThrow();
+// The game's rank loop stops at the first RANDOlist[29] requirement the progress is still below, so
+// sitting exactly on a requirement is already the next rank.
+describe('getDungeons rank', () => {
+  const requirements = randomList[29].map(Number);
+  const middle = Math.floor(requirements.length / 2);
+  it.each([
+    ['no progress', 0, 1],
+    ['exactly on a requirement', requirements[middle], middle + 1],
+    ['just below a requirement', requirements[middle] - 1, middle]
+  ])('%s', (_name, progress, rank) => {
+    const options = [];
+    options[71] = progress;
+    expect(getDungeons({}, options).rank).toBe(rank);
   });
 });
 

@@ -1,4 +1,4 @@
-import { getMaxClaimTime, getSecPerBall } from '@parsers/dungeons';
+import { getArcadeBallsToClaim } from '@parsers/dungeons';
 import { getBuildCost } from '@parsers/world-3/construction';
 import { CAULDRON_INFO, CAULDRONS_MAX_LEVELS, LIQUID_INFO, MAX_VIAL_LEVEL, vialCostsArray } from '@parsers/world-2/alchemy';
 import {
@@ -34,6 +34,7 @@ import { MINE_CURRENCY_UPGRADE_INDICES } from '@parsers/world-7/minehead';
 import { isHatRackEligible } from '@parsers/world-3/hatRack';
 import { getGoldCostToMaxLevel, getStampsPerDay } from '@parsers/world-1/stamps';
 import { getTomeWishPity } from '@parsers/world-4/tome';
+import { BOSS_RESPAWN_ALERTS } from './bossRespawns';
 import { getTesseractBonus } from '@parsers/class-specific/tesseract';
 import { getIdleGuards, getSpareWorkers } from '@parsers/class-specific/royalGuardian';
 import { getCompassBonus } from '@parsers/class-specific/compass';
@@ -79,7 +80,7 @@ export const getOptions = (data) => {
   }, {});
 }
 
-export const getGeneralAlerts = (account, fields, options, characters) => {
+export const getGeneralAlerts = (account, fields, options, characters, lastUpdated, { bossesUp } = {}) => {
   const alerts = {};
   if (fields?.tasks?.checked) {
     const { tasks: tasksOptions } = options?.tasks
@@ -200,6 +201,14 @@ export const getGeneralAlerts = (account, fields, options, characters) => {
       const minibosses = getMiniBossesData(account).filter(({ current }) => current >= options?.etc?.miniBosses?.props?.value);
       if (minibosses.length > 0) {
         etc.miniBosses = minibosses;
+      }
+    }
+    if (options?.etc?.bossRespawns?.checked) {
+      // Up/killed state comes from the Bosses card tracker (useBossRespawns), not the save.
+      const enabledBosses = options?.etc?.bossRespawns?.props?.value || {};
+      const upBosses = Object.keys(BOSS_RESPAWN_ALERTS).filter((boss) => bossesUp?.[boss] && enabledBosses?.[boss] !== false);
+      if (upBosses.length > 0) {
+        etc.bossRespawns = upBosses;
       }
     }
     if (options?.etc?.newCharacters?.checked) {
@@ -601,10 +610,11 @@ export const getWorld2Alerts = (account, fields, options, characters) => {
   if (fields?.arcade?.checked) {
     const arcade = {};
     if (options?.arcade?.balls?.checked) {
-      const ballsToClaim = Math.floor(Math.min(account?.timeAway?.GlobalTime - account?.timeAway?.Arcade, getMaxClaimTime(account))
-        / Math.max(getSecPerBall(account), 1800));
-      const percent = 5 * account?.arcade?.maxBalls / 100;
-      const balls = ballsToClaim >= account?.arcade?.maxBalls - percent;
+      const ballsToClaim = getArcadeBallsToClaim(account, account?.timeAway?.GlobalTime - account?.timeAway?.Arcade);
+      // Read from the finished account: the arcade parser runs before the stamp multipliers land
+      const maxBalls = getArcadeBallsToClaim(account);
+      const percent = 5 * maxBalls / 100;
+      const balls = ballsToClaim >= maxBalls - percent;
       if (balls) {
         arcade.balls = balls;
       }

@@ -4,6 +4,53 @@ import React from 'react';
 /* eslint-disable react/jsx-key */
 export const patchNotes = [
   {
+    'ver': '3.3.91',
+    'gameVer': '2.3.531',
+    'date': '12/10/2026',
+    'features': [],
+    'fixes': [
+      'Sneaking: slab Jade and Essence bonuses, door HP, floor loot and solo charm bonuses now match the game',
+      'Hole: fixed the Fountain stack size, currency values and marble gain, harp notes and EXP, the jar collectible chance, Hive and Evertree requirements and Trench efficiency',
+      'Rift and Atom Collider: Construct Mastery, atom bonuses and costs, the alchemy liquid cap mastery and bubble particle costs now match the game',
+      'Smaller fixes: Justice coins, Wisdom opal chance, Killroy kills, Den and cove texts'
+    ]
+  },
+  {
+    'ver': '3.3.90',
+    'gameVer': '2.3.531',
+    'date': '11/10/2026',
+    'features': [
+      'Leaderboards: new Masterclass tab with Death Bringer, Wind Walker, Arcane Cultist and Royal Guardian boards, plus new boards for medallions, outposts, best outpost rate and best arcane map multi',
+      'Dashboard: new alerts for Dr Defecaus and Baba Yaga when they are up, based on the Bosses timer. Each boss can be turned off on its own',
+      'Breakdowns: every stat breakdown now opens the drawer (character stats, world pages and the old hover lists), and sources at 0 stay listed so you can see what is left to improve',
+      'Account-wide values now follow the character you were logged in with, like the game: sneaking, farming, gaming, sailing, summoning and breeding EXP, star sign bonuses, The Button skill tasks, summoning upgrades and more',
+      'Material Tracker: the greenstack button is now Track my greenstacks, and a new Track missing greenstacks button tracks the ones you have not stacked yet, alerting until they reach 10M'
+    ],
+    'fixes': [
+      'Class EXP now includes the Arcane Cultist map EXP bonus for the map each character is on',
+      'Character stats: damage now matches the game (Looty McShooty, Dreamer Damage, Total Damage Multi cards now multiply instead of adding), Kills per hour shows 0 when a character cannot hit, and Movement Speed shows a percent sign',
+      'Printer multiplier now matches the game: the Legend talent bonus on the printer screen is not actually applied',
+      'Masterclass drops: Extra Dust, Bones and Tachyon now include their lab jewels, Death Bringer talents and the right Killroy upgrade',
+      'Hole: Villager EXP no longer runs 1% low, The Bell rates are fixed, and Monument AFK now includes the Minehead multiplier',
+      'Sailing: artifact find chance, boat loot and boat speed now match the game, and Fun Hippoete no longer shows 20 percent too high',
+      'Construction: player build speed and construction EXP now match the game for every character',
+      'Shrines: shrine EXP is no longer 5x low with an upgraded Moai Head, World Tour now applies across the whole world, and the Crystal Shrine bonus uses the right map',
+      'Post Office: unspent box points no longer show an outdated value, and Box of Gosh now gives the right divinity EXP',
+      'Skill cooldowns no longer apply the Magician Starterpack reduction twice',
+      'Worship: totem souls are no longer about 49x low, and characters without a skull no longer show 5x too little charge rate',
+      'Lab: jewel set bonuses, No Bubble Left Behind and Depot Studies now include their jewels like the game',
+      'Forge: slot speed now includes the Godshard card, and speed barrels no longer show a much shorter time till empty',
+      'Bubba: upgrade costs are no longer 2x high and meat slices per minute are no longer 100x low, which also fixes the Megaflesh dashboard timer',
+      'Tesseract: kills needed and time left to charge each map now follow the game',
+      'Tome: the STR, AGI and WIS bonuses now match the game',
+      'Fixed crop evolution chance for accounts below the 100 percent cap',
+      'Star signs: the Silkrode Nanochip, negative bonuses, Major sign level requirements, Chronus sign costs and three sign values now follow the game',
+      'Wiki: accuracy needed for ores, trees, fish and bugs now uses their own hit chance curve, and monster accuracy is no longer one point short',
+      'Fixed Gaming EXP multi and several breakdowns that were missing sources or showing wrong values',
+      'Smaller fixes: shiny critter chance for archers, shiny pet level speed, upgradeable bubbles, Tesseract crystal charge, Blood Marrow meal speed, King Doot god bonuses, divinity style alerts, printer Wired In, superbit descriptions, obol totals with negative rolls, class bubble bonuses on Carpenter and the first bubble of each color, class EXP prayers, the arcade ball alert cap, Knockout and Grimoire monster targets, Steam achievement completion, Eclipse Skulls bonus, Death Note legend, gilded build slots, anvil time to full dungeon rank at an exact requirement, Gambit summoning doublers, Grimoire wraith crit, sushi and jelly multipliers, and the Legend talent 39 description'
+    ]
+  },
+  {
     'ver': '3.3.89',
     'gameVer': '2.3.531',
     'date': '10/10/2026',
@@ -13,14 +60,31 @@ export const patchNotes = [
       'New dashboard alert for Cooking: count meals whose next level costs fewer ladles than your threshold, with an option to include Overflowing Ladle',
       'Leaderboards: redesigned page with an Overview tab (global podium, your rank, highlights and boards within reach), boards grouped into sections, and a Top 100 drawer that shows the players around you',
       'Leaderboards: search any player or Anon# id to see their ranks, and jump to any board with the / key',
-      'Leaderboards: tied players now share a rank, and maxed boards show how many players hold the max'
+      'Leaderboards: tied players now share a rank, and maxed boards show how many players hold the max',
+      'Characters: click a skill to see its full EXP multiplier breakdown, split into multiplicative and additive bonuses, including every All skill EXP source',
+      'Characters: AFK Gains now opens a full breakdown, split into base, additive and multiplicative bonuses',
+      'Breakdowns: redesigned drawer with nested groups that show their total, clear % and x values, and inactive bonuses hidden behind a toggle',
+      'Characters: click a skill to see its efficiency breakdown next to its EXP multi, for Mining, Choppin, Fishing, Catching, Trapping, Worship, Cooking, Laboratory and Spelunking',
+      'Spelunking: the efficiency card now opens a breakdown',
+      'Characters: removed the inaccurate warning on Sneaking EXP',
+      'Statues on the General page now show their Statue Flair banner'
     ],
     'fixes': [
+      'Leaderboards: top 3 names in the Global ranking podium now link to their profiles',
+      'Alert settings: options that depend on another option now sit indented right under it',
       'Leaderboards: salt rank boards no longer count salts that are not unlocked yet',
       'Fixed Crystal Glunko Cove upgrade costs missing the 15% study discount, and Coral Reef daily gains counting the Demonblub card bonus when the card is not owned',
       'Monster cash multiplier now includes the Molti passive card and the first Cash from Mobs arcade upgrade',
+      'Class EXP multiplier now includes the full Omniphau divinity bonus (it was about 20x too low)',
+      'Cash multiplier on the dashboard, Formulas page and leaderboards now counts Coins for Charon like the character page',
+      'Divinity bonuses now follow the game rules for Coral Kid, King Doot and linked gods, fixing defence, damage, skill and class EXP, cash, AFK gains, printer, sailing speed and statue drop values on affected accounts',
+      'AFK gain rates now match the game: all activities were slightly too low and Spelunking far too high',
+      'Lab mainframe, printer, divinity style alert, Kattlekruk bubbles, AFK gains and Divinity EXP now count King Doot, pocket divinities and the god chosen by Coral Kid for major divinity bonuses',
       'Summoning: upgrade bonuses now include Absolute Stardom, Allstar and stone trial multipliers, and upgrade costs now match the game (Essential Essence, Sell Sell Sell and Cost Laundering included, Upgrade Vault sushi discounts no longer applied)',
-      'Sailing: Sushi Station now shows in the artifact find breakdown'
+      'Sailing: Sushi Station now shows in the artifact find breakdown',
+      'Skill EXP multipliers now match the game: they include the account-wide skill EXP bonus, and Farming (far too high), Cooking, Laboratory, Sneaking, Divinity and Construction EXP were corrected',
+      'Mining efficiency, skill efficiency, MSA farming/jade/essence bonuses and worship charge syphon now match the game',
+      'Fixed Cooking efficiency using the wrong skill mastery bonus'
     ]
   },
   {

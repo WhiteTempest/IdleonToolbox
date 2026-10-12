@@ -8,6 +8,7 @@ import Image from 'next/image';
 import { CardTitleAndValue } from '@components/common/styles';
 import { getSlabBonus } from '@parsers/world-5/sailing';
 import { IconInfoCircleFilled } from '@tabler/icons-react';
+import { isMissingGreenstack } from '@parsers/misc';
 
 const Slab = () => {
   const { state } = useContext(AppContext);
@@ -21,8 +22,7 @@ const Slab = () => {
     else if (itemDisplay === 'rotation' && item?.onRotation) return true;
     else if (itemDisplay === 'unobtainable' && item?.unobtainable) return true;
     else if (itemDisplay === 'greenstacked' && item?.greenStacked) return true;
-    else if (itemDisplay === 'greenstackable' && item?.greenstackable && !item?.greenStacked && !item?.unobtainable
-      && !item?.unrealisticGreenstack) return true;
+    else if (itemDisplay === 'greenstackable' && isMissingGreenstack(item)) return true;
     else if (itemDisplay === 'unrealistic' && item?.unrealisticGreenstack) return true;
   }
 
@@ -35,8 +35,8 @@ const Slab = () => {
     { name: 'Sail Spd', icon: 'Arti10', value: state?.account?.sailing?.artifacts?.[10]?.bonus ?? 0 },
     { name: 'Divinity', icon: 'Arti18', value: state?.account?.sailing?.artifacts?.[18]?.bonus ?? 0 },
     { name: 'Bits', icon: 'Arti20', value: state?.account?.sailing?.artifacts?.[20]?.bonus ?? 0 },
-    { name: 'Jade', icon: 'Slab4', value: state?.account?.sneaking?.jadeEmporium?.[8]?.bonus ?? 0 },
-    { name: 'Essence', icon: 'Slab5', value: state?.account?.sneaking?.jadeEmporium?.[6]?.bonus ?? 0 },
+    { name: 'Jade', icon: 'Slab4', value: getSlabBonus(state?.account, 4) ?? 0 },
+    { name: 'Essence', icon: 'Slab5', value: getSlabBonus(state?.account, 5) ?? 0 },
     { name: 'Pow', icon: 'CaveShopUpg17', value: getSlabBonus(state?.account, 6) ?? 0 },
     { name: 'Research Exp', icon: 'ClassIcons61', value: getSlabBonus(state?.account, 7) ?? 0 }
   ];

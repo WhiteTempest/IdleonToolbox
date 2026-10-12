@@ -5,7 +5,7 @@ import { mapEnemiesArray, mapPortals, monsterCoinQuantity, monsters, tesseract, 
 import { CLASSES, getCharacterByHighestTalent, getTalentBonus, getHighestTalentAcrossCharacters } from '@parsers/talents';
 import { getStatsFromGear } from '@parsers/items';
 import { getArcadeBonus } from '@parsers/world-2/arcade';
-import { getLabBonus } from '@parsers/world-4/lab';
+import { getJewelBonus } from '@parsers/world-4/lab';
 import { getBubbleBonus } from '@parsers/world-2/alchemy';
 import { getLoreBossBonus } from '@parsers/world-7/spelunking';
 import { getMeritocracyBonus } from '@parsers/world-2/voteBallot';
@@ -19,6 +19,7 @@ import { getExoticMarketBonus } from '@parsers/world-6/farming';
 import { isCompanionBonusActive } from '@parsers/misc';
 import { getSushiBonus } from '@parsers/world-7/sushiStation';
 import { getJellyBonus } from '@parsers/world-7/jellyOperator';
+import { additiveGroup, createBreakdown, multiplier, NUMBERED_GROUP, percent } from '@parsers/breakdown';
 
 export const tachyonNames = {
   0: 'Purple',
@@ -107,9 +108,10 @@ export const getTesseract = (idleonData: any, characters: any[], account: any, _
   })
 
   const crystalChargeReq = getCrystalChargeReq(characters, upgrades)
-  const weaponDropChance = 1 / (300 * Math.pow(1.2, account?.accountOptions?.[396] ?? 0));
+  // game: ArcaneType("WepDropChance" / "RingDropChance"), each slowed by +1% per OptionsListAccount[396 / 397]
+  const weaponDropChance = 1 / (300 * (1 + (account?.accountOptions?.[396] ?? 0) / 100));
   const weaponQuality = calcTesseractBonus(upgrades, 5, 0);
-  const ringDropChance = 1 / (500 * Math.pow(1.2, account?.accountOptions?.[397] ?? 0));
+  const ringDropChance = 1 / (500 * (1 + (account?.accountOptions?.[397] ?? 0) / 100));
   const ringQuality = calcTesseractBonus(upgrades, 23, 0);
 
   const unlockedPortals = (portalsRaw || []).reduce((result: any, mapRaw: any) => {
@@ -376,7 +378,8 @@ export const getExtraTachyon = (character: any, account: any) => {
   const tesseract = getTalentBonus(character?.flatTalents, 'TESSERACT');
   const { value: equipBonus } = getStatsFromGear(character, 95, account);
   const arcadeBonus = getArcadeBonus(account?.arcade?.shop, 'Arcane_Tachyons')?.bonus ?? 0;
-  const mainframeBonus = getLabBonus(account?.lab?.labBonuses, 123); // game MainframeBonus(123)
+  // game MainframeBonus(123): ids of 100+ are jewels (123 - 100 = Eternal Energy Jewel), not lab bonuses
+  const mainframeBonus = getJewelBonus(account?.lab?.jewels, 23);
   const paletteBonus = getPaletteBonus(account, 29) ?? 0;
   const exoticBonus = getExoticMarketBonus(account, 55) ?? 0;
   const emperorBonus = getEmperorBonus(account, 6);
@@ -384,7 +387,7 @@ export const getExtraTachyon = (character: any, account: any) => {
   const charmBonus = getCharmBonus(account, 'Mystery_Fizz'); // Pristine charm 22
   const loreBonus = getLoreBossBonus(account, 6) ?? 0; // Tome epilogue (LoreEpiBon 6)
   const meritocracyBonus = getMeritocracyBonus(account, 25) ?? 0;
-  const { value: allMasterclassDropz, sources: amdSources } = getAllMasterclassDropz(character, account);
+  const { value: allMasterclassDropz, breakdown: masterclassDropsGroup } = getAllMasterclassDropz(character, account);
   const backupEnergy = getTalentBonus(character?.flatTalents, 'BACKUP_ENERGY');
   const bundleBonus = isBundlePurchased(account?.bundles, 'bun_x') ? 1.2 : 1; // ExtraTachyonMulti
 
@@ -406,53 +409,46 @@ export const getExtraTachyon = (character: any, account: any) => {
 
   return {
     value,
-    breakdown: {
-      statName: "Extra Tachyon",
-      totalValue: notateNumber(value, "MultiplierInfo") + 'x',
-      categories: [
-        {
-          name: "Additive",
-          sources: [
-            { name: "Upgrade (Ripple in Spacetime)", value: upgrade17 },
-            { name: "Talent (Tesseract)", value: tesseract },
-            { name: "Upgrade (Verdon Hoarding)", value: upgrade34 },
-            { name: "Upgrade (Aurion Hoarding)", value: upgrade56 },
-            { name: "Gear", value: equipBonus },
-            { name: "Lab", value: mainframeBonus },
-            { name: "Arcade", value: arcadeBonus },
-            { name: "Palette", value: paletteBonus },
-            { name: "Exotic Market", value: exoticBonus },
-          ],
-        },
-        {
-          name: "Multipliers",
-          sources: [
-            { name: "Emperor", value: emperorBonus },
-            { name: "Bubble", value: bubbleBonus },
-            { name: "Meritocracy", value: meritocracyBonus },
-            { name: "Tome Epilogue", value: loreBonus },
-            { name: "Charm (Mystery Fizz)", value: charmBonus },
-            { name: "Backup Energy", value: Math.max(1, backupEnergy) },
-            { name: "Bundle", value: bundleBonus },
-          ],
-        },
-        {
-          name: "All Masterclass Drops (mult)",
-          sources: amdSources,
-        },
-      ],
-    }
+    breakdown: createBreakdown('Extra Tachyon', notateNumber(value, 'MultiplierInfo') + 'x', [
+      additiveGroup(NUMBERED_GROUP, [
+        percent('Upgrade (Ripple in Spacetime)', upgrade17),
+        percent('Talent (Tesseract)', tesseract),
+        percent('Upgrade (Verdon Hoarding)', upgrade34),
+        percent('Upgrade (Aurion Hoarding)', upgrade56),
+        percent('Gear', equipBonus),
+        percent('Lab', mainframeBonus),
+        percent('Arcade', arcadeBonus),
+        percent('Palette', paletteBonus),
+        percent('Exotic Market', exoticBonus)
+      ]),
+      additiveGroup(NUMBERED_GROUP, [
+        percent('Emperor', emperorBonus),
+        percent('Bubble', bubbleBonus)
+      ]),
+      masterclassDropsGroup,
+      multiplier('Meritocracy', 1 + meritocracyBonus / 100),
+      multiplier('Tome Epilogue', 1 + loreBonus / 100),
+      multiplier('Charm (Mystery Fizz)', 1 + charmBonus / 100),
+      multiplier('Backup Energy', Math.max(1, backupEnergy)),
+      multiplier('Bundle', bundleBonus)
+    ])
   };
 }
 
+// game: ArcaneType("KillsReq"), per world (mapId / 50), with two W4 maps overridden
+const KILLS_REQ_PER_WORLD = [10, 20, 40, 70, 80, 100, 250, 250];
+const KILLS_REQ_OVERRIDES: Record<number, number> = { 159: 30, 151: 45 };
+const EARLY_MAP_COUNT = 25;
+const EARLY_MAP_KILLS_REQ = 5;
 export const getMapKillsReq = (mapId: any) => {
-  const worldReq = [10, 20, 40, 70, 80, 250, 250, 250];
-  return 25 > mapId ? 5 : worldReq[Math.floor(mapId / 50)];
+  if (EARLY_MAP_COUNT > mapId) return EARLY_MAP_KILLS_REQ;
+  return KILLS_REQ_OVERRIDES[mapId] ?? KILLS_REQ_PER_WORLD[Math.floor(mapId / 50)];
 }
 
+// game: ArcaneType("TimeLeft"), seconds per world (mapId / 50)
+const TIME_LEFT_PER_WORLD = [360, 270, 230, 210, 200, 190, 180, 180];
 export const getMapTimeLeft = (mapId: any) => {
-  const worldReq = [360, 270, 225, 200, 180, 180, 180, 180];
-  return worldReq[Math.floor(mapId / 50)]
+  return TIME_LEFT_PER_WORLD[Math.floor(mapId / 50)]
 }
 
 export const getArcanistStats = (upgrades: any, totalUpgradeLevels: any, character: any, account: any) => {
@@ -546,8 +542,10 @@ const getDescription = (description: any, bonus: any) => {
 }
 
 const getCrystalChargeReq = (characters: any, upgrades: any) => {
+  // game: GetTalentNumber(2, 599), BACKUP_ENERGY's y bonus (the "- charge" half), of the Arcane
+  // Cultist doing the charging
   const bestArcane = getCharacterByHighestTalent(characters, CLASSES.Arcane_Cultist, 'BACKUP_ENERGY', true);
-  const bestBackupEnergy = getTalentBonus(bestArcane?.flatTalents, 'BACKUP_ENERGY');
+  const bestBackupEnergy = getTalentBonus(bestArcane?.flatTalents, 'BACKUP_ENERGY', true);
 
   return Math.ceil(Math.max(50, 200
     - (Math.min(100, calcTesseractBonus(upgrades, 13, 0))
@@ -560,6 +558,8 @@ export const getPrismaFragChance = (character: any, account: any, upgrades: any)
       * (calcTesseractBonus(upgrades, 51, 0) / 100))
     * Math.max(1, primoPrisma * Math.pow(1.5, Math.floor((character?.mapIndex ?? 0) / 50)))
 }
+
+const MAX_PRISMA_MULTI = 4;
 
 // game: "PrismaBonusMult"
 export const getPrismaMulti = (account: any) => {
@@ -577,33 +577,28 @@ export const getPrismaMulti = (account: any) => {
   const sushiBonus = getSushiBonus(account, 23);
   const jellyBonus = getJellyBonus(account, 36);
 
-  const value = Math.min(4, 2 + (tesseractBonus
+  const uncapped = 2 + (tesseractBonus
     + (arcadeBonus + (sushiBonus + jellyBonus) + (trophyBonus + (paletteBonus
-       + (sigilsBonus + exoticMarketBonus)))) + legendBonus + 50 * companionBonus) / 100);
+       + (sigilsBonus + exoticMarketBonus)))) + legendBonus + 50 * companionBonus) / 100;
+  const value = Math.min(MAX_PRISMA_MULTI, uncapped);
 
   return {
     value,
-    breakdown: {
-      statName: "Prisma multi",
-      totalValue: notateNumber(value, "MultiplierInfo"),
-      categories: [
-        {
-          name: "Additive",
-          sources: [
-            { name: "Tesseract", value: tesseractBonus },
-            { name: "Arcade", value: arcadeBonus },
-            { name: "Sushi", value: sushiBonus },
-            { name: "Jelly Operator", value: jellyBonus },
-            { name: "Trophy", value: trophyBonus },
-            { name: "Palette", value: paletteBonus },
-            { name: "Ethereal Sigils", value: sigilsBonus },
-            { name: "Exotic Market", value: exoticMarketBonus },
-            { name: "Legend Talent", value: legendBonus },
-            { name: "Companion", value: companionBonus ? 50 : 0 },
-          ],
-        },
-      ],
-    }
+    // The base x2 is +100% on top of the additive total's own 1
+    breakdown: createBreakdown('Prisma multi', notateNumber(value, 'MultiplierInfo'), [
+      percent('Base', 100),
+      percent('Tesseract', tesseractBonus),
+      percent('Arcade', arcadeBonus),
+      percent('Sushi', sushiBonus),
+      percent('Jelly Operator', jellyBonus),
+      percent('Trophy', trophyBonus),
+      percent('Palette', paletteBonus),
+      percent('Ethereal Sigils', sigilsBonus),
+      percent('Exotic Market', exoticMarketBonus),
+      percent('Legend Talent', legendBonus),
+      percent('Companion', 50 * companionBonus),
+      percent('Cap', 100 * (value - uncapped), { note: `At most ×${MAX_PRISMA_MULTI}` })
+    ], { combine: 'additive' })
   };
 }
 

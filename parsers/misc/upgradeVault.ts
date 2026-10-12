@@ -4,6 +4,12 @@ import { liveEntries } from '@parsers/catalog';
 import { isBundlePurchased, getEventShopBonus, isCompanionBonusActive } from '@parsers/misc';
 import { getResearchGridBonus } from '@parsers/world-7/research';
 import { getSushiBonus } from '@parsers/world-7/sushiStation';
+import { createBreakdown, multiplier } from '@parsers/breakdown';
+import { getMonsterLadderTarget } from '@parsers/class-specific/grimoire';
+
+// Knockout! (15) names its current target from the monster ladder progress in this OptionsListAccount slot
+const KNOCKOUT_INDEX = 15;
+const KNOCKOUT_PROGRESS_OPTION = 338;
 
 export const getUpgradeVault = (idleonData: any, accountData: any, charactersData: any[]) => {
   const upgradeVaultRaw = idleonData?.UpgVault || tryToParse(idleonData?.UpgVault);
@@ -19,7 +25,7 @@ export const parseUpgradeVault = (upgradeVaultRaw: any, accountData: any, charac
     oresMined: accountData?.accountOptions?.[340] ?? 0,
     fishCaught: accountData?.accountOptions?.[345] ?? 0,
     bugsCaught: accountData?.accountOptions?.[346] ?? 0,
-    knockoutProgress: accountData?.accountOptions?.[338] ?? 0
+    knockoutProgress: accountData?.accountOptions?.[KNOCKOUT_PROGRESS_OPTION] ?? 0
   };
   let upgrades = liveEntries<any>(upgradeVault).map(({ entry: upgrade, index }) => {
     return {
@@ -68,20 +74,14 @@ export const getVaultCostReduction = (accountData: any) => {
   const cheaperFactor = totalMulti > 0 ? 1 / totalMulti : 1; // the "N.NNx" number shown in-game
 
   // Per-source "cheaper" contribution = reciprocal of that source's cost multiplier.
-  const sources = [
-    { name: 'Darts', value: 1 / dartsBonusReduction },
-    { name: 'Companion (Sushi Roll)', value: companionMulti > 0 ? 1 / companionMulti : 1 },
-    { name: 'Sushi Station', value: sushiDiscount > 0 ? 1 / sushiDiscount : 1 }
-  ];
-
   return {
     totalMulti,
     cheaperFactor,
-    breakdown: {
-      statName: 'Vault cost reduction',
-      totalValue: notateNumber(cheaperFactor, 'MultiplierInfo'),
-      categories: [{ name: 'Multiplicative', sources }]
-    }
+    breakdown: createBreakdown('Vault cost reduction', notateNumber(cheaperFactor, 'MultiplierInfo'), [
+      multiplier('Darts', 1 / dartsBonusReduction),
+      multiplier('Companion (Sushi Roll)', companionMulti > 0 ? 1 / companionMulti : 1),
+      multiplier('Sushi Station', sushiDiscount > 0 ? 1 / sushiDiscount : 1)
+    ])
   };
 }
 
@@ -99,6 +99,9 @@ const resolveVaultDescription = (description: any, index: number, bonus: number,
   const dollar = getVaultDollarValue(index, bonus, ctx);
   if (dollar != null) {
     resolved = resolved.replace('$', dollar);
+  }
+  if (index === KNOCKOUT_INDEX) {
+    resolved = resolved.replace('&', '' + getMonsterLadderTarget(ctx.knockoutProgress));
   }
   // Monster Tax (2) ends with a "Total Coin Bonus from@all@sources;~x" clause whose `~`
   // (MonsterCash total) we don't compute — drop the dangling clause rather than show it raw.
@@ -131,7 +134,7 @@ const getVaultDollarValue = (index: number, bonus: number, ctx: any): string | n
   switch (index) {
     case 13:
       return '' + Math.round(1e4 * (1 - 1 / (1 + bonus / 100))) / 100;
-    case 15:
+    case KNOCKOUT_INDEX:
       return '' + Math.round(knockoutProgress * bonus);
     case 34:
       return '' + Math.round((vaultKills?.[8] ?? 0) * bonus);
@@ -303,17 +306,8 @@ export const getVaultTotalKills = ({ characters, account }: any) => {
   }
   vaultKillzTotals.push(totalCompletedTasks);
 
-  // Sum cauldron info for each world (alchemy bubbles, min 100 each)
-  // CauldronInfo[worldIndex] contains bubble levels, capped at 100 each
-  let totalCauldronLevels = 0;
-  for (let worldIndex = 0; worldIndex < 4; worldIndex++) {
-    const worldBubbles = account?.alchemy?.bubbles?.[worldIndex] || [];
-    const bubbleSum = worldBubbles.reduce((sum: any, bubble: any) => {
-      return sum + Math.min(100, bubble?.level || 0);
-    }, 0);
-    totalCauldronLevels = Math.round(totalCauldronLevels + bubbleSum);
-  }
-  vaultKillzTotals.push(totalCauldronLevels);
+  // Every bubble level of the 4 cauldrons, each capped at 100
+  vaultKillzTotals.push(account?.alchemy?.totalBubbleLevelsTill100 ?? 0);
 
   // Calculate kills for map 101
   const world5PortalMapIndex = 101;

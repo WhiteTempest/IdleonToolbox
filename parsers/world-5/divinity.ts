@@ -1,4 +1,3 @@
-import { isGodEnabledBySorcerer } from '@parsers/world-4/lab';
 import { isCompanionBonusActive } from '@parsers/misc';
 import { getActiveBubbleBonus, isPrismaBubble } from '@parsers/world-2/alchemy';
 import { getPrismaMulti } from '@parsers/class-specific/tesseract';
@@ -9,6 +8,7 @@ import { getJellyBonus } from '@parsers/world-7/jellyOperator';
 import { getUpgradeVaultBonus } from '@parsers/misc/upgradeVault';
 import { cosmoUpgrades, gods } from '@website-data';
 import { growth, tryToParse } from '@utility/helpers';
+import { getBestActiveCharacter } from '@parsers/talents';
 
 export const getDivinity = (idleonData: any, serializedCharactersData: any, accountData: any) => {
   const divinityRaw = tryToParse(idleonData?.Divinity) || idleonData?.Divinity;
@@ -131,38 +131,13 @@ export const getGodBlessingBonus = (gods: any, godName: any) => {
   return gods?.find(({ name }: any) => name === godName)?.blessingBonus ?? 0;
 }
 
-export const getGodByIndex = (linkedDeities: any, characters: any, gIndex: any) => {
-  const char = characters?.find((_: any, index: any) => linkedDeities?.[index] === gIndex)
-  return char?.deityMinorBonus;
-}
-
-export const getDeityLinkedIndex = (account: any, characters: any, deityIndex: any) => {
-  const coralKidLinked = account?.accountOptions?.[425] > 0 && account?.accountOptions?.[425] === deityIndex;
-  const pocketLinked = account?.hole?.godsLinks?.find(({ index }: any) => index === deityIndex);
-  const normalLink = account?.divinity?.linkedDeities?.map((deity: any, index: any) => deityIndex === deity || (isCompanionBonusActive(account, 0) && account?.finishedWorlds?.World4)
-    ? index
-    : -1);
-  const esLink = characters.map((character: any, index: any) => isGodEnabledBySorcerer(character, deityIndex) || (isCompanionBonusActive(account, 0) && account?.finishedWorlds?.World4)
-    ? index
-    : -1);
-  // Check if pocketLinked exists and add it to the result
-  return normalLink?.map((charIndex: any, index: any) => {
-    // First check for pocket link or coral kid link
-    if (pocketLinked || coralKidLinked) {
-      return index;
-    }
-    // Then check for normal and ES links as before
-    return charIndex === -1 && esLink?.[index] !== -1
-      ? esLink?.[index]
-      : charIndex;
-  }).filter((index: any) => index !== -1) || [];
-}
-
-export const getMinorDivinityBonus = (character: any, account: any, forcedDivinityIndex?: any, characters?: any) => {
-  const bigPCharacter = characters?.find((char: any) => char.equippedBubbles?.find(({ bubbleName }: any) => bubbleName === 'BIG_P'));
-  const bigPBubble = getActiveBubbleBonus((bigPCharacter || character || characters?.[0])?.equippedBubbles, 'BIG_P', account);
-  const divinityLevel = (character || bigPCharacter || characters?.[0])?.skillsInfo?.divinity?.level ?? 0;
-  const linkedDeity = forcedDivinityIndex ?? account?.divinity?.linkedDeities?.[character.playerId];
+// game: DivMinorBonus scales every character's minor bonus by AlchBubbles.Y2ACTIVE, the BIG_P bubble
+// equipped by the LOGGED-IN character. bubbleCharacter is that character for account-wide sums; a
+// character's own bonus (viewed as if it were playing) passes nothing and uses its own bubbles.
+export const getMinorDivinityBonus = (character: any, account: any, godSlot?: any, characters?: any, bubbleCharacter?: any) => {
+  const bigPBubble = getActiveBubbleBonus((bubbleCharacter || character || characters?.[0])?.equippedBubbles, 'BIG_P', account);
+  const divinityLevel = (character || characters?.[0])?.skillsInfo?.divinity?.level ?? 0;
+  const linkedDeity = godSlot ?? account?.divinity?.linkedDeities?.[character.playerId];
   return getMinorDivinityBonusValue({
     divinityLevel,
     bigPBubble,
@@ -178,8 +153,19 @@ export interface MinorDivinityInputs {
   coralKidUpgBonus: number;
 }
 
-// Arctis' slot in the gods list. Its minor bonus is the only one the game ceils into talent levels.
-export const ARCTIS_GOD_SLOT = 1;
+// A god's slot is its position in the gods list: every link the save stores is one, and every helper
+// here takes one except isMajorDivinityActive. The game's Divinity("Bonus_Minor"/"Bonus_MAJOR", p, i)
+// takes the god's index (GodsInfo[slot][13]) instead, so a number copied from the game into a slot
+// helper reads a different god. Name the god from these maps; divinity-breakpoints.test pins them.
+export const GOD_SLOT = {
+  Snehebatu: 0, Arctis: 1, Nobisect: 2, Harriep: 3, Goharut: 4,
+  Omniphau: 5, Purrmep: 6, Flutterbis: 7, Kattlekruk: 8, Bagur: 9
+} as const;
+
+export const GOD_INDEX = {
+  Snehebatu: 0, Arctis: 2, Nobisect: 7, Harriep: 3, Goharut: 5,
+  Omniphau: 4, Purrmep: 6, Flutterbis: 1, Kattlekruk: 8, Bagur: 9
+} as const;
 
 // Every link the save stores is a god slot, while the minorBonusMultiplier column is in godIndex
 // order, so the multiplier for a slot always comes out of a second lookup.
@@ -310,26 +296,115 @@ export const getW7ChosenGodIndex = (account: any) => {
 // Divinity("Bonus_MAJOR", playerIndex, godIndex), which decides whether a character gets a god's
 // major bonus. `godIndex` is the god's bonus id (the GodsInfo[..][13] column), while every link the
 // save stores is a god slot, so each comparison goes through gods[slot].godIndex.
-// God indices 6 (Purrmep) and 8 (Kattlekruk) short circuit on their own unlock flags in the game;
-// nothing reads those through here yet, so they are not modelled.
+// Purrmep and Kattlekruk pay theirs account wide while any character is directly linked to them: the
+// game reads flags (GenINFO[87] and [210]) it sets from every link at load, polytheism not included.
+// King Doot (Companions(0)) follows the logged-in character's divinity level: pass loggedInCharacter
+// when the game walks every character while one is logged in (lab tubes); without it the character
+// is treated as the one playing.
 // game: "Bonus_MAJOR"
-export const isMajorDivinityActive = (character: any, account: any, godIndex: number) => {
-  if (isCompanionBonusActive(account, 0)) return true;
-  if (isPocketDivinityOwned(account, godIndex)) return true;
-  if (getW7ChosenGodIndex(account) === godIndex) return true;
-  // Research grid square 173 hands Arctis to everyone, and gem shop item 9 does the same for
-  // Snehebatu, whoever the character is actually linked to.
-  if (godIndex === 2 && (account?.research?.gridSquares?.[173]?.bonuses?.[0] ?? 0) >= 1) return true;
-  if (godIndex === 0 && Number(account?.gemShopPurchases?.[9]) > 0) return true;
+export const isMajorDivinityActive = (character: any, account: any, godIndex: number, loggedInCharacter?: any) => {
+  if (isGodGrantedToEveryone(character, account, godIndex, loggedInCharacter) || getW7ChosenGodIndex(account) === godIndex) return true;
+  if (godIndex === GOD_INDEX.Purrmep || godIndex === GOD_INDEX.Kattlekruk) {
+    return (account?.divinity?.linkedDeities ?? []).some((slot: any) => slot >= 0 && Number((gods as any)?.[slot]?.godIndex) === godIndex);
+  }
+  return getLinkedGodSlot(character, account, godIndex) !== -1;
+}
 
+const DIV_STYLE_TRANQI = 5;
+
+// Divinity("DivPerHr", t) without its TranQi clause: whether character t meditates, AFK at Divinity or
+// counted in the lab with Goharut. The game's own rules here, not Bonus_MAJOR's: a raw pocket god slot
+// (no unlocked-spot check) of Arctis puts everyone in the lab, and only a pocket Goharut, King Doot or
+// a direct Goharut link counts for the god. King Doot and the "logged in at the lab with Goharut
+// major" clause, which makes every character meditate, follow the logged-in character.
+// game: "DivPerHr"
+export const isMeditatingForDivinity = (character: any, account: any, characters: any) => {
+  if (character?.afkTarget === 'Divinity') return true;
+  const loggedInCharacter = getBestActiveCharacter(characters) ?? character;
+  if (loggedInCharacter?.afkTarget === 'Laboratory'
+    && isMajorDivinityActive(loggedInCharacter, account, GOD_INDEX.Goharut, loggedInCharacter)) return true;
+  const pockets = [29, 30].map((index) => Number(account?.hole?.holesObject?.extraCalculations?.[index]));
+  const inLab = character?.afkTarget === 'Laboratory' || pockets.includes(GOD_SLOT.Arctis);
+  const hasGoharut = pockets.includes(GOD_SLOT.Goharut)
+    || isKingDootActive(loggedInCharacter, account)
+    || account?.divinity?.linkedDeities?.[character?.playerId] === GOD_SLOT.Goharut;
+  return inLab && hasGoharut;
+}
+
+// What an AFK claim actually pays a character's style rate for. DivPerHr above only feeds the "/hr"
+// numbers on the Divinity screen; Divinity_PTS is granted solely by the Divinity claim and by the
+// Laboratory claim with the claimer's own Goharut major, and the claimer is the one logged in.
+// Every other claim pays nothing but the TranQi EXP.
+// game: AFK claim "DIVINITY" / "LABORATORY" branches
+export const isMeditatingOnClaim = (character: any, account: any) =>
+  character?.afkTarget === 'Divinity'
+  || (character?.afkTarget === 'Laboratory'
+    && isMajorDivinityActive(character, account, GOD_INDEX.Goharut, character));
+
+// Divinity("DivPerHr", t) == 1: the TranQi style earns while not meditating.
+// game: "DivPerHr"
+export const isGainingDivinityPoints = (character: any, account: any, characters: any) =>
+  Number(account?.divinity?.linkedStyles?.[character?.playerId]) === DIV_STYLE_TRANQI
+  || isMeditatingForDivinity(character, account, characters);
+
+// Divinity("Bonus_Minor", playerIndex, godIndex): the god's minor bonus for one character, 0 when the
+// character doesn't get it. Unlike the major bonus, Coral Kid's chosen god plays no part here.
+// game: "Bonus_Minor"
+export const getCharacterMinorDivinityBonus = (character: any, account: any, godIndex: number, characters?: any) => {
+  const slot = isGodGrantedToEveryone(character, account, godIndex)
+    ? getGodSlotOf(godIndex)
+    : getLinkedGodSlot(character, account, godIndex);
+  return slot === -1 ? 0 : getMinorDivinityBonus(character, account, slot, characters);
+}
+
+// Divinity("Bonus_Minor", -1, godIndex): the minor bonus summed over every character linked to the
+// god. Only for Harriep and Goharut do King Doot, a pocket divinity or Coral Kid hand it to everyone,
+// and Coral Kid counts when OptionsListAccount[425] is godIndex + 1, although 425 is a 1-based slot
+// everywhere else (getW7ChosenGodIndex): for Goharut that is choosing Omniphau. The game has it that
+// way. Polytheism links, grid square 173 and gem shop item 9 don't count here.
+// game: "Bonus_Minor"
+export const getAccountMinorDivinityBonus = (account: any, characters: any, godIndex: number) => {
+  const loggedInCharacter = getBestActiveCharacter(characters);
+  const toEveryone = (godIndex === GOD_INDEX.Harriep || godIndex === GOD_INDEX.Goharut)
+    && (isKingDootActive(loggedInCharacter, account)
+      || isPocketDivinityOwned(account, godIndex)
+      || Number(account?.accountOptions?.[425]) === godIndex + 1);
+  return (characters ?? []).reduce((sum: number, character: any) => {
+    const linkedSlot = account?.divinity?.linkedDeities?.[character?.playerId];
+    const slot = toEveryone
+      ? getGodSlotOf(godIndex)
+      : linkedSlot != null && linkedSlot !== -1 && Number((gods as any)?.[linkedSlot]?.godIndex) === godIndex ? linkedSlot : -1;
+    return slot === -1 ? sum : sum + getMinorDivinityBonus(character, account, slot, characters, loggedInCharacter);
+  }, 0);
+}
+
+const getGodSlotOf = (godIndex: number) => (gods as any)?.findIndex((god: any) => Number(god?.godIndex) === godIndex) ?? -1;
+
+// Companions(0) reads 0 while the active character's divinity level is under 2: for one character that
+// is itself, account wide it is the logged-in character (getBestActiveCharacter).
+// The lab passes raw save characters, which hold the level in Lv0[14] rather than skillsInfo.
+export const isKingDootActive = (character: any, account: any) =>
+  !!isCompanionBonusActive(account, 0)
+  && (Number(character?.skillsInfo?.divinity?.level ?? character?.Lv0?.[14]) || 0) >= 2;
+
+// What hands a god's bonus to every character whoever they are linked to: King Doot, a pocket
+// divinity, research grid square 173 for Arctis and gem shop item 9 for Snehebatu.
+const isGodGrantedToEveryone = (character: any, account: any, godIndex: number, loggedInCharacter?: any) =>
+  isKingDootActive(loggedInCharacter ?? character, account)
+  || isPocketDivinityOwned(account, godIndex)
+  || (godIndex === GOD_INDEX.Arctis && (account?.research?.gridSquares?.[173]?.bonuses?.[0] ?? 0) >= 1)
+  || (godIndex === GOD_INDEX.Snehebatu && Number(account?.gemShopPurchases?.[9]) > 0);
+
+// The slot linking a character to a god, or -1: its own link, else the Elemental Sorcerer's polytheism
+// link once that slot is unlocked account wide. An unlinked character gets nothing, and the game does
+// not fall through to the polytheism link.
+const getLinkedGodSlot = (character: any, account: any, godIndex: number) => {
   const linkedSlot = account?.divinity?.linkedDeities?.[character?.playerId];
-  // An unlinked character gets nothing, and the game does not fall through to the polytheism link.
-  if (linkedSlot == null || linkedSlot === -1) return false;
-  if (Number((gods as any)?.[linkedSlot]?.godIndex) === godIndex) return true;
-
-  const secondSlot = character?.secondLinkedDeityIndex;
-  if (secondSlot == null) return false;
-  if (Number((gods as any)?.[secondSlot]?.godIndex) !== godIndex) return false;
-  // The second link only pays out once that god slot has been unlocked account wide.
-  return (Number(account?.divinity?.unlockedDeities) || 0) > secondSlot;
+  if (linkedSlot == null || linkedSlot === -1) return -1;
+  if (Number((gods as any)?.[linkedSlot]?.godIndex) === godIndex) return linkedSlot;
+  // Raw save characters (the lab) carry the polytheism talent level instead of the parsed link.
+  const polytheism = Number(character?.SkillLevels?.[505]) || 0;
+  const secondSlot = character?.secondLinkedDeityIndex ?? (polytheism > 0 ? polytheism % 10 : undefined);
+  if (secondSlot == null || Number((gods as any)?.[secondSlot]?.godIndex) !== godIndex) return -1;
+  return (Number(account?.divinity?.unlockedDeities) || 0) > secondSlot ? secondSlot : -1;
 }

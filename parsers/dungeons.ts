@@ -43,15 +43,10 @@ const parseDungeons = (dungeonUpgrades: any, accountOptions: any[] | undefined):
   const boostedRuns = opts?.[76] || 0;
   const dungeonLevels = randomList?.[29] ?? [];
   const progress = opts[71] || 0;
-  const rank =
-    Number(
-      dungeonLevels.reduce((rank: string, req: string, index: number, _: any) => {
-        if (opts[71] > Number(req)) {
-          rank = index.toString();
-        }
-        return rank;
-      }, '0')
-    ) + 1;
+  // game: the rank is the first RANDOlist[29] entry the progress is still below, so reaching a
+  // requirement exactly already counts as the next rank
+  const nextRankIndex = dungeonLevels.findIndex((req: string) => progress < Number(req));
+  const rank = nextRankIndex === -1 ? dungeonLevels.length : nextRankIndex;
   const rankReq = dungeonLevels?.[rank];
   return {
     upgrades,
@@ -85,6 +80,14 @@ export const getMaxClaimTime = (account: Account): number => {
 
 export const getSecPerBall = (account: Account): number => {
   return 4e3 / (1 + (getBallBonus(account) + getBribeBonus((account as any)?.bribes, 'Weighted_Marbles')) / 100)
+}
+
+// The arcade never charges a ball faster than this, however low Arcade_SecPerBall goes
+const MIN_SEC_PER_CLAIMED_BALL = 1800;
+
+// game: "Balls_to_claim" = floor(min(time away, Arcade_MaxClaimTime) / max(Arcade_SecPerBall, 1800))
+export const getArcadeBallsToClaim = (account: Account, secondsAway: number = Infinity): number => {
+  return Math.floor(Math.min(secondsAway, getMaxClaimTime(account)) / Math.max(getSecPerBall(account), MIN_SEC_PER_CLAIMED_BALL));
 }
 
 export const getBallBonus = (account: Account): number => {

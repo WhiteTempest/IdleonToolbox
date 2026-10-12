@@ -1,4 +1,5 @@
-import { number2letter, tryToParse } from '@utility/helpers';
+import { notateNumber, number2letter, tryToParse } from '@utility/helpers';
+import { createBreakdown, evaluateBreakdownNode, flat, multiplier, NUMBERED_GROUP, productGroup, sumGroup } from '@parsers/breakdown';
 import { cogKeyMap, flagsReqs, randomList, towers, gameTables } from '@website-data';
 import { createCogstructionData } from '@parsers/world-3/cogstrution';
 import { getGambitBonus } from '@parsers/world-5/caverns/gambit';
@@ -14,6 +15,10 @@ import {
   getAssembledExcogiaSlots,
   stripExcogiaBoost
 } from '@parsers/world-3/constructionOptimizer';
+import { getEventShopBonus, isCompanionBonusActive } from '@parsers/misc';
+import { getMineheadBonusQTY } from '@parsers/world-7/minehead';
+import { getJewelBonus } from '@parsers/world-4/lab';
+import { getOutpostRogBonus } from '@parsers/class-specific/royalGuardian';
 import type { IdleonData, Account } from '../types';
 
 // The board maths lives in its own module so the optimizer can run in a Web Worker without pulling
@@ -112,6 +117,11 @@ const parseFlags = (flagsUnlockedRaw: any[], flagsPlacedRaw: any[], cogsMap: any
   const leftColumn = buildExtraColumn(flagsUnlockedRaw, flagsPlacedRaw, cogsMap, cogsOrder, LEFT_COL_INDEX, LEFT_FLAG_INDEX);
   const rightColumn = buildExtraColumn(flagsUnlockedRaw, flagsPlacedRaw, cogsMap, cogsOrder, RIGHT_COL_INDEX, RIGHT_FLAG_INDEX);
   const expRateMulti = 1 + getSmallCogBonusTotal(cogsOrder, 2) / 100;
+  // game: WorkbenchStuff("ExtraBuildSPDmulti"), the factor baked into every Player_ cog's build rate
+  const companion157 = isCompanionBonusActive(account, 157) ? (account as any)?.companions?.list?.at(157)?.bonus ?? 0 : 0;
+  const extraBuildSpeedMulti = (1 + getSmallCogBonusTotal(cogsOrder, 1) / 100)
+    * (1 + companion157 / 100)
+    * Math.max(1, getOutpostRogBonus(account, 0));
   const finalFlaggyRate = firstBoard?.totalFlaggyRate * flaggyMulti;
   // ExtraBuildSPDmulti and ExtraFlaggyRatemulti are deliberately not applied to these totals. The
   // game's WorkbenchStuff("PlayerBuildSpd", ...) result gets multiplied by both and written into
@@ -129,6 +139,7 @@ const parseFlags = (flagsUnlockedRaw: any[], flagsPlacedRaw: any[], cogsMap: any
     totalFlaggyRate: finalFlaggyRate,
     totalExpRate: firstBoard?.totalExpRate * expRateMulti,
     playersBuildRate,
+    extraBuildSpeedMulti,
     leftColumn,
     rightColumn,
     smallCogs: getSmallCogUpgrades(cogsOrder, [...leftColumn, ...rightColumn]),
@@ -430,21 +441,35 @@ export const applyMaxLevelToTowers = (accountData: any) => {
   });
 }
 
-const getConstructionMasteryBonus = (account: any, totalConstruct: any, index: any) => {
-  if ((account?.rift?.currentRift ?? 0) < 40) return 0;
-  if (index === 0) {
+// The Construct Mastery rift bonus (rift 40), by WorkbenchStuff("ConstMasteryBonus", index)
+export const CONSTRUCT_MASTERY = {
+  REFINERY_SPEED: 0,
+  DAMAGE: 1,
+  BUILD_SPEED: 2,
+  TRAPPER_DRONE_LV: 3,
+  TALENT_LIBRARY_LV: 4,
+  SHRINE_LV: 5,
+  WIZARD_TOWER_LV: 6
+};
+const CONSTRUCT_MASTERY_RIFT = 40;
+
+// game: WorkbenchStuff("ConstMasteryBonus", index); totalConstruct is the sum of every building level.
+// The refinery speed tier has no level gate in the game: it pays floor(total / 10) from rift 40 on.
+export const getConstructionMasteryBonus = (account: any, index: number, totalConstruct = account?.towers?.totalLevels ?? 0) => {
+  if ((account?.rift?.currentRift ?? 0) < CONSTRUCT_MASTERY_RIFT) return 0;
+  if (index === CONSTRUCT_MASTERY.REFINERY_SPEED) {
     return Math.max(0, Math.floor(totalConstruct / 10));
-  } else if (index === 1) {
+  } else if (index === CONSTRUCT_MASTERY.DAMAGE) {
     return Math.max(0, 2 * Math.floor((totalConstruct - constructionMasteryThresholds?.[2]) / 10));
-  } else if (index === 2) {
+  } else if (index === CONSTRUCT_MASTERY.BUILD_SPEED) {
     return Math.max(0, 5 * Math.floor((totalConstruct - constructionMasteryThresholds?.[4]) / 10));
-  } else if (index === 3) {
+  } else if (index === CONSTRUCT_MASTERY.TRAPPER_DRONE_LV) {
     return totalConstruct >= constructionMasteryThresholds?.[1] ? 35 : 0;
-  } else if (index === 4) {
+  } else if (index === CONSTRUCT_MASTERY.TALENT_LIBRARY_LV) {
     return totalConstruct >= constructionMasteryThresholds?.[3] ? 100 : 0;
-  } else if (index === 5) {
+  } else if (index === CONSTRUCT_MASTERY.SHRINE_LV) {
     return totalConstruct >= constructionMasteryThresholds?.[5] ? 100 : 0;
-  } else if (index === 6) {
+  } else if (index === CONSTRUCT_MASTERY.WIZARD_TOWER_LV) {
     return totalConstruct >= constructionMasteryThresholds?.[6] ? 30 : 0;
   }
   return 0;
@@ -453,18 +478,61 @@ const getConstructionMasteryBonus = (account: any, totalConstruct: any, index: a
 export const getExtraMaxLevels = (account: any, maxLevel: any, atomBonus: any, index?: any) => {
   const totalConstruct = account?.towers?.totalLevels;
   return 50 === maxLevel ? Math.round(2 * atomBonus
-    + (getConstructionMasteryBonus(account, totalConstruct, 6)
+    + (getConstructionMasteryBonus(account, CONSTRUCT_MASTERY.WIZARD_TOWER_LV, totalConstruct)
       + 100 * getGambitBonus(account, 9)))
-    : 101 === maxLevel ? getConstructionMasteryBonus(account, totalConstruct, 4)
+    : 101 === maxLevel ? getConstructionMasteryBonus(account, CONSTRUCT_MASTERY.TALENT_LIBRARY_LV, totalConstruct)
       : 100 === maxLevel
         ? (18 <= index && account?.coralReef?.unlockedCorals > index - 18
-          ? Math.round(getConstructionMasteryBonus(account, totalConstruct, 5) + 100 + getSushiBonus(account, 58))
-          : Math.round(getConstructionMasteryBonus(account, totalConstruct, 5) + getSushiBonus(account, 58)))
-        : 15 === maxLevel ? getConstructionMasteryBonus(account, totalConstruct, 3) : 0;
+          ? Math.round(getConstructionMasteryBonus(account, CONSTRUCT_MASTERY.SHRINE_LV, totalConstruct) + 100 + getSushiBonus(account, 58))
+          : Math.round(getConstructionMasteryBonus(account, CONSTRUCT_MASTERY.SHRINE_LV, totalConstruct) + getSushiBonus(account, 58)))
+        : 15 === maxLevel ? getConstructionMasteryBonus(account, CONSTRUCT_MASTERY.TRAPPER_DRONE_LV, totalConstruct) : 0;
 }
 
-export const getGildedBoostioBonus = (account: any) => {
+const GILDED_BOOSTIO_BASE = 3;
+
+// The trimmed slot's build speed multiplier
+const getGildedBoostioMultipliers = (account: any) => {
   const atomBonus = getAtomBonus(account, 'Nitrogen_-_Construction_Trimmer');
   const legendTalentBonus = getLegendTalentBonus(account, 33);
-  return (3 + atomBonus / 100) * (1 + legendTalentBonus / 100);
+  return productGroup('Trimmed slot bonuses', [
+    sumGroup(NUMBERED_GROUP, [
+      flat('Base', GILDED_BOOSTIO_BASE),
+      flat('Construction Trimmer (Atom)', atomBonus / 100)
+    ], { unit: 'multiplier' }),
+    multiplier('Legend talent', 1 + legendTalentBonus / 100)
+  ]);
+}
+
+export const getGildedBoostioBonus = (account: any) => evaluateBreakdownNode(getGildedBoostioMultipliers(account));
+
+const MAX_GILDED_SLOTS = 8;
+// Sapphire Rhinestone gilds one slot per 5 of its MainframeBonus(103)
+const SAPPHIRE_RHINESTONE_PER_SLOT = 5;
+const SAPPHIRE_RHINESTONE_INDEX = 3;
+const MINEHEAD_GILDED_SLOT_UPGRADE = 18;
+
+// game: WorkbenchStuff("TotalGildedSlots"); the first N build slots are trimmed (gilded)
+export const getTotalGildedSlots = (account: any) => {
+  const sapphireRhinestone = Math.ceil(getJewelBonus(account?.lab?.jewels, SAPPHIRE_RHINESTONE_INDEX) / SAPPHIRE_RHINESTONE_PER_SLOT);
+  const atomSlot = getAtomBonus(account, 'Nitrogen_-_Construction_Trimmer') ? 1 : 0;
+  const total = Math.min(1, getMineheadBonusQTY(account, MINEHEAD_GILDED_SLOT_UPGRADE))
+    + sapphireRhinestone
+    + atomSlot
+    + Math.min(1, getLegendTalentBonus(account, 33))
+    + getGambitBonus(account, 9)
+    + getEventShopBonus(account, 14);
+  return Math.round(Math.min(MAX_GILDED_SLOTS, total));
+}
+
+export const getTrimmedBuildSpeed = (account: any) => {
+  const buildSpeed = account?.construction?.totalBuildRate ?? 0;
+  const multipliers = getGildedBoostioMultipliers(account);
+  const value = buildSpeed * evaluateBreakdownNode(multipliers);
+  return {
+    value,
+    breakdown: createBreakdown('Trimmed Build Speed', String(notateNumber(value, 'Big')), [
+      flat('Build speed', buildSpeed),
+      multipliers
+    ])
+  };
 }
