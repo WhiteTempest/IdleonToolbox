@@ -1,34 +1,61 @@
-import { cleanUnderscore, createArrayOfArrays, growth, round, tryToParse } from '@utility/helpers';
+import { cleanUnderscore, createArrayOfArrays, growth, notateNumber, round, tryToParse } from '@utility/helpers';
 import { cauldrons, p2w, sigils, vials } from '@website-data';
 import { liveEntries } from '@parsers/catalog';
 import { isArtifactAcquired } from '@parsers/world-5/sailing';
 import { getSaltLickBonus } from '@parsers/world-3/saltLick';
 import { getMealsBonusByEffectOrStat } from '@parsers/world-4/cooking';
 import { getJewelBonus, getLabBonus } from '@parsers/world-4/lab';
-import { getEventShopBonus, isBundlePurchased, isCompanionBonusActive, isMasteryBonusUnlocked } from '@parsers/misc';
+import { getEventShopBonus, getStatCurveValue, isBundlePurchased, isCompanionBonusActive, isMasteryBonusUnlocked } from '@parsers/misc';
 import { GOD_INDEX, isMajorDivinityActive } from '@parsers/world-5/divinity';
-import { getStampsBonusByEffect } from '@parsers/world-1/stamps';
+import { getStampsBonusByEffect, getStampsBonusByStat } from '@parsers/world-1/stamps';
+import { getGuildBonusBonus } from '@parsers/guild';
+import { getPostOfficeBonus } from '@parsers/world-3/postoffice';
+import { getStarSignBonus } from '@parsers/starSigns';
 import { getArcadeBonus } from '@parsers/world-2/arcade';
 import { isRiftBonusUnlocked } from '@parsers/world-4/rift';
 import { getUpgradeVaultBonus } from '@parsers/misc/upgradeVault';
 import { getPrismaMulti } from '@parsers/class-specific/tesseract';
-import { getAllTalentAddedLevels, getBestActiveCharacter, getHighestTalentAcrossCharacters } from '@parsers/talents';
-import { getMeritocracyBonus } from '@parsers/world-2/voteBallot';
+import {
+  getAllTalentAddedLevels,
+  getBaseTalentBonus,
+  getBestActiveCharacter,
+  getHighestTalentAcrossCharacters,
+  getTalentBonus,
+  mainStatMap
+} from '@parsers/talents';
+import { getMeritocracyBonus, getVoteBonus } from '@parsers/world-2/voteBallot';
 import { getLegendTalentBonus } from '@parsers/world-7/legendTalents';
 import { getZenithBonus } from '@parsers/world-1/statues';
-import { getSpelunkingBonus } from '@parsers/world-7/spelunking';
+import { getSpelunkingBonus, isEtherealBonusUnlocked } from '@parsers/world-7/spelunking';
 import { getMineheadBonusQTY } from '@parsers/world-7/minehead';
-import { NUMBERED_GROUP, additiveGroup, createBreakdown, flat, info, multiplier, percent, productGroup, sumGroup } from '@parsers/breakdown';
+import { getAchievementStatus } from '@parsers/achievements';
+import { getWinnerBonus } from '@parsers/world-6/summoning';
+import { isJadeBonusUnlocked } from '@parsers/world-6/sneaking';
+import { getPaletteBonus } from '@parsers/world-5/gaming';
+import { getSushiBonus } from '@parsers/world-7/sushiStation';
+import {
+  NUMBERED_GROUP,
+  additiveGroup,
+  createBreakdown,
+  evaluateBreakdownNode,
+  flat,
+  info,
+  multiplier,
+  percent,
+  productGroup,
+  sumGroup
+} from '@parsers/breakdown';
 
 export const MAX_VIAL_LEVEL = 13;
 // One row per cauldron / liquid, in save order: the slug the catalog and the rest of the app key by,
 // the name the game's own p2w screen draws (N.js "POWER_CAULDRON" / "WATER_DROPS"), the chart color,
-// the bubble image letter, and the CauldronBubbles prefix. Every mapping below is derived from these.
+// the bubble image letter, the CauldronBubbles prefix, and the vial stat behind its brew speed. Every mapping
+// below is derived from these.
 export const CAULDRON_INFO = [
-  { name: 'power', displayName: 'Power', color: '#ff9000', imageLetter: 'O', bubblePrefix: '_' },
-  { name: 'quicc', displayName: 'Quicc', color: '#76ef5a', imageLetter: 'G', bubblePrefix: 'a' },
-  { name: 'high-iq', displayName: 'High-IQ', color: '#f1a2fc', imageLetter: 'P', bubblePrefix: 'b' },
-  { name: 'kazam', displayName: 'Kazam', color: '#f6f031', imageLetter: 'Y', bubblePrefix: 'c' }
+  { name: 'power', displayName: 'Power', color: '#ff9000', imageLetter: 'O', bubblePrefix: '_', brewVialStat: 'OrangeBrew' },
+  { name: 'quicc', displayName: 'Quicc', color: '#76ef5a', imageLetter: 'G', bubblePrefix: 'a', brewVialStat: 'GreenBrew' },
+  { name: 'high-iq', displayName: 'High-IQ', color: '#f1a2fc', imageLetter: 'P', bubblePrefix: 'b', brewVialStat: 'PurpleBrew' },
+  { name: 'kazam', displayName: 'Kazam', color: '#f6f031', imageLetter: 'Y', bubblePrefix: 'c', brewVialStat: 'YellowBrew' }
 ];
 export const LIQUID_INFO = [
   { name: 'water drops', displayName: 'Water Drops' },
@@ -368,8 +395,10 @@ const isClassMultiplied = (bubble: any) => {
 
 // game: "BubbleBonus" plus the TalentCalc(-2) multipliers. shouldMultiply = the character is of the
 // cauldron's class; the class bubble only lands on the bubbles that qualify for it.
-export const getBubbleBonus = (account: any, bubbleName: any, shouldRound?: any, shouldMultiply?: any) => {
-  const targetBubble = account?.alchemy?.bubblesFlat?.find(
+// cauldron: look the bubble up in that cauldron only, for names several cauldrons share (ESSENCE_BOOST)
+export const getBubbleBonus = (account: any, bubbleName: any, shouldRound?: any, shouldMultiply?: any, cauldron?: string) => {
+  const candidates = cauldron ? account?.alchemy?.bubbles?.[cauldron] : account?.alchemy?.bubblesFlat;
+  const targetBubble = candidates?.find(
     ({ bubbleName: name }: any) => name === bubbleName
   );
   if (targetBubble === -1) return 0;
@@ -597,9 +626,13 @@ const getBestBubbleBreakthrough = (characters: any) => {
   }, { value: 0, characterName: null });
 }
 
+// OptionsListAccount[32] holds one 0/1 digit per cauldron
+const IVORY_CAULDRON_MULTI = 1.5;
+const isIvoryCauldron = (account: any, cauldronIndex: number) =>
+  `${account?.accountOptions?.[32] ?? ''}`.charAt(cauldronIndex) === '1';
+
 export const applyNewBubbleChances = (account: any, characters: any) => {
   const bubbleBreakthrough = getBestBubbleBreakthrough(characters);
-  const ivoryCauldrons = `${account?.accountOptions?.[32] ?? ''}`;
   return Object.fromEntries(Object.entries(account?.alchemy?.cauldrons ?? {}).map(([name, cauldron]: any) => {
     const index = CAULDRON_INFO.findIndex((info) => info.name === name);
     const luckLevel = cauldron?.boosts?.luck?.level ?? 0;
@@ -608,7 +641,7 @@ export const applyNewBubbleChances = (account: any, characters: any) => {
     const p2wLevel = account?.alchemy?.p2w?.cauldrons?.[index]?.newBubble?.level ?? 0;
     const p2wBonus = Math.max(growth(func, p2wLevel, x1, x2, false), 1);
     const talentMulti = 1 + bubbleBreakthrough.value / 100;
-    const ivory = ivoryCauldrons.charAt(index) === '1' ? 1.5 : 1;
+    const ivory = isIvoryCauldron(account, index) ? IVORY_CAULDRON_MULTI : 1;
     const multi = luck * p2wBonus * talentMulti * ivory;
     const base = getBaseNewBubbleChance(cauldron?.unlockedBubbles ?? 0);
     return [name, {
@@ -625,6 +658,133 @@ export const applyNewBubbleChances = (account: any, characters: any) => {
           { name: 'Bubble Breakthrough', value: talentMulti },
           { name: 'Ivory cauldron', value: ivory }
         ]
+      }
+    }];
+  }));
+}
+
+// game: CauldronStats("ResearchSpeed") / ("SpecificSpdBonuses")
+const ALCHEMY_LEVEL_POWER = 0.8;
+const WISDOM_CURVE_DIVISOR = 0.6;
+const SPEED_BOOST_PER_LEVEL = 5;
+const GUILD_TOWN_PRODUCTION_INDEX = 5;
+const MAFIOSO_COMPANION_INDEX = 46;
+const PLAYER_P2W_INDEX = 3;
+const PLAYER_P2W_SPEED = 0;
+const CAULDRON_P2W_INDEX = 0;
+const CAULDRON_P2W_SPEED = 0;
+
+// game: cauldronp2wbonuses("CauldronBonus"), unrounded and never below 0
+const getCauldronP2wBonus = (p2wIndex: number, bonusIndex: number, level: number) => {
+  const [x1, x2, func] = p2w[p2wIndex][bonusIndex];
+  return Math.max(0, growth(func, level, x1, x2, false) ?? 0);
+}
+
+// The brew rate a character adds to any cauldron it stands in, per hour. The logged-in character uses its
+// live WIS, Busy Brewin' with added levels and the town production speed; every other one its saved WIS
+// and raw Busy Brewin' level, with no town production speed. The stamp, guild, bubble, post office and
+// companion terms are account-wide (the bubble's class multi and the box follow the logged-in character).
+export const getCharacterBrewSpeed = (character: any, account: any, characters: any) => {
+  const loggedIn = getBestActiveCharacter(characters) ?? character;
+  const isLoggedIn = loggedIn?.name === character?.name;
+  const alchemyLevel = character?.skillsInfo?.alchemy?.level ?? 0;
+  const base = Math.round(Math.pow(alchemyLevel, ALCHEMY_LEVEL_POWER));
+
+  const stampBonus = getStampsBonusByStat(account, 'AlchSpd');
+  const guildBonus = getGuildBonusBonus(account?.guild?.guildBonuses, GUILD_TOWN_PRODUCTION_INDEX);
+  const bubbleBonus = getBubbleBonus(account, 'BREWSTACHIO', false, mainStatMap?.[loggedIn?.class] === 'wisdom');
+  const postOfficeBonus = getPostOfficeBonus(loggedIn?.postOffice, 'Potion_Package', 0);
+
+  const p2wSpeed = getCauldronP2wBonus(PLAYER_P2W_INDEX, PLAYER_P2W_SPEED, account?.alchemy?.p2w?.player?.speedLv ?? 0);
+  const wisdomMulti = 1 + getStatCurveValue(character?.stats?.wisdom ?? 0) / WISDOM_CURVE_DIVISOR;
+  const busyBrewin = isLoggedIn
+    ? getTalentBonus(character?.flatTalents, 'BUSY_BREWIN\'')
+    : getBaseTalentBonus(character?.flatTalents, 'BUSY_BREWIN\'');
+  const brokenTime = isLoggedIn ? getTalentBonus(character?.flatTalents, 'BROKEN_TIME') : 0;
+  const starSign = isLoggedIn ? getStarSignBonus(character, account, 'Speed_in_Town') : 0;
+  const characterSpeed = p2wSpeed * alchemyLevel * wisdomMulti * (1 + (busyBrewin + brokenTime + starSign) / 100);
+
+  const companionBonus = isCompanionBonusActive(account, MAFIOSO_COMPANION_INDEX)
+    ? account?.companions?.list?.at(MAFIOSO_COMPANION_INDEX)?.bonus ?? 0
+    : 0;
+
+  const value = base
+    * (1 + (stampBonus + guildBonus + bubbleBonus + postOfficeBonus) / 100)
+    * (1 + characterSpeed / 100)
+    * (1 + companionBonus / 100);
+
+  return {
+    value,
+    breakdown: createBreakdown(`${cleanUnderscore(character?.name ?? '')} brew speed`, value, [
+      flat('Base', base, { note: `Alchemy level ${alchemyLevel}` }),
+      additiveGroup(NUMBERED_GROUP, [
+        percent('Stamp', stampBonus),
+        percent('Guild', guildBonus),
+        percent('Brewstachio (Bubble)', bubbleBonus),
+        percent('Potion Package (Post Office)', postOfficeBonus)
+      ]),
+      additiveGroup(NUMBERED_GROUP, [
+        productGroup('Alchemy speed', [
+          flat('Pay 2 Win alchemy speed', p2wSpeed),
+          flat('Alchemy level', alchemyLevel),
+          multiplier('Wisdom', wisdomMulti),
+          additiveGroup(NUMBERED_GROUP, [
+            percent('Busy Brewin\' (Talent)', busyBrewin),
+            percent('Broken Time (Talent)', brokenTime),
+            percent('Star signs', starSign)
+          ])
+        ], { unit: 'percent' })
+      ]),
+      multiplier('Mafioso (Companion)', 1 + companionBonus / 100)
+    ])
+  };
+}
+
+// game: CauldronStats("SpecificSpdBonuses", cauldron)
+export const getCauldronBrewMulti = (account: any, cauldronIndex: number) => {
+  const vialBonus = getVialsBonusByStat(account?.alchemy?.vials, CAULDRON_INFO[cauldronIndex]?.brewVialStat) ?? 0;
+  const p2wLevel = account?.alchemy?.p2w?.cauldrons?.[cauldronIndex]?.speed?.level ?? 0;
+  const p2wBonus = getCauldronP2wBonus(CAULDRON_P2W_INDEX, CAULDRON_P2W_SPEED, p2wLevel);
+  const ivory = isIvoryCauldron(account, cauldronIndex) ? IVORY_CAULDRON_MULTI : 1;
+  const speedLevel = account?.alchemy?.cauldrons?.[CAULDRON_INFO[cauldronIndex]?.name]?.boosts?.speed?.level ?? 0;
+  const speedBoost = Math.round(SPEED_BOOST_PER_LEVEL * speedLevel);
+  const value = (1 + vialBonus / 100) * (1 + p2wBonus / 100) * ivory * (1 + speedBoost / 100);
+  return {
+    value,
+    lines: [
+      multiplier('Vial', 1 + vialBonus / 100),
+      multiplier('Pay 2 Win speed', 1 + p2wBonus / 100),
+      multiplier('Ivory cauldron', ivory),
+      multiplier('Speed boost', 1 + speedBoost / 100, { note: `Lv. ${speedLevel}` })
+    ]
+  };
+}
+
+// The brew per hour the game draws under each cauldron: the cauldron's multiplier times the speed of every
+// character brewing in it.
+export const applyBrewSpeeds = (account: any, characters: any) => {
+  return Object.fromEntries(Object.entries(account?.alchemy?.cauldrons ?? {}).map(([name, cauldron]: any) => {
+    const index = CAULDRON_INFO.findIndex((info) => info.name === name);
+    const multi = getCauldronBrewMulti(account, index);
+    const brewers = (cauldron?.players ?? [])
+      .map(({ index: playerIndex }: any) => characters?.find(({ playerId }: any) => playerId === playerIndex))
+      .filter(Boolean)
+      .map((character: any) => ({ character, ...getCharacterBrewSpeed(character, account, characters) }));
+    const charactersSpeed = brewers.reduce((sum: number, { value }: any) => sum + value, 0);
+    const value = charactersSpeed * multi.value;
+    return [name, {
+      ...cauldron,
+      brewSpeed: {
+        value,
+        multi: multi.value,
+        breakdown: createBreakdown(`${CAULDRON_INFO[index]?.displayName} brew speed`, value, [
+          sumGroup('Characters brewing', brewers.map(({ character, breakdown }: any) =>
+            productGroup(cleanUnderscore(character?.name ?? '') ?? '', breakdown.tree, { unit: 'flat' })), {
+            unit: 'flat',
+            ...(brewers.length ? {} : { note: 'No character is brewing here' })
+          }),
+          productGroup(NUMBERED_GROUP, multi.lines)
+        ])
       }
     }];
   }));
@@ -693,7 +853,103 @@ export const getSigilBonus = (sigils: any, name: any, excludeEclectic?: boolean)
   }, 0);
 };
 
-export const applyArtifactBonusOnSigil = (sigils: any, artifacts: any, meritocracyBonus = 0) => {
+const SIGIL_SPEED_ACHIEVEMENT_INDEX = 112;
+const SIGIL_SPEED_GEM_SHOP_INDEX = 110;
+const SIGIL_SPEED_GEM_SHOP_PERCENT = 20;
+const SIGIL_SPEED_ARCADE_INDEX = 43;
+const SIGIL_SPEED_VOTE_INDEX = 17;
+const SIGIL_SPEED_PALETTE_INDEX = 20;
+const SIGIL_SPEED_LEGEND_INDEX = 31;
+const SIGIL_SPEED_SUSHI_INDEX = 41;
+// Lab "Sigils of Olden Alchemy" (MainframeBonus(12)): without it no sigil charges at all
+const SIGILS_LAB_BONUS_INDEX = 12;
+// The game's charge loop walks CauldronJobs[1] up to index 9 only, so an 11th character never charges a sigil
+const SIGIL_CHARGING_SLOTS = 10;
+
+// game: Labb("SigilBonusSpeed"), sigil EXP per hour for every character assigned to a sigil
+export const getSigilSpeed = (account: any) => {
+  const achievement = getAchievementStatus(account?.achievements, SIGIL_SPEED_ACHIEVEMENT_INDEX);
+  const peaPod = getSigilBonus(account?.alchemy?.p2w?.sigils, 'PEA_POD');
+  const gemShop = SIGIL_SPEED_GEM_SHOP_PERCENT * (account?.gemShopPurchases?.[SIGIL_SPEED_GEM_SHOP_INDEX] ?? 0);
+  const vial = getVialsBonusByStat(account?.alchemy?.vials, 'SigSpd');
+  const stamps = getStampsBonusByEffect(account, '+{%_Sigil_Charge_rate');
+  const winner = getWinnerBonus(account, '<x Sigil SPD');
+  const sushi = getSushiBonus(account, SIGIL_SPEED_SUSHI_INDEX);
+  const arcade = getArcadeBonus(account?.arcade?.shop, SIGIL_SPEED_ARCADE_INDEX)?.bonus ?? 0;
+  const turtleVial = getVialsBonusByStat(account?.alchemy?.vials, '6turtle');
+  const vote = getVoteBonus(account, SIGIL_SPEED_VOTE_INDEX);
+  const palette = getPaletteBonus(account, SIGIL_SPEED_PALETTE_INDEX);
+  const legend = getLegendTalentBonus(account, SIGIL_SPEED_LEGEND_INDEX) ?? 0;
+  const tree = [
+    additiveGroup(NUMBERED_GROUP, [
+      percent('Achievement', achievement),
+      percent('Pea Pod (Sigil)', peaPod),
+      percent('Gem store', gemShop),
+      percent('Vial', vial),
+      percent('Stamps', stamps)
+    ]),
+    multiplier('Summoning', 1 + winner / 100),
+    multiplier('Sushi Station', 1 + sushi / 100),
+    multiplier('Arcade', 1 + arcade / 100),
+    multiplier('Turtle Vial', 1 + turtleVial / 100),
+    multiplier('Vote', 1 + vote / 100),
+    multiplier('Palette', 1 + palette / 100),
+    multiplier('Legend talent', 1 + legend / 100)
+  ];
+  const value = evaluateBreakdownNode(productGroup('Sigil speed', tree));
+  return {
+    value,
+    breakdown: createBreakdown('Sigil Speed', `${notateNumber(value, 'MultiplierInfo')}x`, tree)
+  };
+};
+
+// The tier a sigil can level into next needs its own account unlock
+export const getSigilTierUnlocks = (account: any) => ({
+  // Ninja("EmporiumBonus", 31)
+  jade: !!isJadeBonusUnlocked(account, 'Ionized_Sigils'),
+  // Spelunk("DoWeHaveLoreN1", 6)
+  ethereal: !!isEtherealBonusUnlocked(account),
+  // ResearchStuff("GreenSigilsUnlocked"): Grid_Bonus(128) >= 1 and the same lore boss
+  eclectic: !!account?.research?.greenSigilsUnlocked
+});
+
+// EXP the sigil needs for its next level, or null when it cannot level further (maxed, or the tier is locked)
+export const getSigilNextCost = (sigil: any, unlocks: ReturnType<typeof getSigilTierUnlocks>) => {
+  switch (sigil?.unlocked) {
+    case SIGIL_UNDISCOVERED:
+      return sigil?.unlockCost ?? null;
+    case 0:
+      return sigil?.boostCost ?? null;
+    case 1:
+      return unlocks.jade ? sigil?.jadeCost ?? null : null;
+    case 2:
+      return unlocks.ethereal ? sigil?.etherealCost ?? null : null;
+    case 3:
+      return unlocks.eclectic ? sigil?.eclecticCost ?? null : null;
+    default:
+      return null;
+  }
+};
+
+// Needs achievements, gem shop, stamps, summoning, arcade, vote, gaming, legend talents, research and sushi: run last
+export const applySigilProgression = (account: any) => {
+  const p2wData = account?.alchemy?.p2w;
+  if (!p2wData) return;
+  const sigilSpeed = getSigilSpeed(account);
+  const unlocks = getSigilTierUnlocks(account);
+  const labConnected = getLabBonus(account?.lab?.labBonuses, SIGILS_LAB_BONUS_INDEX) > 0;
+  p2wData.sigilSpeed = sigilSpeed;
+  p2wData.sigils = p2wData.sigils?.map((sigil: any) => {
+    const chargingCharacters = sigil?.characters?.filter(({ index }: any) => index < SIGIL_CHARGING_SLOTS)?.length ?? 0;
+    return {
+      ...sigil,
+      nextCost: getSigilNextCost(sigil, unlocks),
+      chargeRate: labConnected ? chargingCharacters * sigilSpeed.value : 0
+    };
+  });
+};
+
+export const applyArtifactBonusOnSigil =(sigils: any, artifacts: any, meritocracyBonus = 0) => {
   const chilledYarnArtifact = isArtifactAcquired(artifacts, 'Chilled_Yarn');
   const multi = (1 + (chilledYarnArtifact?.bonus ?? 0)) * (1 + meritocracyBonus / 100);
   if (multi === 1) return sigils;
@@ -766,7 +1022,7 @@ export const getNblbLevel = (acc: any, characters: any, isMin?: any) => {
   }
   level = Math.round(level + 1);
 
-  const sBundle = isBundlePurchased(acc?.bundles, 'bun_s');
+  const sBundle = isBundlePurchased(acc, 'bun_s');
   if (sBundle) {
     level += 3;
 
@@ -794,7 +1050,7 @@ const MAX_UPGRADEABLE_BUBBLES = 10;
 // game: ArcaneType("is_NBLB_on") / ("NBLB_bubbleQTY")
 export const getUpgradeableBubbles = (acc: any, characters: any) => {
   const noBubbleLeftBehind = acc?.lab?.labBonuses?.find((bonus: any) => bonus.name === 'No_Bubble_Left_Behind');
-  const isNblbOn = noBubbleLeftBehind?.active || isBundlePurchased(acc?.bundles, 'bun_s') || getEventShopBonus(acc, 2) === 1;
+  const isNblbOn = noBubbleLeftBehind?.active || isBundlePurchased(acc, 'bun_s') || getEventShopBonus(acc, 2) === 1;
   if (!isNblbOn) return {
     normal: [],
     atomBubbles: [],

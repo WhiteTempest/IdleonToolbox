@@ -11,7 +11,6 @@ import {
   killRoySkullShop,
   mapEnemiesArray,
   mapNames,
-  mapPortals,
   monsters,
   ninjaExtraInfo,
   randomList,
@@ -38,6 +37,7 @@ import { getBribeBonus } from '@parsers/world-1/bribes';
 import { getMeritocracyBonus, getVoteBonus } from '@parsers/world-2/voteBallot';
 import { getUpgradeVaultBonus } from '@parsers/misc/upgradeVault';
 import { getArmorSetBonus } from '@parsers/world-3/armorSmithy';
+import { hasClearedMap } from '@parsers/portals';
 import { getObolsBonus } from '@parsers/obols';
 import { getLegendTalentBonus } from '@parsers/world-7/legendTalents';
 import { calcCardBonus, getCardBonusByEffect, getCardLevel } from '@parsers/cards';
@@ -51,7 +51,7 @@ import { getJellyBonus } from '@parsers/world-7/jellyOperator';
 import { getWinnerBonus } from '@parsers/world-6/summoning';
 import { isArtifactAcquired } from '@parsers/world-5/sailing';
 import { getSaltLickBonus } from '@parsers/world-3/saltLick';
-import { additiveGroup, createBreakdown, flat, gearGroup, multiplier, NUMBERED_GROUP, percent, productGroup } from '@parsers/breakdown';
+import { additiveGroup, createBreakdown, flat, gearGroup, multiplier, NUMBERED_GROUP, percent, productGroup, sumGroup } from '@parsers/breakdown';
 import { getCharacterFamilyBonus } from './family';
 
 export const getRawRefinerySalts = () => {
@@ -76,6 +76,38 @@ export const getDoubleStatueDrop = (account: any, character: any, characters: an
     expression: `tesseractBonus + talentBonus + paletteBonus + Math.min(10, divinityMinorBonus)`
   };
 }
+
+const DOUBLE_AINT_ENOUGH_LEGEND = 2;
+const GREY_HARDHAT_SHOP_UPG = 48;
+const DOUBLE_DROP_BUNDLE = 'bon_k';
+
+// How many statues / golden foods a 2x drop gives: Math.round(2 + (LegendPTS_bonus(2) [+ ShopUpgBonus(48)]) / 100),
+// then x2 from bon_k (which also doubles drops that did not roll the 2x)
+const getDoubleDropSize = (account: any, statName: string, includeHardhat: boolean) => {
+  const legendBonus = getLegendTalentBonus(account, DOUBLE_AINT_ENOUGH_LEGEND) ?? 0;
+  const hardhatBonus = includeHardhat ? getSpelunkingBonus(account, GREY_HARDHAT_SHOP_UPG) ?? 0 : 0;
+  const bundleMulti = isBundlePurchased(account, DOUBLE_DROP_BUNDLE) ? 2 : 1;
+  const baseSize = Math.round(2 + (legendBonus + hardhatBonus) / 100);
+  const value = baseSize * bundleMulti;
+  return {
+    value,
+    breakdown: createBreakdown(statName, `${value}x`, [
+      sumGroup('2x Drop Size', [
+        flat('Base', 2),
+        flat('Double Aint Enough (Legend Talent)', legendBonus / 100),
+        ...(includeHardhat ? [flat('Grey Hardhat', hardhatBonus / 100)] : [])
+      ], { round: 'round' }),
+      multiplier('Bundle', bundleMulti)
+    ]),
+    expression: includeHardhat
+      ? `Math.round(2 + (legendBonus + greyHardhat) / 100) * bundleMulti`
+      : `Math.round(2 + legendBonus / 100) * bundleMulti`
+  };
+}
+
+export const getDoubleStatueDropSize = (account: any) => getDoubleDropSize(account, 'Double Statue Drop Size', true);
+
+export const getDoubleGoldenFoodDropSize = (account: any) => getDoubleDropSize(account, 'Double Golden Food Drop Size', false);
 
 export const getDoubleGoldenFoodDrop = (account: any) => {
   const tesseractBonus = getTesseractBonus(account, 30);
@@ -236,7 +268,7 @@ export const hasMasterclassDailyDiscount = (account: any): boolean =>
 
 // game: "AllMasterclassCostReduxPrefix" - the pre-2.3.525 whole formula, now just the first factor.
 const getAllMasterclassCostReduxPrefix = (account: any, forceLegendTalent: any) => {
-  const hasBonusBundle = isBundlePurchased(account?.bundles, 'bon_p');
+  const hasBonusBundle = isBundlePurchased(account, 'bon_p');
   const hasLegendTalent = forceLegendTalent === undefined
     ? hasMasterclassDailyDiscount(account)
     : forceLegendTalent;
@@ -422,7 +454,7 @@ const NON_STORABLE_ITEMS = new Set([
   'LootDice', 'DungCredits1', 'DungCredits2', 'DungEnhancer0', 'DungEnhancer1', 'DungEnhancer2',
   'XP', 'XPskill', 'Cash', 'Cashb'
 ]);
-const isGreenstackable = (item: any): boolean =>
+export const isGreenstackable = (item: any): boolean =>
   typeof item?.typeGen === 'string' && !isEquipmentItem(item) && !NON_STORABLE_TYPES.has(item?.Type)
   && !NON_STORABLE_ITEMS.has(item?.rawName);
 
@@ -586,9 +618,16 @@ const getAmountPerDay = ({ name, dialogThreshold }: any = {}, characters: any) =
   }, 0);
 }
 
+// The save's BundlesReceived map, which is the only source of truth for ownership. The bundle
+// catalog cannot be: it is built for display and has missed bundles the game knows (bon_w/x/y had no
+// row until they did, so their +1000 base carry capacity was silently dropped).
+export const getOwnedBundles = (idleonData: any): Record<string, boolean> => {
+  const bundlesRaw = tryToParse(idleonData?.BundlesReceived) || idleonData?.BundlesReceived || {};
+  return Object.fromEntries(Object.entries(bundlesRaw).map(([name, value]) => [name, Number(value) > 0]));
+};
+
 export const getBundles = (idleonData: any) => {
-  const bundlesRaw = tryToParse(idleonData?.BundlesReceived) || idleonData?.BundlesReceived;
-  const ownedBundles = bundlesRaw || {};
+  const ownedBundles = getOwnedBundles(idleonData);
 
   if (!bundlesData) return [];
 
@@ -602,6 +641,9 @@ export const getBundles = (idleonData: any) => {
         name: bundleName,
         owned: !!ownedBundles[bundleName],
         price: bundle.price,
+        // The Starter Pack offer (bon_w/x/y) is drawn from OffersBG<card>.png, not <key>.png.
+        ...(bundle.image ? { image: bundle.image } : {}),
+        ...(bundle.starterOffer ? { starterOffer: true } : {}),
         ...(bundle.evolving ? {
           evolving: true,
           displayName: bundle.name,
@@ -621,8 +663,8 @@ export const getBundles = (idleonData: any) => {
     });
 };
 
-export const isBundlePurchased = (bundles: any, name: any) => {
-  return bundles?.find(({ name: n, owned }: any) => n === name && owned);
+export const isBundlePurchased = (account: any, name: string): boolean => {
+  return account?.bundlesOwned?.[name] === true;
 }
 
 export const isArenaBonusActive = (arenaWave: any, waveReq: any, bonusNumber: any) => {
@@ -661,15 +703,15 @@ export const getMaterialCapacity = (bag: any, capacities: any) => {
     * (1 + extraBagsTalentBonus / 100) * allCapacity)
 };
 
-// game: AnvilProduceStats("ProdSpdBonusFromAGI") switches curves at exactly 1000 AGI
-const AGILITY_SPEED_CURVE_SWITCH = 1000;
-export const getSpeedBonusFromAgility = (agility = 0) => {
-  let base = (Math.pow(agility + 1, 0.37) - 1) / 40;
-  if (agility >= AGILITY_SPEED_CURVE_SWITCH) {
-    base = ((agility - 1000) / (agility + 2500)) * 0.5 + 0.297;
-  }
-  return base * 2 + 1;
+// game: RunCodeOfTypeXforThingY("Stat2num", stat), which switches curves at exactly 1000
+const STAT_CURVE_SWITCH = 1000;
+export const getStatCurveValue = (stat = 0) => {
+  if (stat < STAT_CURVE_SWITCH) return (Math.pow(stat + 1, 0.37) - 1) / 40;
+  return ((stat - STAT_CURVE_SWITCH) / (stat + 2500)) * 0.5 + 0.297;
 };
+
+// game: AnvilProduceStats("ProdSpdBonusFromAGI")
+export const getSpeedBonusFromAgility = (agility = 0) => getStatCurveValue(agility) * 2 + 1;
 
 export const getHighestLevelOf = (characters: any, className: any) => {
   const classes = characters?.filter((character: any) => checkCharClass(character?.class, className));
@@ -1146,9 +1188,9 @@ export const getItemCapacity = (type = '', character: any, account?: any, forceM
   const allCarryStamps = getStampsBonusByEffect(account, 'Carry_Capacity_for_ALL_item_types!');
   const talentBonus = getTalentBonus(character?.flatTalents, 'EXTRA_BAGS', false, false, character?.addedLevels, true, forceMaxCapacity);
   const upgradeVaultBonus = getUpgradeVaultBonus(account?.upgradeVault?.upgrades, 11);
-  const bundleCapW = isBundlePurchased(account?.bundles, 'bon_w') ? 1 : 0;
-  const bundleCapX = isBundlePurchased(account?.bundles, 'bon_x') ? 1 : 0;
-  const bundleCapY = isBundlePurchased(account?.bundles, 'bon_y') ? 1 : 0;
+  const bundleCapW = isBundlePurchased(account, 'bon_w') ? 1 : 0;
+  const bundleCapX = isBundlePurchased(account, 'bon_x') ? 1 : 0;
+  const bundleCapY = isBundlePurchased(account, 'bon_y') ? 1 : 0;
   const bundleCapacity = 1000 * (bundleCapW + bundleCapX + bundleCapY);
   const allCap = getAllCap(character, account, forceMaxCapacity);
   const hardCap = 205e7;
@@ -1625,6 +1667,29 @@ export const getKillRoy = (idleonData: any, charactersData: any, accountData: an
 
   // The curve is asymptotic, so the cap is never actually reached.
   // Inverting L/(decay+L) = percent gives the level needed for a given % of the cap.
+  // Game's skull shop description rounds shops 11-14 down and 16-19 up.
+  const roundUpDescription = new Set([6, 7, 8, 9]);
+  const formatDescriptionBonus = (value: number, i: number) => {
+    const round = roundUpDescription.has(i) ? Math.ceil : Math.floor;
+    return String(round(value * 100) / 100);
+  };
+
+  // The game feeds these "x" bonuses in as percentages: 1.42x applies as x1.0142 / +1.42%.
+  const formatAppliedMulti = (value: number) => `x${Math.round((1 + value / 100) * 10000) / 10000}`;
+  const formatAppliedPct = (value: number) => `+${Math.round(value * 100) / 100}%`;
+  const getAppliedBonuses = (i: number, bonus: number, cap: number) => {
+    if (i === 6) {
+      return [{ name: 'Masterclass drops', value: formatAppliedMulti(bonus), max: formatAppliedMulti(cap) }];
+    }
+    if (i === 7) {
+      return [
+        { name: 'Research EXP', value: formatAppliedMulti(bonus), max: formatAppliedMulti(cap) },
+        { name: 'Spelunking EXP', value: formatAppliedPct(bonus), max: formatAppliedPct(cap) }
+      ];
+    }
+    return null;
+  };
+
   const breakpointPercents = [50, 75, 90, 95, 99];
   const getDecayBreakpointLevel = (percent: number, decay: number) => Math.ceil((decay * percent) / (100 - percent));
 
@@ -1656,7 +1721,7 @@ export const getKillRoy = (idleonData: any, charactersData: any, accountData: an
     let replacementChar = '{';
 
     if (i === 5 && level >= 2) {
-      description = `Permanently_boosts_your_Gallery_Multiplier_by_+${(bonus / 100).toFixed(2)}x`;
+      description = `Permanently_boosts_your_Gallery_Multiplier_by_+${Math.floor(bonus) / 100}x`;
     }
 
     return {
@@ -1668,7 +1733,8 @@ export const getKillRoy = (idleonData: any, charactersData: any, accountData: an
       capDisplay,
       breakpoints,
       nextBreakpoint,
-      description: description?.replace(replacementChar, String(Math.floor(bonus * 100) / 100))
+      appliedBonuses: capInfo ? getAppliedBonuses(i, bonus, capInfo.cap) : null,
+      description: description?.replace(replacementChar, formatDescriptionBonus(bonus, i))
     }
   });
   return {
@@ -1797,10 +1863,7 @@ export const getKillRoyClasses = (rooms: any, account: any, serverVars: any, ign
     321: [0, 1, 2]
   };
   // Game: 0 >= KillsLeft2Advance[200][0], ie. Magma Rivertown (the World 5 town) has been reached.
-  // character.kills stores kills DONE (portal requirement minus kills left), so the equivalent test
-  // is kills[200] >= the requirement - an unreached town leaves kills[200] at 0, not at it.
-  const world5TownReq = parseFloat(mapPortals?.[200]?.[0] as any);
-  const unlockedMap = characters?.some(({ kills }: any) => kills?.[200] >= world5TownReq);
+  const unlockedMap = characters?.some((character: any) => hasClearedMap(character, 200));
   const baseSeed = Math.floor((account?.timeAway?.GlobalTime + Math.round((account?.timeAway?.ShopRestock + 86400 * account?.accountOptions?.[39]))) / 604800);
   for (let i = 0; i < rooms; i++) {
     if (!ignoreSkipConditions && (skipConditions as Record<string, any>)[done] && (skipConditions as Record<string, any>)[done].includes(i)) {

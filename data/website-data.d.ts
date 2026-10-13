@@ -3266,6 +3266,15 @@ declare module '@website-data' {
         EquipmentNametag20: number;
         EquipmentNametag31: number;
       };
+      bon_w: {
+        EquipmentCape10: number;
+      };
+      bon_x: {
+        EquipmentCape14: number;
+      };
+      bon_y: {
+        EquipmentCape16: number;
+      };
     };
     dungeon: {
       CardsX21: number;
@@ -3360,6 +3369,7 @@ declare module '@website-data' {
   export const mapEnemies: Record<string, number>;
   export const mapEnemiesArray: string[];
   export const mapMonsterCounts: Record<string, number>;
+  export const mapMulticharReq: Record<string, number>;
   export const mapNames: Record<string, string>;
   export const mapPortalDestinations: Record<string, any>;
   export const mapPortals: Record<string, any>;

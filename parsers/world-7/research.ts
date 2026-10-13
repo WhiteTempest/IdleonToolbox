@@ -13,7 +13,8 @@ import { getSlabBonus, isArtifactAcquired } from '@parsers/world-5/sailing';
 import { getDancingCoralBonus } from '@parsers/world-7/coralReef';
 import { getMealsBonusByEffectOrStat } from '@parsers/world-4/cooking';
 import { getLoggedInSkillLevel, isCompanionBonusActive, isCompanionLvl2Active, getEventShopBonus } from '@parsers/misc';
-import { calcCardBonus, getCardBonusByEffect } from '@parsers/cards';
+import { calcCardBonus, getCardBonusByEffect, getCardLevel } from '@parsers/cards';
+import { getGambitBonus } from '@parsers/world-5/caverns/gambit';
 import { getMineheadBonusQTY, getMineheadGlimboTotalTrades } from '@parsers/world-7/minehead';
 import { getStickerBonus } from '@parsers/world-6/farming';
 import { getArmorSetBonus } from '@parsers/world-3/armorSmithy';
@@ -22,7 +23,7 @@ import { getJellyBonus } from '@parsers/world-7/jellyOperator';
 import { getButtonBonus } from '@parsers/world-7/button';
 import { getKillRoyShopBonus } from '@parsers/misc';
 import { isJadeBonusUnlocked } from '@parsers/world-6/sneaking';
-import { getEquinoxBonus } from '@parsers/world-3/equinox';
+import { EQUINOX_CLOUD, getCloudBonus, getEquinoxBonus } from '@parsers/world-3/equinox';
 import { getFountainBonusTotal } from '@parsers/world-5/caverns/the-fountain';
 import { getOutpostRogBonus } from '@parsers/class-specific/royalGuardian';
 import { getCglunkoBonus } from '@parsers/world-5/caverns/crystal-glunko-cove';
@@ -172,6 +173,10 @@ export const getResearch = (idleonData: any, account: any, characters: any, serv
     researchEXPrateTOT += getResearchEXPrateObj(account, research, obsIndex);
   }
   researchEXPrateTOT *= researchEXPmulti;
+  const { value: researchAFKrate, breakdown: researchAFKrateBreakdown } = getResearchAFKrate(account, research);
+  // Offline time banks into Research[7][3] at the AFK rate, only while the logged-in character's research level
+  // (Lv0[20]) is above 0; claiming it pays ResearchEXPrateTOT per banked hour
+  const researchEXPrateAFK = researchLevel > 0 ? researchEXPrateTOT * researchAFKrate / 100 : 0;
 
   // exp and expReq must come from the same character: a stale character still on the previous level
   // has a higher exp than a fresh one that just leveled, and mixing the two shrinks the EXP left.
@@ -316,6 +321,9 @@ export const getResearch = (idleonData: any, account: any, characters: any, serv
     researchEXPmulti,
     researchEXPmultiBreakdown,
     researchEXPrateTOT,
+    researchAFKrate,
+    researchAFKrateBreakdown,
+    researchEXPrateAFK,
     gridPTSearned,
     gridPTSpent,
     gridPTSavailable,
@@ -366,18 +374,18 @@ export const getResearchGridBonus = (account: any, gridIndex: any, mode: any) =>
   return account?.research?.gridSquares?.[gridIndex]?.bonuses?.[mode] ?? 0;
 }
 
-// Game: Grid_Bonus_Allmulti = 1 + (Companions(55) + 5 * min(1, Research[0][173] * Companions(0)) + CloudBonus(71) + CloudBonus(72) + CloudBonus(76)) / 100
+// Game: Grid_Bonus_Allmulti = 1 + (Companions(55) + 5 * min(1, Research[0][173] * Companions(0)) + CloudBonus(71) + CloudBonus(72) + CloudBonus(76) + RoG_BonusQTY(53)) / 100
 // game: "Grid_Bonus_Allmulti"
 export function getGridBonusAllmulti(account: any, research: any) {
   const companion55 = isCompanionBonusActive(account, 55) ? (account?.companions?.list?.at(55)?.bonus ?? 0) : 0;
   const companion0Active = research?.kingDootActive ? 1 : 0;
   const gridLevel173 = Number(research?.gridLevels?.[173]) || 0;
   const challenges = account?.equinox?.challenges;
-  const cloud71 = challenges?.[71]?.current === -1 ? 1 : 0;
-  const cloud72 = challenges?.[72]?.current === -1 ? 1 : 0;
-  const cloud76 = challenges?.[76]?.current === -1 ? 1 : 0;
+  const clouds = getCloudBonus(challenges, EQUINOX_CLOUD.RESEARCH_GRID_1)
+    + getCloudBonus(challenges, EQUINOX_CLOUD.RESEARCH_GRID_2)
+    + getCloudBonus(challenges, EQUINOX_CLOUD.RESEARCH_GRID_3);
   const sushiBonus53 = getSushiBonus(account, 53);
-  return 1 + (companion55 + 5 * Math.min(1, gridLevel173 * companion0Active) + cloud71 + cloud72 + cloud76 + sushiBonus53) / 100;
+  return 1 + (companion55 + 5 * Math.min(1, gridLevel173 * companion0Active) + clouds + sushiBonus53) / 100;
 }
 
 function getResearchGridBonusInternal(account: any, research: any, gridIndex: any, mode: any): any {
@@ -705,6 +713,65 @@ function getResearchEXPmulti(account: any, research: any) {
     multiplier('Jelly Operator', jellyFactor),
     multiplier('Royal Guardian Outpost', outpostRogFactor)
   ]);
+
+  return { value, breakdown };
+}
+
+// game: AFKgainrates("Research"), shown as ResearchStuff("AFKgainsRatePCT")
+const RESEARCH_AFK_BASE_PCT = 1;
+const RESEARCH_AFK_CAP_PCT = 100;
+const RIP_TIDE_COMPANION = 28;
+const RIFT_STALKER_COMPANION = 153;
+const RIFT_STALKER_AFK_PCT = 20;
+const RIFT_STALKER_UPGRADED_AFK_PCT = 10;
+const RESEARCH_AFK_GAMBIT_BONUS = 15;
+const RESEARCH_AFK_MINEHEAD_OPPONENTS = [1, 10];
+const POWERED_DOWN_RESEARCH_GRID = 71;
+const RESEARCH_AFK_GAINS_GRID = 111;
+const ENDER_PEARL_MAX_TIER = 6;
+const PIRATE_DECKHAND_MAX_LEVEL = 10;
+const PROFESSIONAL_PAPERS_GEM_SHOP = 45;
+const PROFESSIONAL_PAPERS_PCT = 2;
+const RESEARCH_AFK_SUSHI_BONUSES = [4, 24];
+
+function getResearchAFKrate(account: any, research: any) {
+  const ripTide = isCompanionBonusActive(account, RIP_TIDE_COMPANION)
+    ? (account?.companions?.list?.at(RIP_TIDE_COMPANION)?.bonus ?? 0)
+    : 0;
+  const riftStalker = RIFT_STALKER_AFK_PCT * (isCompanionBonusActive(account, RIFT_STALKER_COMPANION)
+      ? (account?.companions?.list?.at(RIFT_STALKER_COMPANION)?.bonus ?? 0)
+      : 0)
+    + RIFT_STALKER_UPGRADED_AFK_PCT * (isCompanionLvl2Active(account, RIFT_STALKER_COMPANION) ? 1 : 0);
+  const gambit = getGambitBonus(account, RESEARCH_AFK_GAMBIT_BONUS);
+  const minehead = RESEARCH_AFK_MINEHEAD_OPPONENTS.map((index) => ({
+    name: account?.minehead?.opponents?.[index]?.name || `Opponent ${index + 1}`,
+    value: getMineheadBonusQTY(account, index)
+  }));
+  const poweredDownResearch = getResearchGridBonusInternal(account, research, POWERED_DOWN_RESEARCH_GRID, 0);
+  const researchAfkGainsGrid = getResearchGridBonusInternal(account, research, RESEARCH_AFK_GAINS_GRID, 0);
+  const enderPearl = Math.min(ENDER_PEARL_MAX_TIER,
+    Math.round(isArtifactAcquired(account?.sailing?.artifacts, 'Ender_Pearl')?.acquired ?? 0));
+  const pirateDeckhand = Math.min(getCardLevel(account?.cards, 'w7b11'), PIRATE_DECKHAND_MAX_LEVEL);
+  const professionalPapers = PROFESSIONAL_PAPERS_PCT * (account?.gemShopPurchases?.[PROFESSIONAL_PAPERS_GEM_SHOP] ?? 0);
+  const sushi = RESEARCH_AFK_SUSHI_BONUSES.reduce((sum, index) => sum + getSushiBonus(account, index), 0);
+
+  const bonuses = ripTide + riftStalker + gambit + minehead.reduce((sum, { value }) => sum + value, 0)
+    + poweredDownResearch + researchAfkGainsGrid + enderPearl + pirateDeckhand + professionalPapers + sushi;
+  const value = Math.min(RESEARCH_AFK_CAP_PCT, RESEARCH_AFK_BASE_PCT + bonuses);
+
+  const breakdown = createBreakdown('Research AFK Gains', `${notateNumber(value, 'MultiplierInfo')}%`, [
+    percent('Base', RESEARCH_AFK_BASE_PCT),
+    percent('RIP Tide (Companion)', ripTide),
+    percent('Rift Stalker (Companion)', riftStalker),
+    percent('Gambit', gambit),
+    ...minehead.map(({ name, value }) => percent(`${name} (Minehead)`, value)),
+    percent('Powered Down Research (Grid)', poweredDownResearch),
+    percent('Research AFK Gains (Grid)', researchAfkGainsGrid),
+    percent('Ender Pearl (Artifact)', enderPearl),
+    percent('Pirate Deckhand (Card)', pirateDeckhand),
+    percent('Professional Papers (Gem Shop)', professionalPapers),
+    percent('Sushi Station', sushi)
+  ], { combine: 'sum', max: RESEARCH_AFK_CAP_PCT });
 
   return { value, breakdown };
 }

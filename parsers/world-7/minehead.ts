@@ -12,6 +12,7 @@ import { isSuperbitUnlocked } from '@parsers/world-5/gaming';
 import { isJadeBonusUnlocked } from '@parsers/world-6/sneaking';
 import { getOutpostRogBonus } from '@parsers/class-specific/royalGuardian';
 import { getArcadeBonus } from '@parsers/world-2/arcade';
+import { EQUINOX_CLOUD, getCloudBonus } from '@parsers/world-3/equinox';
 import { NUMBERED_GROUP, additiveGroup, createBreakdown, flat, multiplier, percent, productGroup } from '@parsers/breakdown';
 
 // The three mine currency gain upgrades (Miney Farmey I/II, Miney Damagey Synergy). The dashboard
@@ -137,7 +138,7 @@ export const getMinehead = (idleonData: any, account: any, serverVars: any) => {
   // --- Opponent mine count (depth charges) ---
   // handleMines_Opp
   const superbitReduction = Math.min(1, isSuperbitUnlocked(account, 'Less_Charge') ? 1 : 0);
-  const cloud41Reduction = Math.min(1, account?.equinox?.challenges?.[41]?.current === -1 ? 1 : 0);
+  const cloud41Reduction = Math.min(1, getCloudBonus(account?.equinox?.challenges, EQUINOX_CLOUD.MINEHEAD_DEPTH_CHARGE));
   const jadeReduction = Number(isJadeBonusUnlocked(account, 'Depth_Charge_Disposal'));
   const getMinesOpp = (t: any) =>
     Math.round(Math.min(40, Math.max(1,
@@ -198,7 +199,7 @@ export const getMinehead = (idleonData: any, account: any, serverVars: any) => {
   // ROG bonus 3 is "Minehead Currency Gain"; only the selected one is ever above the 1x identity.
   const outpostRogBonus = Math.max(1, getOutpostRogBonus(account, 3));
   const jellyBonus8 = getJellyBonus(account, 8);
-  const banJBundle = isBundlePurchased(account?.bundles, 'ban_j') ? 1 : 0;
+  const banJBundle = isBundlePurchased(account, 'ban_j') ? 1 : 0;
 
   const currencyGain =
     grid129Bonus

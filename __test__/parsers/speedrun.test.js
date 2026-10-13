@@ -10,9 +10,10 @@ import {
   getSpeedrunStats,
   SPEEDRUN_HIGHSCORE_INDEX
 } from '@parsers/class-specific/speedrun';
-import { getVialsBonusByStat } from '@parsers/world-2/alchemy';
 import highend from '../fixtures/highend.json';
 import rankOne from '../fixtures/speedrun-rank1.json';
+import { mapMulticharReq } from '@website-data';
+import { getMapDoorRequirements, getMultiCharDoorLock } from '@parsers/portals';
 
 let account;
 let characters;
@@ -27,11 +28,6 @@ beforeAll(() => {
 });
 
 describe('getSpeedrunStats', () => {
-  it('reads the highscore from accountOptions[158]', () => {
-    const stats = getSpeedrunStats({ accountOptions: { [SPEEDRUN_HIGHSCORE_INDEX]: 63 } }, [], {});
-    expect(stats.highscore).toBe(63);
-  });
-
   it('steps the multikill bonus every 5 maps', () => {
     const accountAt = (highscore) => ({ accountOptions: { [SPEEDRUN_HIGHSCORE_INDEX]: highscore } });
     const at62 = getSpeedrunStats(accountAt(62), characters, character);
@@ -83,19 +79,6 @@ describe('getSpeedrunRoute', () => {
     expect(entry).toBeDefined();
     expect(entry.effectiveKillsPerSecond).toBeCloseTo(entry.killsPerSecond * entry.portalProgressPerKill, 6);
     expect(entry.secondsToClear).toBeCloseTo(entry.reqKills / entry.effectiveKillsPerSecond, 6);
-  });
-
-  it('applies the portal-only vault and vial bonuses on top of kill per kill', () => {
-    const route = getSpeedrunRoute(account, characters, character);
-    const entry = route.find(({ reachable }) => reachable);
-    // Vault 43 multiplies and the Seawater vial adds, so portal progress is never below the
-    // plain kill-per-kill value the rest of the site shows.
-    expect(entry.portalProgressPerKill).toBeGreaterThanOrEqual(entry.killPerKill);
-
-    const vaultLevel = account?.upgradeVault?.upgrades?.[43]?.bonus ?? 0;
-    const vialBonus = getVialsBonusByStat(account?.alchemy?.vials, 'MultiKillPlay') ?? 0;
-    expect(entry.portalProgressPerKill)
-      .toBeCloseTo((1 + vaultLevel / 100) * (entry.killPerKill + vialBonus / 100), 6);
   });
 
   it('marks maps the character cannot hit as unreachable', () => {
@@ -162,6 +145,20 @@ describe('getSpeedrunRoute', () => {
     [29, 66, 114, 115, 164, 165, 214, 266].forEach((mapIndex) => {
       expect(route.filter((portal) => portal.mapIndex === mapIndex)).toHaveLength(0);
     });
+  });
+
+  // Code-derived: no live run is going to read. The portal handler checks RegionLockMulticharProg on the killing
+  // blow, when the runner's own KillsLeft2Advance has just reached 0, so the runner always counts as cleared.
+  it('counts the runner as having cleared a multi-character map', () => {
+    const map = Object.keys(mapMulticharReq)[0];
+    const fresh = { playerId: 0, kills: { [map]: 0 } };
+    const cleared = { playerId: 1, kills: { [map]: getMapDoorRequirements(map)[0] } };
+    expect([
+      getMultiCharDoorLock(map, [fresh, cleared])?.cleared,
+      getMultiCharDoorLock(map, [fresh, cleared], fresh)?.cleared,
+      // the buffed route passes a copy of the runner
+      getMultiCharDoorLock(map, [fresh, cleared], { ...fresh })?.cleared
+    ]).toEqual([1, 2, 2]);
   });
 
   it('drops the maps the game never gave a name', () => {

@@ -13,7 +13,7 @@ import { getLegendTalentBonus } from "@parsers/world-7/legendTalents";
 import { getUpgradeVaultBonus } from "@parsers/misc/upgradeVault";
 import { getPaletteBonus } from "@parsers/world-5/gaming";
 import { getCompassBonus } from "@parsers/class-specific/compass";
-import { getCloudBonus } from "@parsers/world-3/equinox";
+import { EQUINOX_CLOUD, getCloudBonus } from "@parsers/world-3/equinox";
 import { getLandRank } from "@parsers/world-6/farming";
 import { getGambitBonus } from "@parsers/world-5/caverns/gambit";
 import { getBubbleBonus } from "@parsers/world-2/alchemy";
@@ -273,7 +273,7 @@ export const getLocalNinjaUpgradeBonus = (upgrades: any, index: any, gemstones: 
     const paletteBonus30 = getPaletteBonus(account, 30) || 0;
     const vaultBonus88 = getUpgradeVaultBonus(account?.upgradeVault?.upgrades, 88) || 0;
     // 100 * Dreamstuff("CloudBonus", 53) - equinox challenge "Get a LV. 7 slot in Sneaking, using Symbols"
-    const cloudBonus53 = 100 * getCloudBonus(account?.equinox?.challenges, 53);
+    const cloudBonus53 = 100 * getCloudBonus(account?.equinox?.challenges, EQUINOX_CLOUD.SNEAKING_CHARM_MAX_LV);
     return Math.round(
       level * modifier
       + masteryLootLevel * selectedMasteryLevel
@@ -481,8 +481,11 @@ export const getStealthForDetection = (target: number, difficulty: number) => {
 // doubles and Blue/Green/Black Belt triple.
 const SOLO_CHARM_SUBTYPES = [2, 13, 14, 19];
 
+// Shiny Smoke doubles while its ninja sits at 0% detection. The game checks DetectionDEC(t, -1), which takes the
+// floor from the mouse position on the sneaking screen; the ninja's own floor is the intended one and is used here.
+const SHINY_SMOKE_SUBTYPE = 6;
+
 // Game: NinjaBonus(t, subType) - the two charm slots (raw 14+4t, 15+4t), boosted by Gold_Scroll and the slot symbol.
-// Shiny Smoke's (6) doubling at 0% detection is left out: nothing reads that charm here.
 // game: "NinjaBonus"
 export const getNinjaCharmBonus = (account: any, playerIndex: number, subType: number) => {
   const goldScroll = getInventoryNinjaItem(account, 'Gold_Scroll');
@@ -491,6 +494,10 @@ export const getNinjaCharmBonus = (account: any, playerIndex: number, subType: n
   const total = charms.reduce((sum: number, item: any) => item?.subType === subType && item?.name
     ? sum + (item?.rawValue ?? 0) * (1 + goldScroll / 100) * (1 + (item?.symbolBonus ?? 0) / 100)
     : sum, 0);
+  if (subType === SHINY_SMOKE_SUBTYPE) {
+    // sneaking.detection is filled after getSneaking; stealth never reads this charm, so there is no cycle
+    return account?.sneaking?.detection?.ninjas?.[playerIndex]?.detection === 0 ? 2 * total : total;
+  }
   if (!SOLO_CHARM_SUBTYPES.includes(subType)) return total;
   const floor = players?.[playerIndex]?.floor;
   const isSolo = !players.some((player: any, index: number) => index !== playerIndex && player?.floor === floor);

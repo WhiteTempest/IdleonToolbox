@@ -3,10 +3,11 @@ import { Alert, Card, CardContent, Divider, Stack, Typography } from '@mui/mater
 import { cleanUnderscore, notateNumber, numberWithCommas, prefix, secondsToShortDuration } from '@utility/helpers';
 import { TitleAndValue } from '@components/common/styles';
 import useCheckbox from '@components/common/useCheckbox';
+import MultiCharLockText from '@components/common/MultiCharLockText';
 
 // One row per portal. Maps with two get two, told apart by where each door leads.
-const PortalRow = ({ portal, showDoor }) => {
-  const { portalIndex, reqKills, destinationName, secondsToClear, buffedSecondsToClear, reachable } = portal;
+const PortalRow = ({ portal, showDoor, runUnlocked }) => {
+  const { portalIndex, reqKills, destinationName, secondsToClear, buffedSecondsToClear, reachable, multiCharLock } = portal;
 
   return <Stack gap={0.25} sx={{ py: 0.5 }}>
     {showDoor ? <Typography variant={'caption'} color={'text.secondary'}>
@@ -14,11 +15,12 @@ const PortalRow = ({ portal, showDoor }) => {
     </Typography> : null}
     <TitleAndValue title={'Kills needed'} value={numberWithCommas(reqKills)}/>
     <TitleAndValue title={'Clear time'} value={reachable ? secondsToShortDuration(secondsToClear) : 'Can\'t hit this monster'}/>
-    {reachable ? <TitleAndValue title={'With Void Radius'} value={secondsToShortDuration(buffedSecondsToClear)}/> : null}
+    {reachable && runUnlocked ? <TitleAndValue title={'With Void Radius'} value={secondsToShortDuration(buffedSecondsToClear)}/> : null}
+    <MultiCharLockText lock={multiCharLock}/>
   </Stack>;
 };
 
-const MapCard = ({ mapName, monster, effectiveKillsPerSecond, reachable, portals, detailed }) => <Card
+const MapCard = ({ mapName, monster, effectiveKillsPerSecond, reachable, portals, detailed, runUnlocked }) => <Card
   sx={{ width: 260 }}>
   <CardContent>
     <Stack direction={'row'} alignItems={'center'} gap={1}>
@@ -29,11 +31,15 @@ const MapCard = ({ mapName, monster, effectiveKillsPerSecond, reachable, portals
     <Typography variant={'caption'} color={'text.secondary'}>
       {reachable ? `${notateNumber(effectiveKillsPerSecond, 'Big')} portal progress / sec` : 'Out of reach'}
     </Typography>
+    {!detailed ? portals.map(({ portalIndex, multiCharLock }) => <MultiCharLockText key={portalIndex}
+                                                                                 lock={multiCharLock}
+                                                                                 variant={'caption'}
+                                                                                 component={'div'}/>) : null}
     {detailed ? <>
       <Divider sx={{ my: 1 }}/>
       <Stack divider={<Divider flexItem/>}>
         {portals.map((portal) => <PortalRow key={portal.portalIndex} portal={portal}
-                                            showDoor={portals.length > 1}/>)}
+                                            showDoor={portals.length > 1} runUnlocked={runUnlocked}/>)}
       </Stack>
     </> : null}
   </CardContent>
@@ -72,7 +78,7 @@ const Portals = ({ character, plan }) => {
       {Object.entries(worlds).map(([world, maps]) => <Stack key={world} gap={1.5}>
         <Typography variant={'h6'}>World {world}</Typography>
         <Stack direction={'row'} gap={2} flexWrap={'wrap'} alignItems={'flex-start'}>
-          {[...maps.values()].map((map) => <MapCard key={map.mapIndex} {...map} detailed={detailed}/>)}
+          {[...maps.values()].map((map) => <MapCard key={map.mapIndex} {...map} detailed={detailed} runUnlocked={plan.runUnlocked}/>)}
         </Stack>
       </Stack>)}
     </Stack>

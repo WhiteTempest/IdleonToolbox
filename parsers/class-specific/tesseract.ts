@@ -1,5 +1,5 @@
 import { commaNotation, lavaLog, lavaLog2, notateNumber, tryToParse } from '@utility/helpers';
-import { getFilteredPortals } from '@parsers/portals';
+import { getFilteredPortals, getMultiCharDoorLock } from '@parsers/portals';
 import { liveEntries } from '@parsers/catalog';
 import { mapEnemiesArray, mapPortals, monsterCoinQuantity, monsters, tesseract, items } from '@website-data';
 import { CLASSES, getCharacterByHighestTalent, getTalentBonus, getHighestTalentAcrossCharacters } from '@parsers/talents';
@@ -246,9 +246,12 @@ export const getMaps = (account: any, characters: any, character: any) => {
   const maxMapBonus = 100 * (highestOverwhelmingEnergy - 1) + Math.min(10, calcTesseractBonus(upgrades, 58, 0))
   return getFilteredPortals()?.map(({ mapIndex, mapName }) => {
     const availablePortals = mapPortals?.[mapIndex];
+    // A bought door 0 still stays shut until enough characters have cleared the map (Portal0 checks both)
+    const doorZeroLock = getMultiCharDoorLock(mapIndex, characters);
     const portals = availablePortals.map((_: any, portalIndex: any) => {
       return {
-        unlocked: unlockedPortals?.[mapIndex + '_' + portalIndex]
+        unlocked: unlockedPortals?.[mapIndex + '_' + portalIndex],
+        multiCharLock: portalIndex === 0 ? doorZeroLock : null
       }
     });
     const monsterRawName = (mapEnemiesArray as any)?.[mapIndex];
@@ -389,7 +392,7 @@ export const getExtraTachyon = (character: any, account: any) => {
   const meritocracyBonus = getMeritocracyBonus(account, 25) ?? 0;
   const { value: allMasterclassDropz, breakdown: masterclassDropsGroup } = getAllMasterclassDropz(character, account);
   const backupEnergy = getTalentBonus(character?.flatTalents, 'BACKUP_ENERGY');
-  const bundleBonus = isBundlePurchased(account?.bundles, 'bun_x') ? 1.2 : 1; // ExtraTachyonMulti
+  const bundleBonus = isBundlePurchased(account, 'bun_x') ? 1.2 : 1; // ExtraTachyonMulti
 
   const upgrade17 = calcTesseractBonus(upgrades, 17, 0);
   const upgrade34 = calcTesseractBonus(upgrades, 34, 0) * lavaLog(account?.accountOptions?.[390] ?? 0);

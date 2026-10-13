@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { getPlayerQuests, getQuests, isWorldFinished } from '@parsers/quests';
+import '../../polyfills';
+import { getPlayerQuests, getQuests, isWorldFinished, worldNpcMap } from '@parsers/quests';
+import { quests } from '@website-data';
 
 const build = (questComplete) => [{ quests: getPlayerQuests(questComplete) }];
 
@@ -108,13 +110,24 @@ describe('quest markers', () => {
     expect(npc.npcQuests[0].Name).toBe('The_Journey_Begins!');
   });
 
-  it('places the newly mapped npcs in their worlds', () => {
+  it.each([
+    // quest-only drops that can sit in the chest
+    ['Mutton', 'Mutton4', ['Quest22', 'Quest23', 'Quest24']],
+    ['Funguy', 'Funguy3', ['Quest21']],
+    // gear (Crystallin stamp) and dungeon items never stack, so nothing to warn about
+    ['Papua_Piggea', 'Papua_Piggea2', []],
+    ['Shuvelle', 'Shuvelle5', []],
+    ['Scripticus', 'Scripticus1', []]
+  ])('lists the greenstackable drops %s gates behind %s', (npcName, questKey, expected) => {
     const result = getQuests([]);
-    expect(findNpc(result, 'Hyperion_Nebula', 'Nebula_Neddy')).toBeTruthy();
-    expect(findNpc(result, "Smolderin'_Plateau", 'Lava_Larry')).toBeTruthy();
-    expect(findNpc(result, 'Spirited_Valley', 'Spirit_Sungmin')).toBeTruthy();
-    expect(findNpc(result, 'Shimmerfin_Deep', 'Zenelith')).toBeTruthy();
-    expect(findNpc(result, 'Blunder_Hills', 'Obol_Altar')).toBeTruthy();
+    const npc = Object.values(result).flat().find(({ name }) => name === npcName);
+    const quest = npc.npcQuests.find(({ QuestName }) => QuestName === questKey);
+    expect([...quest.missableDrops].sort()).toEqual(expected);
+  });
+
+  it('maps every quest npc of the catalog to a world or to the unlisted ones', () => {
+    // An npc missing from worldNpcMap silently drops off the quests page (Wavey_Wayne did after World 7)
+    expect(Object.keys(quests).filter((npcName) => !(npcName in worldNpcMap))).toEqual([]);
   });
 
   it('resolves the world 6 gate from the account flag without any characters', () => {

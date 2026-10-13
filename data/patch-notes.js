@@ -4,15 +4,46 @@ import React from 'react';
 /* eslint-disable react/jsx-key */
 export const patchNotes = [
   {
+    'ver': '3.3.92',
+    'gameVer': '2.3.531',
+    'date': '13/10/2026',
+    'features': [
+      'Cauldrons: each cauldron shows its brew speed per hour with a breakdown',
+      'Forge shows your max ore capacity, and Arcade Shop shows your gold ball multi',
+      'Research: shows your Research AFK Gains rate and the research EXP per hour you earn while away',
+      'Summoning: every essence colour shows its gain per hour with a breakdown'
+    ],
+    'fixes': [
+      'Worship totems: EXP per wave now includes the Worship EXP multi of the worshipping character, with a character select',
+      'Summoning: the upgrade total bonus for victories now counts endless wins and the right world'
+    ]
+  },
+  {
     'ver': '3.3.91',
     'gameVer': '2.3.531',
     'date': '12/10/2026',
-    'features': [],
+    'features': [
+      'Bundles: new Starter Pack tab and wiki category with the Baby Troll, Balloonfish and Bubba offer cards',
+      'Damage breakdown: multis are split by whether damage scaling affects them, with your scaling tier and what a ×2 multi is really worth. Nested breakdown groups are numbered 1.1, 1.2',
+      'Formulas: added Double Statue and Golden Food Drop Size (Grey Hardhat, Double Aint Enough), and the double drop chances now show as %',
+      'Quests: new Missable greenstacks filter, flags quests whose item drops stop once the quest is finished and that item is not greenstacked yet',
+      'Bone Joe Calculator: added Verminous, priced with your Royal Guardian rat damage'
+    ],
     'fixes': [
       'Sneaking: slab Jade and Essence bonuses, door HP, floor loot and solo charm bonuses now match the game',
       'Hole: fixed the Fountain stack size, currency values and marble gain, harp notes and EXP, the jar collectible chance, Hive and Evertree requirements and Trench efficiency',
       'Rift and Atom Collider: Construct Mastery, atom bonuses and costs, the alchemy liquid cap mastery and bubble particle costs now match the game',
-      'Smaller fixes: Justice coins, Wisdom opal chance, Killroy kills, Den and cove texts'
+      'Armor Smithy, Salt Lick and Hat Rack: a fully worn set gives its bonus before you hand it in, salt counts include salt in the refinery, locked salt upgrades are dimmed, and the hat rack bonus list shows the game values',
+      'Weekly Bosses: HP, MP, accuracy, defence, speed and bag size task numbers now show the right values',
+      'Tournament: correct round names, match results and tournament day, and the Pet Mart gems alert follows the game claim rule',
+      'Killroy: Permanent Upgrades now round like the game does and show the bonus the game really applies to Research, Spelunking and Masterclass drops',
+      'Emperor: Next level bonus now shows the right bonus (it was one level ahead and disappeared after level 48), with an info icon listing the next 10 bonuses. Summary cards now wrap on small screens',
+      'Anvil and carry capacities now include the +1000 base capacity from the Starter Pack offer, so anvils no longer show Full too early',
+      'Sigils: charge timers and progress use the right next tier cost, Eclectic only counts once unlocked, and the dashboard alert no longer flags maxed sigils',
+      'Respawn rates now match the game for Dig Doug, the Hole caves, Verminous and monsters outside the world lists, and the Task Unlocks page shows the 7th tab',
+      'Speedrun: run cooldown includes cooldown reduction, and an unlearned Void Trial Rerun no longer shows points, boss portals or Void Radius times',
+      'Talents a character has not learned no longer count, which fixes printer samples, Acme Anvil points and a few damage talents',
+      'Smaller fixes: Justice coins, Wisdom opal chance, Killroy kills, Den and cove texts, grand discovery chance follows your logged-in character, trophies and nametags count as gear until map 250 unlocks the gallery, and the lowest-level class EXP merit no longer applies on a level tie'
     ]
   },
   {

@@ -15,8 +15,10 @@ import {
   monsters,
   ninjaExtraInfo,
   randomList,
+  deathNote,
   starSignByIndexMap
 } from '@website-data';
+import { getCglunkoBonus } from '@parsers/world-5/caverns/crystal-glunko-cove';
 import {
   calculateAfkTime,
   getBookLvRange,
@@ -31,7 +33,8 @@ import {
   isCompanionBonusActive,
   isCompanionLvl2Active,
   isMasteryBonusUnlocked,
-  getSkillCardBonus
+  getSkillCardBonus,
+  getStatCurveValue
 } from './misc';
 import { calculateItemTotalAmount, createItemsWithUpgrades, getStatsFromGear } from './items';
 import { getInventoryList } from './storage';
@@ -67,6 +70,7 @@ import { getCookingEff, getCookingProwess, getMealsBonusByEffectOrStat } from '.
 import { getObols, getObolsBonus, mergeCharacterAndAccountObols } from './obols';
 import { getPlayerWorship } from './world-3/worship';
 import { getPlayerQuests } from './quests';
+import { getPortalKillsLeftDisplay } from './portals';
 import { getJewelBonus, getLabBonus, getLabEfficiency, getPlayerLabChipBonus } from './world-4/lab';
 import { getAchievementStatus } from './achievements';
 import { lavaLog, notateNumber, commaNotation } from '@utility/helpers';
@@ -74,7 +78,7 @@ import { getArcadeBonus } from './world-2/arcade';
 import { isArtifactAcquired } from './world-5/sailing';
 import { getShinyBonus } from './world-4/breeding';
 import { getAccountMinorDivinityBonus, getCharacterMinorDivinityBonus, getDivStylePerHour, getMinorDivinityBonus, GOD_INDEX, isMajorDivinityActive } from './world-5/divinity';
-import { getCloudBonus, getEquinoxBonus } from './world-3/equinox';
+import { EQUINOX_CLOUD, getCloudBonus, getEquinoxBonus } from './world-3/equinox';
 import { CONSTRUCT_MASTERY, getConstructionMasteryBonus } from './world-3/construction';
 import { getAtomBonus } from './world-3/atomCollider';
 import {
@@ -468,7 +472,8 @@ export const initializeCharacter = (char: any, charactersLevels: any, account: a
     currentIcon = 'ClassIcons45';
   }
   else {
-    current = parseFloat(mapPortals?.[currentMapIndex]?.[0]) - parseFloat(kills?.[currentMapIndex]);
+    // The game draws the first door's kills left rounded up; progress is the requirement minus that
+    current = parseFloat(mapPortals?.[currentMapIndex]?.[0]) - getPortalKillsLeftDisplay(parseFloat(kills?.[currentMapIndex]?.[0]));
     currentIcon = 'ClassIconsF';
   }
   character.nextPortal = {
@@ -1728,6 +1733,47 @@ const createTalentPreset = (charClass: any, skillLevels: any, maxSkillLevels: an
 // World 7 scales the shared respawn bonuses; its Advice Fish and merit terms sit outside the scaling
 const W7_RESPAWN_SCALING = 0.65;
 
+// game performETCaction: the respawn formula is picked by list membership, not by the monster's world.
+// W1-W3 read RANDOlist 0/1/15 (Dig Doug is in the W2 list but not the W2 death note), W4-W7 the death note.
+const RESPAWN_WORLD_LISTS: string[][] = [
+  randomList?.[0],
+  randomList?.[1],
+  randomList?.[15],
+  ...[3, 4, 5, 6].map((world) => (deathNote as any[])?.filter((mob) => mob?.world === world).map(({ rawName }) => rawName))
+];
+const HOLE_CAVE_RESPAWN = ['caveB', 'caveC', 'caveD'];
+const ROYAL_RAT = 'fm_rat';
+const RESPAWN_MERIT_INDEX = 1;
+const CGLUNKO_RESPAWN_UPGRADE = 2;
+// caveB reads the World 5 respawn merit level (Tasks[2][4][1])
+const HOLE_CAVE_MERIT_WORLD = 4;
+
+// Respawns the shared bonuses never touch. The game's caveD branch writes its result onto caveC (and leaves
+// caveD at its base), so caveC ends up with caveD's base over the Crystal Glunko Cove respawn bonuses.
+const getFixedRespawn = (group: number | string | null, baseRespawn: number, account: any): number | null => {
+  if (group === null || group === 'caveD') return baseRespawn;
+  if (group === 'caveC') {
+    const glunkoBonus = getCglunkoBonus(account, CGLUNKO_RESPAWN_UPGRADE)
+      + getSchematicBonus({ holesObject: account?.hole?.holesObject, t: 100, i: 25 });
+    return (monsters as any)?.caveD?.RespawnTime / (1 + glunkoBonus / 100);
+  }
+  if (group === ROYAL_RAT) return account?.royalGuardian?.raw?.length
+    ? account?.royalGuardian?.guardian?.ratRespawn ?? baseRespawn
+    : baseRespawn;
+  return null;
+}
+
+// 1-7 for a world formula, the raw name for the special branches, null when the game leaves the respawn as is
+const getRespawnGroup = (rawName: string): number | string | null => {
+  if (rawName === 'riftAll') return 'riftAll';
+  const worldIndex = RESPAWN_WORLD_LISTS.slice(0, 6).findIndex((list) => list?.includes(rawName));
+  if (worldIndex !== -1) return worldIndex + 1;
+  if (HOLE_CAVE_RESPAWN.includes(rawName)) return rawName;
+  if (RESPAWN_WORLD_LISTS[6]?.includes(rawName)) return 7;
+  if (rawName === ROYAL_RAT) return rawName;
+  return null;
+}
+
 export const getRespawnRate = (character: any, account: any) => {
   const { targetMonster } = character;
   const monster = monsters?.[targetMonster];
@@ -1737,7 +1783,18 @@ export const getRespawnRate = (character: any, account: any) => {
   };
 
   const isRift = targetMonster === 'riftAll';
-  const { RespawnTime, worldIndex = 0 } = monster;
+  const { RespawnTime } = monster;
+  const group = getRespawnGroup(targetMonster);
+  const fixedRespawn = getFixedRespawn(group, RespawnTime, account);
+  if (fixedRespawn !== null) return {
+    respawnRate: fixedRespawn,
+    breakdown: createBreakdown('Respawn Rate', notateNumber(fixedRespawn, 'MultiplierInfo'), [
+      flat('Respawn time', fixedRespawn)
+    ], { combine: 'divide' })
+  };
+  // caveB takes the W1 achievement and the W1 merit's per-level value on the W5 merit's level
+  const worldIndex = typeof group === 'number' ? group : 0;
+  const isHoleCave = group === 'caveB';
 
   // Common bonuses (all worlds)
   const schematicBonus = getSchematicBonus({ holesObject: account?.hole?.holesObject, t: 44, i: 10 });
@@ -1755,18 +1812,17 @@ export const getRespawnRate = (character: any, account: any) => {
   const achieve109 = getAchievementStatus(account?.achievements, 109);
   const achieve308 = getAchievementStatus(account?.achievements, 308);
 
-  const achievementBonus = (worldIndex === 1 || isRift) ? achieve44
+  const achievementBonus = (worldIndex === 1 || isRift || isHoleCave) ? achieve44
     : worldIndex === 2 ? achieve109
       : (worldIndex >= 5) ? 2 * achieve308 : 0;
 
-  // Merit bonus (world-specific)
-  // merit index = worldIndex - 1 (0-based). 2.3.530 added the W7 merit ("All Shimmerfin Deep Mobs
-  // respawn +{% faster"), so W7 is no longer the exception it used to be - but it enters the W7
-  // branch below OUTSIDE the 0.65 scaling, alongside the Advice Fish term.
-  const meritIdx = isRift ? 0 : worldIndex - 1;
-  const meritLevel = account?.tasks?.[2]?.[meritIdx]?.[1] ?? 0;
-  const meritBonusPerLevel = account?.meritsDescriptions?.[meritIdx]?.[1]?.bonusPerLevel ?? 0;
-  const meritBonus = worldIndex <= 7 || isRift ? meritLevel * meritBonusPerLevel : 0;
+  // Merit bonus (world-specific): the world's "respawn +{% faster" merit (TaskShopDesc[w][1]). W7's enters
+  // the W7 branch below OUTSIDE the 0.65 scaling, alongside the Advice Fish term.
+  const meritLevelIdx = isRift ? 0 : isHoleCave ? HOLE_CAVE_MERIT_WORLD : worldIndex - 1;
+  const meritValueIdx = isRift || isHoleCave ? 0 : worldIndex - 1;
+  const meritLevel = account?.tasks?.[2]?.[meritLevelIdx]?.[RESPAWN_MERIT_INDEX] ?? 0;
+  const meritBonusPerLevel = account?.meritsDescriptions?.[meritValueIdx]?.[RESPAWN_MERIT_INDEX]?.bonusPerLevel ?? 0;
+  const meritBonus = meritLevel * meritBonusPerLevel;
 
   // Rift: DIABOLICAL_SET bonus
   const diabolicalSetBonus = isRift ? getArmorSetBonus(account, 'DIABOLICAL_SET') : 0;
@@ -1835,6 +1891,9 @@ export const notateExpMulti = (value: number) => {
   }
 }
 
+// game ExpMulti: 3 * Tasks[2][0][2]
+const LOWEST_LEVEL_MERIT_EXP_PER_LEVEL = 3;
+
 export const getClassExpMulti = (character: any, account: any, characters: any) => {
   // _customBlock_ExpMulti(0)
   // luck defaults to 0: a character with no stats data (e.g. no save) has no luck, not an
@@ -1855,11 +1914,13 @@ export const getClassExpMulti = (character: any, account: any, characters: any) 
   let expGainLUK2 = 0;
   let expGainLUK3 = 0;
 
-  // Lowest character bonus
-  const lowestLevel = characters?.reduce((res: any, { level }: any) => (level < res ? level : res), Infinity);
-  const isLowestLevel = character?.level === lowestLevel;
+  // Lowest character bonus: the game needs the merit bought and a class level strictly below every other
+  // character's (a tie gets nothing); the vault and superbit terms ride on the same check
+  const meritLevel = account?.tasks?.[2]?.[0]?.[2] ?? 0;
+  const isLowestLevel = meritLevel > 0 && (characters ?? []).every((other: any) => other?.playerId === character?.playerId
+    || character?.level < other?.level);
   const upgradeVaultBonus = getUpgradeVaultBonus(account?.upgradeVault?.upgrades, 12);
-  const meritBonus = account?.tasks?.[2]?.[0]?.[2] * 3;
+  const meritBonus = meritLevel * LOWEST_LEVEL_MERIT_EXP_PER_LEVEL;
   const superbitBonus = isSuperbitUnlocked(account, 'Noobie_Gains')?.unlocked ? 50 : 0;
   let superbitApplied;
   if (isLowestLevel) {
@@ -1889,7 +1950,7 @@ export const getClassExpMulti = (character: any, account: any, characters: any) 
   expGainLUK2 += cardSetBonus;
 
   // ExpGainLUK3 - superbit + bundle
-  const hasBundle = isBundlePurchased(account?.bundles, 'bun_q');
+  const hasBundle = isBundlePurchased(account, 'bun_q');
   const bundleBonus = hasBundle ? 20 : 0;
   if (hasBundle) {
     expGainLUK3 += bundleBonus;
@@ -2004,7 +2065,7 @@ export const getClassExpMulti = (character: any, account: any, characters: any) 
   // SushiStuff("RoG_BonusQTY", 15) - Tobiko Temaki
   const sushiClassExpBonus = getSushiBonus(account, 15);
   // 5 * Dreamstuff("CloudBonus", 70) - equinox challenge "Reach LV. 100 for any Palette Colour in Gaming"
-  const equinoxClassExpMulti = 5 * getCloudBonus(account?.equinox?.challenges, 70);
+  const equinoxClassExpMulti = 5 * getCloudBonus(account?.equinox?.challenges, EQUINOX_CLOUD.CLASS_EXP);
   // Royal Statue 3 (CLASS EXP) - returns 0 for accounts with no Royal Guardian. The game appends
   // this factor at the end of the same ExpGainLUK5 chain, right after the Fountain term.
   const royalStatueClassExpBonus = getRoyalStatueBonus(account, 3);
@@ -2297,13 +2358,7 @@ export const getDropRate = (character: any, account: any, characters: any) => {
   // luck defaults to 0 for the same reason as getClassExpMulti above - undefined luck breaks the
   // `luck < 1e3` branch check (always false) and falls through to a NaN-producing formula.
   const { luck = 0 } = character?.stats || {};
-  let luckMulti;
-  if (luck < 1e3) {
-    luckMulti = (Math.pow(luck + 1, 0.37) - 1) / 40;
-  }
-  else {
-    luckMulti = (luck - 1e3) / (luck + 2500) * 0.5 + 0.297;
-  }
+  const luckMulti = getStatCurveValue(luck);
   const postOfficeBonus = getPostOfficeBonus(character?.postOffice, 'Non_Predatory_Loot_Box', 0);
   const robbingHoodTalentBonus = getTalentBonus(character?.flatTalents, 'ROBBINGHOOD');
   const lootyCurseTalentBonus = getTalentBonus(character?.flatTalents, 'CURSE_OF_MR_LOOTY_BOOTY');
@@ -2436,7 +2491,7 @@ export const getDropRate = (character: any, account: any, characters: any) => {
   }
   let final = dropRate;
 
-  const hasAnotherDrBundle = isBundlePurchased(account?.bundles, 'bun_v');
+  const hasAnotherDrBundle = isBundlePurchased(account, 'bun_v');
   if (hasAnotherDrBundle) {
     final += DR_BUNDLE_FLAT;
   }
@@ -2449,7 +2504,7 @@ export const getDropRate = (character: any, account: any, characters: any) => {
     final += DR_NINJA_MASTERY_FLAT;
   }
 
-  const hasDrBundle = isBundlePurchased(account?.bundles, 'bun_p');
+  const hasDrBundle = isBundlePurchased(account, 'bun_p');
   if (hasDrBundle) {
     final *= DR_BUNDLE_MULTI
   }
@@ -2471,7 +2526,7 @@ export const getDropRate = (character: any, account: any, characters: any) => {
   const sushiDropRateBonus = getSushiBonus(account, 48);
   const jellyDropRateBonus = getJellyBonus(account, 14);
   // 5 * Dreamstuff("CloudBonus", 69) - equinox challenge "Acquire at least 10 Megaflesh from Bubba the Seal"
-  const equinoxDropRateMulti = 5 * getCloudBonus(account?.equinox?.challenges, 69);
+  const equinoxDropRateMulti = 5 * getCloudBonus(account?.equinox?.challenges, EQUINOX_CLOUD.DROP_RATE);
   const vialDrMulti = getVialsBonusByStat(account?.alchemy?.vials, '7drMulto');
   // Royal Statue 1 (DROP RATE) - returns 0 for accounts with no Royal Guardian. The game inserts
   // this factor right after ArcaneMapMulti_bon in this same chain, before CardBonusREAL(101).
@@ -2731,7 +2786,7 @@ export const getCashMulti = (character: any, account: any, characters: any, play
   const eventBonus2 = getEventShopBonus(account, 20);
   const { value: gearBonusMoney, newBreakdown: gearBonusMoneyBreakdown } = getStatsFromGear(character, 77, account);
   const { value: gearExtraMoney, newBreakdown: gearExtraMoneyBreakdown } = getStatsFromGear(character, 100, account);
-  const hasCashBundle = isBundlePurchased(account?.bundles, 'bun_y') ? 1 : 0;
+  const hasCashBundle = isBundlePurchased(account, 'bun_y') ? 1 : 0;
   const charmBonus = getCharmBonus(account, 'Gumball_Necklace');
   const starTalent = getTalentBonus(character?.flatStarTalents, 'CASH_MONEY');
   const armorSetBonus = getArmorSetBonus(account, 'GOLD_SET');
@@ -3193,7 +3248,7 @@ export const getAfkGain = (character: any, characters: any, account: any) => {
   const goldenFoodBonus = getGoldenFoodBonus('Golden_Dumpling', character, account, characters);
   const voteBonus = getVoteBonus(account, 6);
   const vaultBonus = getUpgradeVaultBonus(account?.upgradeVault?.upgrades, 23);
-  const bundleBonus = isBundlePurchased(account?.bundles, 'bun_u') ? 30 : 0;
+  const bundleBonus = isBundlePurchased(account, 'bun_u') ? 30 : 0;
   const kangarooAfkBonus = getKangarooBonus(account?.kangaroo?.bonuses, 'AFK Gains') || 0;
 
   const additionalAfkGains =
@@ -3568,16 +3623,18 @@ const getNonConsumeChance = (character: any, account: any) => {
 }
 // VaultKillzTotal(11): floor(log10) of the W5 portal kills
 const VAULT_PORTAL_KILLS_LOG_INDEX = 11;
-// game: WorkbenchStuff("PlayerBuildSpd")
-export const getPlayerConstructionSpeed = (character: any, account: any) => {
+// game: WorkbenchStuff("PlayerBuildSpd"). EtcBonuses("30") (gear and obol build speed) is the LOGGED-IN
+// character's DNSM.TotalStatsETCmap, applied to every character's rate; the rest is the character's own.
+export const getPlayerConstructionSpeed = (character: any, account: any, characters?: any[]) => {
+  const loggedInCharacter = getBestActiveCharacter(characters) ?? character;
   const constructionLevel = character?.skillsInfo?.construction?.level;
   const baseMath = 3 * Math.pow((constructionLevel) / 2 + 0.7, 1.6);
   const bubbleBonus = getBubbleBonus(account, 'CARPENTER', false);
   const stampsBonus = getStampsBonusByEffect(account, 'Building_Speed', character);
   const postOffice = getPostOfficeBoxLevel(character?.postOffice, 'Construction_Container');
   const guildBonus = getGuildBonusBonus(account?.guild?.guildBonuses, 5);
-  const { value: equipmentConstructionEffectBonus } = getStatsFromGear(character, 30, account);
-  const obolsBonus = getObolsBonus(character?.obols, bonuses?.etcBonuses?.[30]);
+  const { value: equipmentConstructionEffectBonus } = getStatsFromGear(loggedInCharacter, 30, account);
+  const obolsBonus = getObolsBonus(loggedInCharacter?.obols, bonuses?.etcBonuses?.[30]);
   const constructionAchievement = getAchievementStatus(account?.achievements, 153);
   const constructMastery = getConstructionMasteryBonus(account, CONSTRUCT_MASTERY.BUILD_SPEED);
   const vialBonus = getVialsBonusByEffect(account?.alchemy?.vials, null, 'Contspd');
@@ -3591,11 +3648,11 @@ export const getPlayerConstructionSpeed = (character: any, account: any) => {
   const multipliers = (1 + getWinnerBonus(account, '<x Construct SPD') / 100)
     * (1 + getPaletteBonus(account, 25) / 100)
     * (1 + getVialsBonusByStat(account?.alchemy?.vials, '6turtle') / 100);
-  const talentBonus = getTalentBonus(character?.flatTalents, 'REDOX_RATES', false, true);
+  const talentBonus = getBaseTalentBonus(character?.flatTalents, 'REDOX_RATES');
   const atomBonus = getAtomBonus(account, 'Helium_-_Talent_Power_Stacker');
   const redSaltAmount = calculateItemTotalAmount([...account?.storage?.list,
   ...(account?.refinery?.refineryStorage || [])], 'Refinery1', true, true);
-  return Math.floor(baseMath * (1 + (constructionLevel * bubbleBonus) / 100) * moreMath * multipliers * (1 + (talentBonus * (atomBonus + lavaLog(redSaltAmount))) / 100));
+  return baseMath * (1 + (constructionLevel * bubbleBonus) / 100) * moreMath * multipliers * (1 + (talentBonus * (atomBonus + lavaLog(redSaltAmount))) / 100);
 }
 // The first class index past the warriors (beginner tree and warriors sit below it)
 const FIRST_ARCHER_CLASS_INDEX = 18;

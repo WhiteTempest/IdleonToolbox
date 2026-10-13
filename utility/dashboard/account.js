@@ -29,7 +29,6 @@ import { isPast } from 'date-fns';
 import { getIsland } from '@parsers/world-2/islands';
 import { getLegendTalentBonus } from '@parsers/world-7/legendTalents';
 import { isSuperbitUnlocked } from '@parsers/world-5/gaming';
-import { getResearchGridBonus } from '@parsers/world-7/research';
 import { MINE_CURRENCY_UPGRADE_INDICES } from '@parsers/world-7/minehead';
 import { isHatRackEligible } from '@parsers/world-3/hatRack';
 import { getGoldCostToMaxLevel, getStampsPerDay } from '@parsers/world-1/stamps';
@@ -44,6 +43,8 @@ const ARCANIST_DAILY_DROP_CAP = 100;
 
 // Weekly boss difficulty stops at 5 skulls, and trophies only drop on a new weekly best.
 const MAX_WEEKLY_BOSS_SKULLS = 5;
+// game: claim button gate 0.1 <= getServerVarLoad("GemPM_x")
+const MIN_PET_MART_GEMS_SERVER_VAR = 0.1;
 
 // getAllItems rebuilds a multi-thousand-item array from every inventory, storage and the forge,
 // and useAlerts calls each world's alert function once per checked tracker subgroup with the same
@@ -262,16 +263,17 @@ export const getGeneralAlerts = (account, fields, options, characters, lastUpdat
     if (options?.etc?.petMartGems?.checked) {
       const lastClaimedShopDay = account?.accountOptions?.[516] ?? 0;
       const currentShopDay = account?.tournament?.global?.S ?? 0;
-      if (currentShopDay >= 1 && lastClaimedShopDay < currentShopDay) {
+      // The game only offers the claim while the GemPM_x server var is at least 0.1
+      const gemsOffered = Number(account?.serverVars?.GemPM_x) >= MIN_PET_MART_GEMS_SERVER_VAR;
+      if (gemsOffered && currentShopDay >= 1 && lastClaimedShopDay < currentShopDay) {
         etc.petMartGems = true;
       }
     }
     if (options?.etc?.tournamentRegister?.checked && account?.companions?.list?.some((companion) => companion?.acquired)) {
-      // accountOptions[496] mirrors the current tournament day in the save (matches the game's
-      // getTournamentDay), so prefer it over tournament.global.T which can be stale.
+      // tournamentDay is the newer of the save's copy (accountOptions[496]) and the global doc's T.
       // accountOptions[511] = tournament-day registered-through (registering sets it to day + 1);
       // registered for the current tournament ⟺ 511 > day.
-      const currentTournamentDay = account?.accountOptions?.[496] ?? account?.tournament?.global?.T ?? 0;
+      const currentTournamentDay = account?.tournament?.tournamentDay ?? 0;
       const registeredThrough = account?.accountOptions?.[511] ?? 0;
       if (currentTournamentDay >= 1 && registeredThrough <= currentTournamentDay) {
         etc.tournamentRegister = true;
@@ -465,23 +467,8 @@ export const getWorld2Alerts = (account, fields, options, characters) => {
       }
     }
     if (options?.alchemy?.sigils?.checked) {
-      const hasJadeBonus = isJadeBonusUnlocked(account, 'Ionized_Sigils');
-      const hasEthearealBonus = account?.spelunking?.loreBosses?.[6]?.defeated;
-      const hasEclecticBonus = getResearchGridBonus(account, 128, 0);
-      const sigils = account?.alchemy?.p2w?.sigils?.filter(({
-        characters,
-        progress,
-        boostCost,
-        jadeCost,
-        etherealCost,
-        eclecticCost
-      }) => {
-        if (characters.length === 0) return false;
-        if (hasEclecticBonus && eclecticCost) return progress >= eclecticCost;
-        if (hasEthearealBonus && etherealCost) return progress >= etherealCost;
-        if (hasJadeBonus && jadeCost) return progress >= jadeCost;
-        return progress >= boostCost;
-      });
+      const sigils = account?.alchemy?.p2w?.sigils?.filter(({ characters, progress, nextCost }) =>
+        characters?.length > 0 && nextCost != null && progress >= nextCost);
       if (sigils.length > 0) {
         alchemy.sigils = sigils;
       }

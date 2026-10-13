@@ -17,7 +17,7 @@ import { isArtifactAcquired } from '@parsers/world-5/sailing';
 import { getShinyBonus } from '@parsers/world-4/breeding';
 import { isSuperbitUnlocked } from '@parsers/world-5/gaming';
 import { getTalentBonus, getVoidWalkerTalentEnhancements, getBestActiveCharacter, getHighestTalentAcrossCharacters, getOwnOrHighestTalent, checkCharClass, CLASSES } from '@parsers/talents';
-import { getEquinoxBonus } from '@parsers/world-3/equinox';
+import { EQUINOX_CLOUD, getCloudBonus, getEquinoxBonus } from '@parsers/world-3/equinox';
 import LavaRand from '@utility/lavaRand';
 import { allProwess, efficiencyGroupNames, getAllBaseSkillEffBreakdown, getAllEffBreakdown } from '@parsers/efficiency';
 import {
@@ -241,7 +241,7 @@ export const formatMealBonus = (value: number) => value < 1e7 ? commaNotation(va
 // game: "RibbonBonus"
 export const getRibbonBonus = (account: any, t: any) => {
   const armorSetBonus = getArmorSetBonus(account, 'EMPEROR_SET');
-  const cloudBonus73 = account?.equinox?.challenges?.[73]?.current === -1 ? 1 : 0;
+  const cloudBonus73 = getCloudBonus(account?.equinox?.challenges, EQUINOX_CLOUD.RIBBON_MULTI);
   const rank = t ?? 0;
   return 1 + (Math.floor(5 * rank + Math.floor(rank / 2) *
     (4 + 6.5 * Math.floor(rank / 5))) + Math.floor(rank / 4) * (armorSetBonus / 4)
@@ -549,8 +549,8 @@ export interface DailyRibbons {
 
 // Inputs for the daily Ribbon Shelf roll (N.js daily reset, the block after Grimoire upgrade 5).
 export const getDailyRibbonInputs = (account: any, characters: any, smoky: DailyRibbonSmoky): DailyRibbonInputs => {
-  const bundleDeathBringer = isBundlePurchased(account?.bundles, 'bun_v') ? 1 : 0;
-  const bundleBoaring = isBundlePurchased(account?.bundles, 'ban_f') ? 1 : 0;
+  const bundleDeathBringer = isBundlePurchased(account, 'bun_v') ? 1 : 0;
+  const bundleBoaring = isBundlePurchased(account, 'ban_f') ? 1 : 0;
   const grimoire = getGrimoireBonus(account?.grimoire?.upgrades, 5);
   const connoisseur = getEventShopBonus(account, 13);
   return {
@@ -559,7 +559,7 @@ export const getDailyRibbonInputs = (account: any, characters: any, smoky: Daily
     connoisseur,
     bundleDeathBringer,
     bundleBoaring,
-    bundleAnniversary: isBundlePurchased(account?.bundles, 'ban_a') ? 1 : 0,
+    bundleAnniversary: isBundlePurchased(account, 'ban_a') ? 1 : 0,
     legendTalent: getLegendTalentBonus(account, 13) || 0,
     talent: getHighestTalentAcrossCharacters(characters, 'RIBBON_WINNING', getBestActiveCharacter(characters)) || 0,
     palette: getPaletteBonus(account, 33),
@@ -1024,8 +1024,7 @@ export const getMealMaxLevel = (account: any) => {
     + (30 * loreBoss)
 }
 export const getMealLevelCost = (level: any, achievements: any, account?: any, localEquinoxUpgrades?: any) => {
-  const foodLustChallenge = account?.equinox?.challenges.find((challenge: any) => challenge.current === -1
-    && challenge.reward.includes('\'Food_Lust\'_Equinox_Upg_now_reduces_cost_by_-42%_per_stack')) ? 1 : 0;
+  const foodLustChallenge = getCloudBonus(account?.equinox?.challenges, EQUINOX_CLOUD.FOOD_LUST_DISCOUNT);
   const companion162 = isCompanionBonusActive(account, 162) ? (account?.companions?.list?.at(162)?.bonus ?? 0) : 0;
 
   return Math.max(0.001, 1 / Math.max(1, 5 * companion162))
@@ -1078,7 +1077,7 @@ export interface NoMealLeftBehindProc {
 // The daily meal level-up fires if either source is owned, and their levels stack onto one meal.
 export const getNoMealLeftBehindLevels = (account: any) => {
   return (isJadeBonusUnlocked(account, 'No_Meal_Left_Behind') ? 1 : 0)
-    + (isBundlePurchased(account?.bundles, 'bun_s') ? 2 : 0);
+    + (isBundlePurchased(account, 'bun_s') ? 2 : 0);
 }
 
 // The game only ever considers meals at level 2 or higher.
