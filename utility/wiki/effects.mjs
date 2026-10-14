@@ -4,8 +4,8 @@ const roundTwo = (num) => Math.round((num + Number.EPSILON) * 100) / 100;
 
 const cleanUnderscore = (str) => (str ? String(str).replace(/_/g, ' ') : '');
 
-// _customBlock_ArbitraryCode5Inputs
-export const growth = (func, level, x1, x2, shouldRound = true, _unused5) => {
+// _customBlock_ArbitraryCode5Inputs, with null for a function name it has no case for.
+const growthCurve = (func, level, x1, x2) => {
   let result;
   switch (func) {
     case 'add':
@@ -64,41 +64,107 @@ export const growth = (func, level, x1, x2, shouldRound = true, _unused5) => {
       result = 100 - (level * x1) / (level + x2);
       break;
     default:
-      result = 0;
+      result = null;
   }
+  return result;
+};
+
+// The game answers 0 for a function it does not know, and every parser caller relies on that.
+export const growth = (func, level, x1, x2, shouldRound = true, _unused5) => {
+  const result = growthCurve(func, level, x1, x2) ?? 0;
   return shouldRound ? roundTwo(result) : result;
 };
 
-
-// A vial or bubble's description carries a `{` where its bonus goes, and what fills it is the
-// bonus at the reader's level. A page with no save has no level, so it reads at level one: a real
-// number the game itself would show, rather than a blank or someone else's total.
-export const ALCHEMY_LEVEL = 1;
-
-const filled = (func, x1, x2) => {
-  const bonus = growth(func, ALCHEMY_LEVEL, x1, x2, false);
-  return Number.isFinite(bonus) ? Math.round(bonus * 100) / 100 : '';
+// Every shape of level formula a wiki page fills in. A node names one per placeholder and carries
+// its constants; nothing is ever evaluated from a string, so a new shape of game formula is a new
+// named entry here with its own test.
+export const FORMULAS = {
+  // _customBlock_ArbitraryCode5Inputs: talents, bubbles, vials and most tables with a func column.
+  // "txt" and "_" mean that half has no number; they, and any name growth has no case for, give
+  // null rather than the game's 0 so the token stays in the sentence.
+  growth: (level, { func, x1, x2 }) => growthCurve(func, level, x1, x2),
+  linear: (level, { perLevel }) => perLevel * level,
+  pow: (level, { base, rate }) => base * Math.pow(rate, level),
+  linearPow: (level, { base, rate }) => base * level * Math.pow(rate, level),
+  // Approaches 100 and never reaches it, floored to two decimals the way the game prints it.
+  diminishingPercent: (level, { perLevel }) => Math.floor(1e4 * (1 - 1 / (1 + (perLevel * level) / 100))) / 100
 };
 
-export const alchemyEffect = (node) => {
-  const { func, x1, x2 } = node?.effect || {};
+const rawValue = (formula, level, args) => {
+  const fn = FORMULAS[formula];
+  return fn ? fn(level, args || {}) : null;
+};
+
+const evaluate = (formula, level, args) => {
+  const value = rawValue(formula, level, args);
+  return Number.isFinite(value) ? value : null;
+};
+
+const roundTwoDecimals = (value) => Math.round(value * 100) / 100;
+
+// Every number the wiki prints. Past a billion the digits stop being readable (costs run to 1e11
+// feathers, Feather Restart's multiplier to 1e19), and an overflowed formula reads as infinite
+// rather than leaving its placeholder behind.
+const formatNumber = (value) => {
+  if (value === Infinity) return '∞';
+  if (value === -Infinity) return '-∞';
+  if (Math.abs(value) >= 1e9) return value.toExponential(2).replace('e+', 'e');
+  // `|| 0` folds -0, which toLocaleString would print as "-0".
+  return (roundTwoDecimals(value) || 0).toLocaleString('en-US', { maximumFractionDigits: 2 });
+};
+
+// The description with each placeholder filled at `level`. A token with no number behind it is
+// left as written rather than replaced with a gap mid-sentence.
+export const levelledText = (node, level) => {
   if (!node?.description) return null;
-  if (!func) return cleanUnderscore(node.description);
-  return cleanUnderscore(String(node.description).replace(/[{$]/g, String(filled(func, x1, x2))));
+  let text = String(node.description);
+  for (const term of node.effect?.terms || []) {
+    const value = rawValue(term.formula, level, term.args);
+    if (value === null || Number.isNaN(value)) continue;
+    text = text.split(term.token).join(formatNumber(value));
+  }
+  return cleanUnderscore(text);
 };
 
-// A stamp reads at level one for the same reason a vial does.
+// What buying `level` costs. The game's cost lines read the level the upgrade is at before the
+// purchase, so the formula runs at level - 1.
+export const costAt = (node, level) => {
+  if (!node?.cost) return null;
+  return evaluate(node.cost.formula, level - 1, node.cost.args);
+};
+
+export const costToMax = (node) => {
+  const cap = node?.effect?.cap ?? null;
+  if (!node?.cost || cap == null) return null;
+  let total = 0;
+  for (let level = 1; level <= cap; level++) {
+    const cost = costAt(node, level);
+    if (cost === null) return null;
+    total += cost;
+  }
+  return total;
+};
+
+// A cost is a whole amount below a billion.
+export const formatAmount = (value) => formatNumber(Math.abs(value) >= 1e9 ? value : Math.round(value));
+
+// Talents cap around 100 by themselves and go far past it with books and bonuses; this guard only
+// stops a number that would render as gibberish.
+const MAX_LEVEL = 10000;
+
+// Anything that is not a whole number from 1 reads as level 1, so clearing the field to type a new
+// number leaves the sentence intact instead of blanking it.
+export const readLevel = (value, cap = null) => {
+  const level = Math.floor(Number(value));
+  if (!Number.isFinite(level) || level < 1) return 1;
+  return Math.min(level, cap ?? MAX_LEVEL);
+};
+
+// A stamp reads at level one: a real number the game itself would show, rather than a blank.
 export const stampEffect = (node) => {
   const { template, func, x1, x2 } = node?.stamp?.effect || {};
   if (!template || !func) return node?.description ? cleanUnderscore(node.description) : null;
-  return cleanUnderscore(String(template).replace(/{/g, String(filled(func, x1, x2))));
-};
-
-// A talent's numbers depend on its level, which a level-less reader (the bot) doesn't have, so the
-// two slots read as X and Y rather than a value from one arbitrary level.
-export const talentTemplate = (node) => {
-  if (!node?.description) return null;
-  return cleanUnderscore(String(node.description).replace(/{/g, 'X').replace(/}/g, 'Y'));
+  return levelledText({ description: template, effect: { terms: [{ token: '{', formula: 'growth', args: { func, x1, x2 } }] } }, 1);
 };
 
 export const cardEffect = (card) => {

@@ -6,25 +6,7 @@
 // Descriptions are filled at their base value, the way systems.mjs does it, because what a player
 // gets once levels and account bonuses apply is not something a save-less page can know.
 
-// Characters the game's font draws as glyphs, which are not text anywhere else.
-const GLYPHS = /[船般航舞製]/g;
-
-// `@` is the game's line break. It becomes a sentence break, or just a space when the sentence has
-// already ended, so a two-line description reads as two sentences.
-const breakLines = (text) => text.replace(/_*(?:@_*)+/g, (match, offset, whole) => (
-  /[.!?)]$/.test(whole.slice(0, offset)) ? '_' : '._'
-));
-
-// The "Total Bonus: ..." tail is a live readout of the player's own total, which is all
-// placeholders without a save.
-const dropReadout = (text) => text.replace(/(?:_*@)*_*Total_Bonus:.*$/i, '');
-
-const tidy = (text) => breakLines(String(text || '').replace(GLYPHS, ''))
-  .replace(/_+/g, '_')
-  .replace(/^_|_$/g, '');
-
-// Ends a clause with a full stop unless the game's own text already did.
-const sentence = (text) => (/[.!?]$/.test(text) ? text : `${text}.`);
+import { dropReadout, sentence, tidy } from '../registry/text.mjs';
 
 // Gods ------------------------------------------------------------------------------------------
 
@@ -32,6 +14,7 @@ const sentence = (text) => (/[.!?]$/.test(text) ? text : `${text}.`);
 // daily amount starts at 20 (alchemy.ts getKrukBubblesDaily) and the list depends on the Zenith
 // Market, so the list is dropped and the lead-in reworded to match.
 const godMajor = (text) => String(text || '')
+  // UPKEEP: 20 is Kattlekruk's daily bubble levels (alchemy.ts getKrukBubblesDaily); re-check the amount and the `+$_LV` wording.
   .replace('+$_LV', '+20_LV')
   .replace(/these_Alchemy_Bubbles:(?:_*@)*_*#/, 'some_Alchemy_Bubbles.');
 
@@ -70,10 +53,12 @@ export const godNodes = (gods) => Object.fromEntries((gods || [])
 // whose running count of artifacts reaches its index. The Edge starts with one and gains three
 // when the Brighter Lighthouse Bulb is bought (sailing.ts ISLAND_ARTIFACT_OVERRIDES); the offsets
 // only line up with the lantern artifacts if the full four are counted.
+// UPKEEP: The_Edge's full artifact count (4) mirrors sailing.ts ISLAND_ARTIFACT_OVERRIDES; re-check it and any other island that gains artifacts by bulb or upgrade.
 const ISLAND_ARTIFACT_COUNT = { The_Edge: 4 };
 
 // Deathskull's text is a single `$` the game fills with a line per form (sailing.ts); the first
 // form is what an unforged one gives.
+// UPKEEP: Deathskull's first-form line is copied from sailing.ts; re-check it, and look for other artifacts whose text became a bare `$`.
 const ARTIFACT_TEXT = {
   Deathskull: 'Gives_+1_Gallery_Slots_for_Trophies_in_World_7!'
 };
@@ -115,6 +100,7 @@ const SUPERBIT_TIERS = ['Super', 'Duper', 'Zuper'];
 
 // Three entries cost 1e150 bits and say "no way I'm lettin' ya buy this". They are the game's
 // jokes, not bonuses, and every real superbit costs under 1e101.
+// UPKEEP: 150 sits above every real superbit cost (under 1e101) and at the joke entries (1e150); re-check both ends when a patch adds superbits.
 const UNBUYABLE_EXPONENT = 150;
 
 // The bits currency has a sprite per tier of magnitude (utility/helpers getBitIndex), and the

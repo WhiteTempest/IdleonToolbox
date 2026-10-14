@@ -59,6 +59,9 @@ import { aliases } from './aliases.mjs';
 import { ignore } from './ignore.mjs';
 import { attachHistory } from './history.mjs';
 import { buildBotIndex } from './bot-index.mjs';
+import { ROWS } from './registry/index.mjs';
+import { loadWebsiteData } from './registry/data.mjs';
+import { registryEdges, registryNodes, registryReport } from './registry/build.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const dataDir = path.join(__dirname, '..', '..', 'data');
@@ -106,6 +109,8 @@ const dungeonKeychains = sharedData.dungeonKeychains;
 const companionGroups = sharedData.companionGroups;
 const upgradeVault = sharedData.upgradeVault;
 const refinery = sharedData.refinery;
+// The registry reads sections by key rather than by file, so it gets every section at once.
+const websiteData = loadWebsiteData(path.join(dataDir, 'website-data'));
 
 const nodes = {
   ...itemNodes(items, monsters, cards, stamps, craftSellPrices(crafts, items), randomList),
@@ -142,6 +147,7 @@ const nodes = {
   ...mapNodes(mapNames, rawMapNames),
   ...vialNodes(vials, vialCosts),
   ...bubbleNodes(cauldrons),
+  ...registryNodes(websiteData, ROWS),
 };
 
 // A world is derived from the areas in it, so it can only be built once the map nodes exist.
@@ -187,6 +193,7 @@ const rawEdges = [
   ...randomEventEdges(randomList, monsters),
   ...ninjaHatEdges(randomList, sharedData.ninjaEquipment, items, monsters),
   ...talentLibraryEdges(sharedData.towers, items),
+  ...registryEdges(websiteData, ROWS),
 ];
 
 // A card the monster already drops from its own table needs no edge of its own. cardEdges exists
@@ -398,6 +405,9 @@ if (fs.existsSync(reportPath)) previousCount = JSON.parse(fs.readFileSync(report
 
 fs.writeFileSync(path.join(dataDir, 'entity-graph.json'), JSON.stringify({ nodes, edges }));
 fs.writeFileSync(path.join(dataDir, 'graph-stats.json'), JSON.stringify(stats, null, 2));
+// Per-kind registry counts and every skipped entry, committed beside the unresolved report so a
+// game patch that adds or drops entries shows up as a diff.
+fs.writeFileSync(path.join(__dirname, 'registry-report.json'), `${JSON.stringify(registryReport(websiteData, ROWS), null, 2)}\n`);
 fs.writeFileSync(reportPath, JSON.stringify(unresolved, null, 2));
 
 console.log('[entity-graph] nodes:', JSON.stringify(stats.nodes));
