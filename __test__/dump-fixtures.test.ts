@@ -36,7 +36,7 @@ import { summoningBonuses, summoningEnemies, summoningEndless, classes, jadeUpgr
 import { number2letter } from '@utility/helpers';
 
 const SAVE = path.resolve(__dirname, '../../project-paple/var/saves/idleon_save_latest.json');
-const OUT = path.resolve(__dirname, '../../project-paple/IdleonProcessor/fixtures');
+const OUT = path.resolve(__dirname, '../../project-paple/tests/processors/fixtures');
 
 // Opt-in only: `npm test` runs on every pre-commit and this file rewrites every
 // project-paple fixture against the current save when it runs (clobbered 15
