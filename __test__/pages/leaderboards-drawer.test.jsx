@@ -151,7 +151,7 @@ describe('leaderboards board drawer', () => {
   });
 
   it('does not carry a collapsed section over to another tab', async () => {
-    const sectioned = { createdAt: 1, totalPlayers: 10, categories: ['skills', 'tasks'].map((category) => ({
+    const sectioned = { createdAt: 1, totalPlayers: 10, categories: ['skills', 'combat'].map((category) => ({
       category, metrics: [
         { key: `${category}A`, label: `${category} A`, section: 'First', notation: 'default' },
         { key: `${category}B`, label: `${category} B`, section: 'Second', notation: 'default' }
@@ -162,9 +162,9 @@ describe('leaderboards board drawer', () => {
       const lists = { [`${tab}A`]: [], [`${tab}B`]: [] };
       return { totalUsers: 10, createdAt: 1, [tab]: { public: lists, anonymous: lists } };
     });
-    // Tasks is fetched first so that coming back to it is instant: a spinner in between would
+    // Combat is fetched first so that coming back to it is instant: a spinner in between would
     // unmount the tab and hide a leak.
-    routerState.query = { t: 'tasks' };
+    routerState.query = { t: 'combat' };
     const { rerender } = renderPage();
     await screen.findByRole('button', { name: 'Collapse First' });
     routerState.query = { t: 'skills' };
@@ -173,7 +173,7 @@ describe('leaderboards board drawer', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'Collapse First' }));
     expect(screen.getByRole('button', { name: 'Expand First' }).getAttribute('aria-expanded')).toBe('false');
 
-    routerState.query = { t: 'tasks' };
+    routerState.query = { t: 'combat' };
     rerender();
     expect(await screen.findByRole('button', { name: 'Collapse First' })).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'Expand First' })).toBeNull();
@@ -183,5 +183,62 @@ describe('leaderboards board drawer', () => {
     renderPage();
     await waitFor(() => expect(client.getQueryCache().find({ queryKey: ['lb-podium', false] })).toBeTruthy());
     expect(client.getQueryCache().find({ queryKey: ['lb-board', 'globalRanking', 'top10', false] })).toBeUndefined();
+  });
+});
+
+describe('old tab links', () => {
+  const worldsMeta = async () => ({ createdAt: 1, totalPlayers: 10, categories: [], tabs: [{ key: 'worlds', label: 'Worlds', sections: [
+    { name: 'World 3', metrics: [{ key: 'redoxSaltRank', label: 'Redox Salt Rank', section: 'World 3', notation: 'default' }] }
+  ] }] });
+  const worldsTab = async () => ({ totalUsers: 10, createdAt: 1, worlds: { public: { redoxSaltRank: [] }, anonymous: { redoxSaltRank: [] } } });
+
+  it("moves an old tab link to the board's tab", async () => {
+    fetchMeta.mockImplementation(worldsMeta);
+    fetchTab.mockImplementation(worldsTab);
+    routerState.query = { t: 'Misc', m: 'redoxSaltRank' };
+    renderPage();
+    await waitFor(() => expect(routerState.replace).toHaveBeenCalledWith(
+      { pathname: '/leaderboards', query: { t: 'Worlds', m: 'redoxSaltRank' } }, undefined, { shallow: true }));
+    expect(routerState.push).not.toHaveBeenCalled();
+  });
+
+  it('lands an old tab without a board on Overview', async () => {
+    fetchMeta.mockImplementation(worldsMeta);
+    routerState.query = { t: 'Misc' };
+    renderPage();
+    await waitFor(() => expect(fetchMeta).toHaveBeenCalled());
+    expect(await screen.findByRole('tab', { name: 'Overview', selected: true })).toBeTruthy();
+    expect(routerState.replace).not.toHaveBeenCalled();
+  });
+
+  it('keeps an Overview open on Overview', async () => {
+    fetchMeta.mockImplementation(worldsMeta);
+    routerState.query = { m: 'redoxSaltRank' };
+    renderPage();
+    expect(await screen.findByRole('dialog', { name: 'Redox Salt Rank' })).toBeTruthy();
+    expect(routerState.replace).not.toHaveBeenCalled();
+  });
+
+  it('opens a board of a tab the site does not know on the current tab', async () => {
+    fetchMeta.mockImplementation(async () => ({ createdAt: 1, totalPlayers: 10, categories: [], tabs: [
+      { key: 'skills', label: 'Skills', sections: [{ name: 'Skills', metrics: [{ key: 'mining', label: 'Mining', section: 'Skills', notation: 'default' }] }] },
+      { key: 'future', label: 'Future', sections: [{ name: 'Next', metrics: [{ key: 'bellRings', label: 'Bell Rings', section: 'Next', notation: 'default' }] }] }
+    ] }));
+    routerState.query = { t: 'skills' };
+    renderPage();
+    const jump = await screen.findByLabelText('Jump to board');
+    await waitFor(() => expect(jump.getAttribute('placeholder')).toBe('Jump to a board (2)'));
+    fireEvent.change(jump, { target: { value: 'Bell' } });
+    fireEvent.click(await screen.findByText('Bell Rings'));
+    expect(routerState.push).toHaveBeenCalledWith({ pathname: '/leaderboards', query: { t: 'skills', m: 'bellRings' } }, undefined, { shallow: true });
+  });
+
+  it('waits for meta', async () => {
+    fetchMeta.mockImplementation(() => new Promise(() => {}));
+    routerState.query = { t: 'Misc', m: 'redoxSaltRank' };
+    renderPage();
+    await waitFor(() => expect(fetchMeta).toHaveBeenCalled());
+    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 50)); });
+    expect(routerState.replace).not.toHaveBeenCalled();
   });
 });

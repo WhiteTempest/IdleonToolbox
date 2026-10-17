@@ -13,6 +13,7 @@ import { getCompassBonus } from '@parsers/class-specific/compass';
 import { getAtomBonus } from '@parsers/world-3/atomCollider';
 import { getArmorSetBonus } from '@parsers/world-3/armorSmithy';
 import { getPaletteBonus } from '@parsers/world-5/gaming';
+import { getMenagerieBoost } from '@parsers/world-7/menagerie';
 import { NUMBERED_GROUP, additiveGroup, createBreakdown, info, listGroup, multiplier, percent, productGroup, sumGroup } from '@parsers/breakdown';
 
 export const getTraps = (rawCharactersData: any) => {
@@ -25,8 +26,7 @@ const parseTraps = (rawCharactersData: any) => {
     return traps.reduce((res: any, critterInfo: any) => {
       const [critterId, , timeElapsed, critterName, crittersQuantity, trapType, trapTime, trapExp] = critterInfo;
       if (critterId === -1 || critterId === '-1') return res;
-      // trapType 0 = non shine
-      // trapType 1 = shiny
+      // trapType is the trap type index (0 Cardboard ... 6 Royal): it picks the row of trapsInfo
       const trapData = trapsInfo[trapType].find((trap) => trap.trapTime === trapTime)
       const timeLeft = trapTime - timeElapsed;
       return critterName ? [...res, {
@@ -197,6 +197,9 @@ const calcShinyMultiplier = (character: any, account: any) => {
   const shinySnitch = getPrayerBonusAndCurse(character?.activePrayers, 'Shiny_Snitch', account);
   const prayerDivider = Math.round(1 + (shinySnitch?.curse ?? 0));
   const meritocracyBonus = getMeritocracyBonus(account, 4) ?? 0;
+  const menagerieBundleBonus = getMenagerieBoost(account, 13);
+  // game: "TrappingStuffs:RareBonusOnOpenMULTI"
+  const bundleMulti = (1 + meritocracyBonus / 100) * (1 + menagerieBundleBonus / 100);
 
   const placementMulti = (1 + (stampBonus + taskBonus) / 100)
     * bubbleMulti
@@ -209,7 +212,7 @@ const calcShinyMultiplier = (character: any, account: any) => {
     onOpenMulti,
     prayerDivider,
     multiplier: placementMulti * onOpenMulti / prayerDivider,
-    bundleSize: Math.round((1 + (shinySnitch?.bonus ?? 0)) * (1 + meritocracyBonus / 100)),
+    bundleSize: Math.round((1 + (shinySnitch?.bonus ?? 0)) * bundleMulti),
     sources: {
       stampBonus,
       taskBonus,
@@ -224,7 +227,8 @@ const calcShinyMultiplier = (character: any, account: any) => {
       arcadeBonus,
       prayerDivider,
       shinySnitchBonus: shinySnitch?.bonus ?? 0,
-      meritocracyBonus
+      meritocracyBonus,
+      menagerieBundleBonus
     }
   };
 }

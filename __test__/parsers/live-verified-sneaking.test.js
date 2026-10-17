@@ -5,6 +5,7 @@ import { parseFixture } from '../helpers/parsed-fixtures';
 import { within } from '../helpers/live-verified';
 import { getNinjaCharmBonus, getInventoryNinjaItem } from '@parsers/world-6/sneaking';
 import { getSlabBonus } from '@parsers/world-5/sailing';
+import { ninjaExtraInfo } from '@website-data';
 
 // Read from the running game on 2026-10-12 through the debug server, logged in as MortasNinth.
 // latest.json is that account's save (OptionsListAccount[340] and the whole Ninja save match), Mastery 4
@@ -49,7 +50,7 @@ const GAME = {
   // Ninja("DoorMaxHP", floor, 0)
   doorMaxHps: [1, 3.84e+42, 2.048e+43, 1.28e+44, 6.4e+44, 5.12e+45, 3.8400000000000003e+46, 5.1200000000000005e+47,
     2.56e+48, 5.12e+49, 1.024e+51, 4.947802324992001e+215],
-  // CustomLists.NinjaInfo[13..22] item names after the Mastery 4 additions
+  // CustomLists.NinjaInfo[13..22] (floors 1..10, 0-based) item names after the Mastery 4 additions
   dropLists: [
     ['NjItem0', 'NjTr0', 'NjTr8', 'NjItem1', 'NjItem14', 'NjGem0', 'NjWep0'],
     ['NjItem5', 'NjTr15', 'NjTr13', 'NjTr5', 'NjTr20', 'NjGem4', 'NjWep1'],
@@ -64,9 +65,9 @@ const GAME = {
   ],
   // Sailing("SlabboBonus", t, 0); 4 and 5 are the Jade Coin Magnetism / Essence Confetti emporium bonuses
   slab: { 4: 722.514, 5: 433.50839999999994, 6: 426.16079999999994, 7: 14.20536 },
-  // Ninja("EmporiumCost", displayRow, 0)
+  // Ninja("EmporiumCost", displayRow, 0); rows past 44 gained * 300^(row - 44) in 2.3.540 (45 and 49 re-read live 2026-10-17)
   emporiumCost: { 0: 300, 6: 900434.4679089931, 8: 7825821.628152618, 20: 1951919511674.787,
-    42: 2.9835522173879903e+37, 49: 1.983862632952015e+59 }
+    42: 2.9835522173879903e+37, 45: 2.0274814473328748e+49, 49: 4.820786198073396e+71 }
 };
 
 // The toolbox reads the "logged-in" character as the save's last played one (IAmTheHunterrr here). Generational
@@ -133,7 +134,17 @@ describe('sneaking verified against the live game', () => {
   });
 
   it('floor loot tables with the mastery additions', () => {
-    expect(sneaking.dropList.map((list) => list.map(({ rawName }) => rawName))).toEqual(GAME.dropLists);
+    const names = sneaking.dropList.map((list) => list.map(({ rawName }) => rawName));
+    expect(names.slice(1, 1 + GAME.dropLists.length)).toEqual(GAME.dropLists);
+  });
+
+  // GenerateItem rolls floor f on NinjaInfo[12 + f]; no mastery adds to the top floor, so it is the raw list
+  it('one loot table per floor, the top floor read from NinjaInfo', () => {
+    const floorCount = ninjaExtraInfo[3].length;
+    const lastList = ninjaExtraInfo[12 + floorCount - 1];
+    expect(sneaking.dropList).toHaveLength(floorCount);
+    expect(sneaking.dropList.at(-1).map(({ rawName, dropChance }) => [rawName, dropChance]))
+      .toEqual(lastList.toChunks(2));
   });
 
   it.each(Object.entries(GAME.slab))('slab bonus %s', (index, value) => {
@@ -170,5 +181,17 @@ describe('Shiny Smoke doubles at 0% detection', () => {
   ])('ninja %i', (playerIndex, _, value, multi) => {
     expect(sneaking.detection.ninjas[playerIndex].detection === 0).toBe(multi === 2);
     within(getNinjaCharmBonus(withShinySmoke(playerIndex), playerIndex, SHINY_SMOKE), multi * value);
+  });
+});
+
+// The Ninja Knowledge panel draws an upgrade below index 17 when `root == r || 1 <= Ninja[103][NinjaUpg[r][9]]`, after
+// changemonsterDEF rewrites four prerequisites for the Ninja Mastery reached (OptionsListAccount[232] = 4 on 2026-10-16,
+// as in latest.json). At mastery 4, Centurion Lineage (0) still points at itself and upgrade 9 always does, so both stay
+// locked at level 0, as the live save shows.
+describe('Ninja Knowledge unlocks', () => {
+  it('follow the prerequisite tree for the mastery reached', () => {
+    expect(sneaking.upgrades.slice(0, 17).map(({ isUnlocked }) => isUnlocked))
+      .toEqual([false, true, true, true, true, true, true, true, true, false, true, true, true, true, true, true, true]);
+    expect(sneaking.upgrades.slice(0, 7).map(({ prerequisiteIndex }) => prerequisiteIndex)).toEqual([0, 4, 8, 5, 2, 15, 10]);
   });
 });

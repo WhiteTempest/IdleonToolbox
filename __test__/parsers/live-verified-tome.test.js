@@ -48,7 +48,9 @@ const GAME = {
     3095, 3150, 3205, 3260, 3315, 3370, 3425, 3480, 3535, 3590, 3645, 3700, 3755, 3810, 3865, 3920,
     3975, 4040, 4105, 4170, 4235, 4300, 4365, 4430, 4495, 4560, 4625, 4690, 4755, 4820, 4885, 4950,
     5015, 5080, 5145, 5210, 5275, 5355, 5435, 5515, 5595, 5675, 5755, 5835, 5915, 5995, 6075, 6155,
-    6235, 6315, 6395, 6475, 6555, 6635, 6715, 6795, 6875, 6955
+    6235, 6315, 6395, 6475, 6555, 6635, 6715, 6795, 6875, 6955,
+    // 2.3.540's two Menagerie lines, read live on 2026-10-17 (TomeLvReq takes no save input)
+    7035, 7115
   ],
   // Summoning("TomeBonus", 0..7) at the game's tome score 45893 (the toolbox scores 45894, same whole steps)
   bonuses: [
@@ -68,7 +70,9 @@ const STALE_GAME_LINES = new Set([0, 3, 11, 15, 22, 48, 50, 120]);
 const { account } = parseFixture(latest);
 const displayOrder = ninjaExtraInfo[32];
 const lines = account.tome.tome.map((line) => ({ ...line, tomeLine: Number(displayOrder[line.index]) }));
-const comparableLines = lines.filter(({ tomeLine }) => !STALE_GAME_LINES.has(tomeLine));
+// Lines past the GAME reading (2.3.540's Menagerie lines 122 and 123) have no live quantity for this save: the fixture
+// predates the Menagerie, so they are left to the level requirement check.
+const comparableLines = lines.filter(({ tomeLine }) => !STALE_GAME_LINES.has(tomeLine) && tomeLine < GAME.quantities.length);
 
 describe('tome verified against the live game', () => {
   it.each(comparableLines.map((line) => [line.tomeLine, line]))('line %i: quantity and points', (tomeLine, line) => {
@@ -88,5 +92,40 @@ describe('tome verified against the live game', () => {
   // archer class multiplier on the AGI one
   it.each(GAME.bonuses.map((bonus, index) => [index, bonus]))('bonus %i', (index, bonus) => {
     within(account.tome.bonuses[index].bonus, bonus);
+  });
+});
+
+// The quantity each bar colour needs sits exactly on the game's TomePCT boundary (oracle: the game's expression, with
+// getLOG = log(max(q, 1)) / 2.30259): at the threshold the line reaches the colour, one step short of it does not.
+// Curve 3 is lower-is-better, so its threshold is the most a line may hold.
+describe('tome colour thresholds', () => {
+  const getLOG = (q) => Math.log(Math.max(q, 1)) / 2.30259;
+  const tomePct = ({ x1, x2 }, q) => [
+    () => (q < 0 ? 0 : Math.pow((1.7 * q) / (q + x1), 0.7)),
+    () => (2.4 * getLOG(q)) / (2 * getLOG(q) + x1),
+    () => Math.min(1, q / x1),
+    () => (q > 5 * x1 ? 0 : Math.pow((1.2 * (6 * x1 - q)) / (7 * x1 - q), 5)),
+    () => Math.pow((2 * Math.min(x1, q)) / (Math.min(x1, q) + x1), 0.7)
+  ][x2]();
+  const targets = { silver: 0.4, gold: 0.75, blue: 0.999 };
+  const { tome } = parseFixture(latest).account.tome;
+
+  it('pins the lines a wrong rounding or log base once missed', () => {
+    const by = (name) => tome.find((line) => line.name.startsWith(name)).requiredQuantities;
+    expect([by('Average_kills_for_a_Crystal_Spawn').blue, by('Fastest_Time_to_kill_Chaotic_Efaunt'), by('Most_Money_held').silver])
+      .toEqual([30, { silver: 37, gold: 23, blue: 10 }, 1778334]);
+  });
+
+  it('every threshold sits on the boundary', () => {
+    const off = [];
+    for (const line of tome) {
+      for (const [tier, q] of Object.entries(line.requiredQuantities)) {
+        if (q === null || q > Number.MAX_SAFE_INTEGER) continue;
+        const short = line.x2 === 3 ? q + 1 : q - 1;
+        const ok = tomePct(line, q) >= targets[tier] && (q === 0 || tomePct(line, short) < targets[tier]);
+        if (!ok) off.push(`${line.name} ${tier} ${q}`);
+      }
+    }
+    expect(off).toEqual([]);
   });
 });

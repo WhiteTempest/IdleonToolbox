@@ -14,7 +14,8 @@ const TIERS = [
   { level: 3, short: 'Eld', full: 'Eldritch' },
   { level: 4, short: 'Sov', full: 'Sovereign' },
   { level: 5, short: 'Omn', full: 'Omnipotent' },
-  { level: 6, short: 'Tra', full: 'Transcendent' }
+  { level: 6, short: 'Tra', full: 'Transcendent' },
+  { level: 7, short: 'Ver', full: 'Verisimilitude' }
 ];
 
 const getTierDescription = (artifact, tier) => {
@@ -25,6 +26,7 @@ const getTierDescription = (artifact, tier) => {
     case 4: return artifact.sovereignFormDescription;
     case 5: return artifact.omnipotentFormDescription;
     case 6: return artifact.transcendentFormDescription;
+    case 7: return artifact.verisimilitudeFormDescription ?? '';
     default: return '';
   }
 };
@@ -43,7 +45,7 @@ const Artifacts = ({ artifacts }) => {
             <CardContent>
               <Stack sx={{ width: 220 }}>
                 <Stack direction={'row'} gap={1} alignItems={'center'}>
-                  <ArtifactImg src={`${prefix}data/${rawName}.png`} alt=""/>
+                  <ArtifactImg src={`${prefix}data/${rawName}.png`} alt="" verisimilitude={currentTier === 7}/>
                   <Typography>{cleanUnderscore(name)}</Typography>
                   {Array.isArray(additionalData) ? <Tooltip title={getTooltip(name, additionalData)}>
                     <IconInfoCircleFilled style={{ marginLeft: 'auto' }} size={18}/>
@@ -53,7 +55,7 @@ const Artifacts = ({ artifacts }) => {
                 <Typography sx={{ fontSize: 11, mt: 0.75, textAlign: 'center', opacity: 0.7 }}>
                   {currentTier === 0
                     ? 'Not Acquired'
-                    : `Tier ${currentTier}/6 · ${TIERS[currentTier - 1].full}`}
+                    : `Tier ${currentTier}/${TIERS.length} · ${TIERS[currentTier - 1]?.full ?? ''}`}
                 </Typography>
                 <Divider sx={{ my: 2 }}/>
                 <Stack flexWrap={'wrap'}>
@@ -145,8 +147,10 @@ const AllStatsTooltip = ({ additionalData }) => {
   </>
 }
 
+// game: _customEvent_Sailing tints a tier 7 (Verisimilitude) artifact with createHueFilter(160)
 const ArtifactImg = styled.img`
   object-fit: contain;
+  ${({ verisimilitude }) => verisimilitude ? 'filter: hue-rotate(160deg);' : ''}
 `
 
 export default Artifacts;

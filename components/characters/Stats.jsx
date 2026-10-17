@@ -23,6 +23,9 @@ import { Breakdown } from '@components/common/Breakdown/Breakdown';
 import GameIconNotation from '@components/common/GameIconNotation';
 import MultiCharLockText from '@components/common/MultiCharLockText';
 
+// The character screen shows crit chance as 200% once it passes 199 (display only)
+const CRIT_CHANCE_DISPLAY_CAP = 200;
+
 const colors = {
   strength: 'error.light',
   agility: 'success.light',
@@ -103,7 +106,7 @@ const Stats = ({ statsFilter, character, lastUpdated, account, characters }) => 
                      breakdown={playerInfo?.killPerkill?.breakdown} breakdownNotation={'ThreeDecimals'}/>
             <NewStat title={'Defence'} value={commaNotation(playerInfo?.defence?.value)}
                      breakdown={playerInfo?.defence?.breakdown}/>
-            <Stat title={'Critical Chance'} value={`${notateNumber(playerInfo?.critChance)}%`}/>
+            <Stat title={'Critical Chance'} value={`${notateNumber(Math.min(CRIT_CHANCE_DISPLAY_CAP, playerInfo?.critChance ?? 0))}%`}/>
             <Stat title={'Critical Damage'} value={`${notateNumber(playerInfo?.critDamage, 'MultiplierInfo')}x`}/>
             <Stat title={'Accuracy'} value={notateNumber(playerInfo?.accuracy)}/>
             <Stat title={'Movement Speed'} value={`${notateNumber(playerInfo?.movementSpeed)}%`}/>
@@ -151,12 +154,15 @@ const Stats = ({ statsFilter, character, lastUpdated, account, characters }) => 
 
           <Card variant={'outlined'}>
             <CardContent>
-              <Typography color={'info.light'}>Crystal Chance</Typography>
+              {/* While guaranteed crystal kills remain the game shows how many are left instead of the chance */}
+              <Typography color={'info.light'}>{crystalSpawnChance?.guaranteedLeft > 0 ? 'Crystal Guaranteed' : 'Crystal Chance'}</Typography>
               <Stack direction={'row'} gap={1}>
                 {/* The game rolls min(cap, chance), so past the cap this number stops improving and
                     the overflow turns into Crystal Embiggener instead. */}
-                <Typography>{`1 in ${Math.floor(1 / crystalSpawnChance?.effectiveValue)}`} ({notateNumber(crystalSpawnChance?.effectiveValue * 100, 'MultiplierInfo')?.replace('.00', '')}%)</Typography>
-                {crystalSpawnChance?.capped ? <Typography sx={{ opacity: .7 }}>capped</Typography> : null}
+                {crystalSpawnChance?.guaranteedLeft > 0
+                  ? <Typography>{commaNotation(crystalSpawnChance.guaranteedLeft)} left</Typography>
+                  : <Typography>{`1 in ${Math.floor(1 / crystalSpawnChance?.effectiveValue)}`} ({notateNumber(crystalSpawnChance?.effectiveValue * 100, 'MultiplierInfo')?.replace('.00', '')}%)</Typography>}
+                {crystalSpawnChance?.capped && !(crystalSpawnChance?.guaranteedLeft > 0) ? <Typography sx={{ opacity: .7 }}>capped</Typography> : null}
                 <Breakdown data={crystalSpawnChance?.breakdown}>
                   <InfoIcon/>
                 </Breakdown>

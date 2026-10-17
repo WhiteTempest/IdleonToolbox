@@ -12,6 +12,7 @@ import { getLoreBossBonus } from '@parsers/world-7/spelunking';
 import { isSuperbitUnlocked } from '@parsers/world-5/gaming';
 import { getResearchGridBonus } from '@parsers/world-7/research';
 import { getArmoryUpgradeBonus } from '@parsers/class-specific/royalGuardian';
+import { getLegendTalentBonus } from '@parsers/world-7/legendTalents';
 import { NUMBERED_GROUP, additiveGroup, createBreakdown, flat, multiplier, percent, productGroup } from '@parsers/breakdown';
 
 const DREAM_UPGRADES_OFFSET = 2;
@@ -83,6 +84,8 @@ const parseEquinox = (weeklyBoss: any, dream: any, account: any) => {
   const loreEpiBonus = getLoreBossBonus(account, 8) ?? 0;
   // game: ArmoryUpgBonus(76) - Farmer_Joe, "+{% Equinox Bar Fill rate".
   const armoryBonus76 = getArmoryUpgradeBonus(account, 76);
+  // game: LegendPTS_bonus(35), Obsolete No More
+  const obsoleteNoMore = getLegendTalentBonus(account, 35) ?? 0;
 
   const cb = (i: number) => getCloudBonus(challenges, i);
   const cloudsBonus =
@@ -107,6 +110,7 @@ const parseEquinox = (weeklyBoss: any, dream: any, account: any) => {
     * (1 + companionBonus)
     * (1 + cosmoBonus / 100)
     * (1 + 0.5 * eventShopBonus)
+    * (1 + obsoleteNoMore / 100)
     * (1 + (account?.accountOptions?.[320] ?? 0) / 10)
     * (1 + tesseractBonus / 100)
     * (1 + armoryBonus76 / 100)
@@ -134,6 +138,7 @@ const parseEquinox = (weeklyBoss: any, dream: any, account: any) => {
       multiplier('Companion', 1 + companionBonus),
       multiplier('Cosmo', 1 + cosmoBonus / 100),
       multiplier('Event shop', 1 + 0.5 * eventShopBonus),
+      multiplier('Obsolete No More', 1 + obsoleteNoMore / 100),
       multiplier('Penguins', 1 + (account?.accountOptions?.[320] ?? 0) / 10),
       multiplier('Tesseract', 1 + tesseractBonus / 100),
       multiplier('Farmer Joe (Armory)', 1 + armoryBonus76 / 100),
@@ -179,7 +184,7 @@ const parseEquinoxUpgrades = (challenges: any, dream: any, account: any) => {
   return equinoxUpgrades.map(({ name, description, maxLevel, bonus }, index) => {
     const realBonus = name === 'Hmm...' ? 0 : name === 'Food_Lust'
       ? Math.min(parseInt(dream[index]), account?.accountOptions?.[193] ?? 0)
-      : bonus * dream[index] || 0;
+      : (bonus ?? 0) * dream[index] || 0;
     const winBonus = getWinnerBonus(account, '+{ Equinox Max LV');
     const cloudBonusMap = {
       4: 5 * getCloudBonus(challenges, 12) +
@@ -240,7 +245,8 @@ const parseEquinoxUpgrades = (challenges: any, dream: any, account: any) => {
     return {
       name: name,
       bonus: realBonus,
-      desc: description?.replace('{}', String(bonus * dream[index] || 0)).replace('{', '').replace('}', String(dream[index] || 0)).split('_@_'),
+      // game: every "}" becomes LV * DreamUpg[i][3] (Voter_Rights' "Total Bonus: {}%" included); "{" is the + glyph
+      desc: description?.replace(/\}/g, String((bonus ?? 0) * dream[index] || 0)).replace(/\{/g, '').split('_@_'),
       lvl: dream[index] || 0,
       maxLvl: totalValue,
       unlocked: index <= nbChallengeUnlocked

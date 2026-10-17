@@ -1,6 +1,8 @@
 import { commaNotation, notateNumber, number2letter, tryToParse } from "@utility/helpers";
 import { createBreakdown, flatLines } from '@parsers/breakdown';
 import {
+  classes,
+  gameTables,
   jadeUpgrades,
   ninjaEquipment,
   ninjaExtraInfo,
@@ -30,7 +32,6 @@ import { getSushiBonus } from "@parsers/world-7/sushiStation";
 import { getJellyBonus } from "@parsers/world-7/jellyOperator";
 import { isCompanionBonusActive } from "@parsers/misc";
 import { getTomeBubbleMulti } from "@parsers/world-4/tome";
-import { CLASSES } from "@parsers/classDefinitions";
 
 export const getSneaking = (idleonData: any, serverVars: any, charactersData: any, account: any) => {
   const rawSneaking = tryToParse(idleonData?.Ninja);
@@ -42,7 +43,8 @@ const baseDoorMaxHps = ninjaExtraInfo?.[3];
 // NinjaInfo rows the game rescales when a Ninja Mastery is selected (changemonsterDEF).
 const DOOR_HP_SCALE_INDEX = 10;
 const FLOOR_DIFFICULTY_SCALE_INDEX = 11;
-const FIRST_DROP_LIST_INDEX = 13;
+// Floor f's loot list is NinjaInfo[12 + f] (0-based floor, GenerateItem).
+const FIRST_DROP_LIST_INDEX = 12;
 // Gemstone counters are capped at 10M gems.
 const GEMSTONE_MAX_VALUE = 1e7;
 // Pristine charms live in their own list rather than in `ninjaEquipment`, but inventory slots
@@ -133,8 +135,8 @@ const parseSneaking = (rawSneaking: any, rawSpelunking: any, serverVars: any, ch
     activityInfo
   }));
 
-  const hasWindWalker = charactersData?.some((character: any) => character?.class === CLASSES.Wind_Walker);
-  const dropList = getFloorDropLists(selectedNinjaMastery, hasWindWalker).map((entry: any) => entry.toChunks(2))
+  const classNames = (charactersData ?? []).map((character: any) => character?.class);
+  const dropList = getFloorDropLists(selectedNinjaMastery, classNames).map((entry: any) => entry.toChunks(2))
     ?.map((array: any) => array?.map(([itemName, dropChance]: any) => ({
       ...(ninjaEquipment as Record<string, any>)[itemName],
       dropChance
@@ -142,27 +144,37 @@ const parseSneaking = (rawSneaking: any, rawSpelunking: any, serverVars: any, ch
 
   const spelunkProgress = rawSpelunking?.[13]?.[3] ?? 0; // This tracks how many special upgrades are unlocked
 
+  // The Ninja Knowledge tree: the root needs nothing, every other upgrade its prerequisite (NinjaUpg x9) at level 1, and
+  // Ninja Mastery rewrites four of those prerequisites as its tiers are reached.
+  const { root } = gameTables.sneakingKnowledgeRoot;
+  const prerequisiteOf = (index: number) => (gameTables.sneakingMasteryPrereqs ?? [])
+    .filter(({ upgrade, mastery }: any) => upgrade === index && (ninjaMastery ?? 0) >= mastery)
+    .reduce((prereq: number, rewrite: any) => rewrite.prereq, ninjaUpgrades?.[index]?.x9);
+
   const upgrades = ninjaUpgrades?.map((upgrade, index) => {
     const level = ninjaUpgradeLevels?.[index];
     const isSpecialUpgrade = index > 16;
+    // Menagerie[7]: Omnijade levels on the 17 knowledge upgrades, added to the level in NLbonuses
+    const omnijadeLevels = isSpecialUpgrade ? 0 : Number(account?.menagerieSave?.[7]?.[index]) || 0;
+    // Menagerie[6]: an Omnijade placed on the upgrade (the panel then draws the level in gold, Omnijade levels included)
+    const omnijadePlaced = !isSpecialUpgrade && (Number(account?.menagerieSave?.[6]?.[index]) || 0) >= 1;
+    const prerequisiteIndex = isSpecialUpgrade || index === root ? null : prerequisiteOf(index);
 
-    let isUnlocked = false;
-
-    if (isSpecialUpgrade) {
-      // Special upgrades unlock sequentially
-      isUnlocked = spelunkProgress > (index - 17);
-    } else {
-      // All normal upgrades are unlocked once you have access to the ninja system
-      isUnlocked = true;
-    }
+    // Special upgrades unlock in order with Spelunking progress
+    const isUnlocked = isSpecialUpgrade
+      ? spelunkProgress > (index - 17)
+      : prerequisiteIndex === null || (ninjaUpgradeLevels?.[prerequisiteIndex] ?? 0) >= 1;
 
     return {
       ...upgrade,
       level,
-      value: (level ?? 0) * (upgrade.modifier ?? 1),
+      omnijadeLevels,
+      omnijadePlaced,
+      // game: "Ninja:NLbonuses" (the plain branch; 6/7/10/11/12 add more in getLocalNinjaUpgradeBonus)
+      value: ((level ?? 0) + omnijadeLevels) * (upgrade.modifier ?? 1),
       isUnlocked,
       isSpecialUpgrade,
-      prerequisiteIndex: !isSpecialUpgrade ? upgrade.x9 : null,
+      prerequisiteIndex,
       unlockOrder: isSpecialUpgrade ? index - 17 + 1 : null,
       position: {
         locked: { x: upgrade.x0, y: upgrade.x1 },
@@ -206,7 +218,8 @@ const parseSneaking = (rawSneaking: any, rawSpelunking: any, serverVars: any, ch
   const jadeEmporium = orderedEmporium.map((upgrade, index) => ({
     ...upgrade,
     // Game: Ninja("EmporiumCost", row) - priced by display row, not by upgrade id.
-    cost: (300 + 500 * index + Math.pow(index, 3)) * Math.pow(2.52, index) * Math.pow(3.07, Math.max(0, index - 28)) * Math.pow(160, Math.max(0, index - 38)),
+    cost: (300 + 500 * index + Math.pow(index, 3)) * Math.pow(2.52, index) * Math.pow(3.07, Math.max(0, index - 28))
+      * Math.pow(160, Math.max(0, index - 38)) * Math.pow(300, Math.max(0, index - 44)),
     // Game: Ninja("EmporiumBonus", id) is the 0/1 unlock flag; what it unlocks is computed where it's read.
     bonus: upgrade.unlocked ? 1 : 0
   }));
@@ -261,9 +274,11 @@ const parseSneaking = (rawSneaking: any, rawSpelunking: any, serverVars: any, ch
   };
 };
 
+// game: "Ninja:NLbonuses"
 export const getLocalNinjaUpgradeBonus = (upgrades: any, index: any, gemstones: any, inventory: any, account: any) => {
-  const { level: rawLevel, modifier } = upgrades?.[index] ?? {};
-  const level = rawLevel ?? 0;
+  const { level: rawLevel, modifier, omnijadeLevels = 0 } = upgrades?.[index] ?? {};
+  // Omnijade levels (Menagerie[7]) count as upgrade levels on the 17 knowledge upgrades
+  const level = (rawLevel ?? 0) + omnijadeLevels;
   const masteryLootLevel = upgrades?.[3]?.level || 0;
   const selectedMasteryLevel = account?.accountOptions?.[231] || 0;
 
@@ -283,7 +298,7 @@ export const getLocalNinjaUpgradeBonus = (upgrades: any, index: any, gemstones: 
     );
   }
   if (index === 6 || index === 7 || index === 10 || index === 12) {
-    return level * modifier + masteryLootLevel * selectedMasteryLevel;
+    return level * modifier + (masteryLootLevel + omnijadeLevels) * selectedMasteryLevel;
   }
   return level * modifier;
 };
@@ -403,8 +418,11 @@ export const getNinjaEquipmentBonus = (account: any, playerIndex: any, equipName
   }, 0);
 };
 
-export const getNinjaUpgradeBonus = (account: any, bonusName: any) => {
-  return account?.sneaking?.upgrades?.find(({ name }: any) => name === bonusName)?.value;
+// Prefer the index: the game reads NinjaUpg by position, and names get renamed (2 was Respect_for_the_Art)
+export const getNinjaUpgradeBonus = (account: any, bonusNameOrIndex: string | number) => {
+  const upgrades = account?.sneaking?.upgrades;
+  if (typeof bonusNameOrIndex === 'number') return upgrades?.[bonusNameOrIndex]?.value;
+  return upgrades?.find(({ name }: any) => name === bonusNameOrIndex)?.value;
 };
 
 export const isJadeBonusUnlocked = (account: any, bonusName: any) => {
@@ -441,29 +459,16 @@ export const getDoorMaxHps = (selectedMastery: number = 0, highestMastery: numbe
   return doors.map((hp) => Math.min(hp, Number.MAX_VALUE));
 };
 
-// Items each mastery adds to the floor loot tables (NinjaInfo[13 + floor - 1]), inserted before the
-// table's last item in this order. The windWalker rows need a Wind Walker on the account.
-const MASTERY_DROP_ADDITIONS = [
-  { mastery: 1, row: 13, items: [['NjGem0', '0.08']] },
-  { mastery: 1, row: 15, items: [['NjGem1', '0.07']] },
-  { mastery: 1, row: 17, items: [['NjGem2', '0.06']] },
-  { mastery: 1, row: 20, items: [['NjGem3', '0.05']] },
-  { mastery: 1, row: 16, items: [['NjGem6', '0.08']], windWalker: true },
-  { mastery: 1, row: 21, items: [['NjGem7', '0.08']], windWalker: true },
-  { mastery: 2, row: 14, items: [['NjTr20', '0.15'], ['NjGem4', '0.05']] },
-  { mastery: 2, row: 15, items: [['NjTr24', '0.14']] },
-  { mastery: 2, row: 16, items: [['NjTr21', '0.14']] },
-  { mastery: 2, row: 18, items: [['NjTr22', '0.13'], ['NjGem5', '0.05']] },
-  { mastery: 2, row: 21, items: [['NjTr23', '0.12']] }
-];
-
-// Flat [item, chance, item, chance, ...] loot tables for floors 1..10, as the game holds them.
-const getFloorDropLists = (selectedMastery: number = 0, hasWindWalker: boolean = false): string[][] => {
-  const lists = ninjaExtraInfo.slice(FIRST_DROP_LIST_INDEX, FIRST_DROP_LIST_INDEX + 10).map((list: any) => [...list]);
-  MASTERY_DROP_ADDITIONS.forEach(({ mastery, row, items, windWalker }) => {
-    if (selectedMastery < mastery || (windWalker && !hasWindWalker)) return;
+// Flat [item, chance, item, chance, ...] loot tables, one per floor (0-based), as the game holds them. What each
+// mastery adds is read from the game (gameTables.sneakingMasteryDrops, z-processing, located in changemonsterDEF):
+// inserted before the list's last item in that order, and a row with a classType only with a character of that
+// class (hasClassTypeN compares the class's index in the classes list).
+const getFloorDropLists = (selectedMastery: number = 0, classNames: string[] = []): string[][] => {
+  const lists = ninjaExtraInfo.slice(FIRST_DROP_LIST_INDEX, FIRST_DROP_LIST_INDEX + baseDoorMaxHps.length).map((list: any) => [...list]);
+  (gameTables.sneakingMasteryDrops ?? []).forEach(({ mastery, list: row, classType, items }: any) => {
+    if (selectedMastery < mastery || (classType !== undefined && !classNames.includes(classes[classType]))) return;
     const list = lists[row - FIRST_DROP_LIST_INDEX];
-    items.forEach((pair) => list.splice(list.length - 2, 0, ...pair));
+    items.forEach(({ item, chance }: any) => list.splice(list.length - 2, 0, item, String(chance)));
   });
   return lists;
 };

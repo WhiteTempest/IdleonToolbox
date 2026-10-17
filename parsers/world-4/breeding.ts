@@ -15,6 +15,21 @@ import { getArcadeBonus } from '@parsers/world-2/arcade';
 import { getSushiBonus } from '@parsers/world-7/sushiStation';
 import { getMineheadBonusQTY } from '@parsers/world-7/minehead';
 import { NUMBERED_GROUP, additiveGroup, createBreakdown, multiplier, percent } from '@parsers/breakdown';
+import { isMenagerieUnlockOwned } from '@parsers/world-7/menagerie';
+
+// Crucible (hard arena) waves cleared, OptionsListAccount[628], against the randomList[115] wave list:
+// the count of waves reached in order, only once the Menagerie unlock 8 is owned.
+// game: "TalentCalc:arenaCruc"
+export const getArenaCrucibleCount = (account: any): number => {
+  if (!isMenagerieUnlockOwned(account, 8)) return 0;
+  const bestWave = Number(account?.accountOptions?.[628]) || 0;
+  const waves: any[] = (randomList as any)?.[115] ?? [];
+  const index = waves.findIndex((wave) => bestWave < Number(wave));
+  return index === -1 ? waves.length : index;
+};
+
+// game: "Breeding:PetArenaCrucBonus"
+export const getPetArenaCrucBonus = (account: any, index: number): number => getArenaCrucibleCount(account) > index ? 1 : 0;
 
 export const getBreeding = (idleonData: any, account: any, processedData: any) => {
   const breedingRaw = tryToParse(idleonData?.Breeding) || idleonData?.Breeding;
@@ -80,6 +95,9 @@ const parseBreeding = (breedingRaw: any, territoryRaw: any, petsRaw: any, petsSt
     return { name, realName, x1, power: x2, x3, gene };
   })?.toChunks(4);
   const terri = territory.filter((_, index) => index !== 14);
+  // TotalTrekkingREQ reads TerritoryInfo[TerritoryID(i, 42)], which is row i itself: the requirement skips no row, even
+  // though the name and battle skip the old Arena row 14.
+  const requirementRows = territory;
   const territories = terri?.map((territory, index) => {
     const team = teams?.[index] || [];
     const previousTeam = teams?.[index - 1] || [];
@@ -92,10 +110,7 @@ const parseBreeding = (breedingRaw: any, territoryRaw: any, petsRaw: any, petsSt
       position
     }), 0) * vaultBonus;
     const teamPower = team?.reduce((sum: any, teamMember: any) => sum + getFightPower(teamMember), 0);
-    const anyCombats = team?.some((teamMember: any) => teamMember?.gene?.abilityType === 0);
-    const flashies = anyCombats ? 0 : team?.filter((teamMember: any) => teamMember?.gene?.name === 'Flashy')?.length;
     const fleeters = team?.filter((teamMember: any) => teamMember?.gene?.name === 'Fleeter')?.length;
-    const fasidiouses = team?.filter((teamMember: any) => teamMember?.gene?.name === 'Fasidious')?.length;
     let miasmas = team?.filter((teamMember: any) => teamMember?.gene?.name === 'Miasma');
     if (miasmas?.length) {
       const geneNames = team?.map(({ gene }: any) => gene?.name);
@@ -108,11 +123,11 @@ const parseBreeding = (breedingRaw: any, territoryRaw: any, petsRaw: any, petsSt
     const topAndBottomRows = [...team, ...previousTeam, ...nextTeam];
     const badumdums = topAndBottomRows?.filter((teamMember) => teamMember?.gene?.name === 'Badumdum')?.length;
     const tsars = topAndBottomRows?.filter((teamMember) => teamMember?.gene?.name === 'Tsar')?.length;
-    const math = forageSpeed * Math.pow(1.3, fleeters) * Math.pow(1.2, badumdums) * Math.pow(1.5, flashies) * Math.pow(1.5, fasidiouses) * miasmas;
+    const math = forageSpeed * Math.pow(1.3, fleeters) * Math.pow(1.2, badumdums) * getCombatMixGeneMulti(team) * miasmas;
     const teamFightPower = (teamPower + forageSpeed * index) * Math.pow(1.5, tsars) * (1 + getSushiBonus(account, 10) / 100);
     const totalForageSpeed = teamFightPower < territory.fightPower ? 0 : math;
     const bonus = 1 + .02 / (team?.filter((teamMember: any) => teamMember?.gene?.name === 'Monolithic')?.length / 5 + 1);
-    const powerReq = index > 14 ? terri?.[index - 1]?.powerReq : territory?.powerReq;
+    const powerReq = requirementRows?.[index]?.powerReq;
     const roundsForTerritory = foragingRounds?.[index] ?? 0;
     const reqProgress = (powerReq + roundsForTerritory) * Math.pow(bonus, roundsForTerritory);
     return { ...territory, team, forageSpeed: totalForageSpeed, reqProgress, currentProgress: currentProgress?.[index] }
@@ -120,12 +135,16 @@ const parseBreeding = (breedingRaw: any, territoryRaw: any, petsRaw: any, petsSt
 
   const fencePets: any[] = [], passivesTotals: Record<string, any> = {};
   let totalShinyLevels = 0;
+  let shinyOverLevels = 0;
+  const maxShinyLevel = getMaxShinyLevel(account);
   const pets = petStats?.map((petList, worldIndex) => {
     const speciesUnlocked = speciesUnlocks?.[worldIndex];
     return petList?.map((pet, petIndex) => {
-      const shinyLevel = getShinyLevel(shinyPetsLevels, worldIndex, petIndex);
+      const shinyLevel = getShinyLevel(shinyPetsLevels, worldIndex, petIndex, maxShinyLevel);
       // Tome calc
       totalShinyLevels += shinyLevel === 0 ? 1 : shinyLevel;
+      // game: "Breeding:SpecialzOverLVL"
+      shinyOverLevels += Math.max(0, shinyLevel - BASE_MAX_SHINY_LEVEL);
 
       const shinyGoal = getLevelGoal(shinyLevel, true);
       const passiveValue = Math.round(pet?.baseValue * shinyLevel);
@@ -174,6 +193,10 @@ const parseBreeding = (breedingRaw: any, territoryRaw: any, petsRaw: any, petsSt
     fencePets,
     fencePetsObject,
     maxArenaLevel: account?.accountOptions?.[89],
+    // Crucible (hard arena) best wave, OptionsListAccount[628]
+    maxCrucibleLevel: account?.accountOptions?.[628] ?? 0,
+    maxShinyLevel,
+    shinyOverLevels,
     timeToNextEgg: (account?.accountOptions?.[87] ?? 0) * 1000,
     petUpgrades: petUpgradesList,
     arenaBonuses,
@@ -186,14 +209,17 @@ const parseBreeding = (breedingRaw: any, territoryRaw: any, petsRaw: any, petsSt
   };
 }
 
-const getShinyLevel = (shinyPetsLevels: any, worldIndex: any, petIndex: any) => {
-  const shinyLevel = new Array(19).fill(1)?.reduce((sum, _, index) => shinyPetsLevels?.[worldIndex]?.[petIndex] > Math.floor((1 + Math.pow(index + 1, 1.6)) * Math.pow(1.7, index + 1))
+// game: "Breeding:SpecialPassives" ("Lv"): one threshold per level past 1, 19 + 10 more with Menagerie unlock 11
+const getShinyLevel = (shinyPetsLevels: any, worldIndex: any, petIndex: any, maxShinyLevel: number = BASE_MAX_SHINY_LEVEL) => {
+  const shinyLevel = new Array(Math.max(0, maxShinyLevel - 1)).fill(1)?.reduce((sum, _, index) => shinyPetsLevels?.[worldIndex]?.[petIndex] > Math.floor((1 + Math.pow(index + 1, 1.6)) * Math.pow(1.7, index + 1))
     ? index + 2
     : sum, 0)
   return shinyPetsLevels?.[worldIndex]?.[petIndex] === 0 ? 0 : shinyLevel === 0 ? 1 : shinyLevel;
 }
 
-export const MAX_SHINY_LEVEL = 20;
+export const BASE_MAX_SHINY_LEVEL = 20;
+// Menagerie unlock 11 raises the shiny cap by 10
+export const getMaxShinyLevel = (account: any) => BASE_MAX_SHINY_LEVEL + 10 * (isMenagerieUnlockOwned(account, 11) ? 1 : 0);
 export const MAX_BREEDABILITY_LEVEL = 9;
 
 // Both shiny and breedability goals are absolute thresholds on the raw progress counter,
@@ -295,10 +321,10 @@ export const getShinyBonus = (pets: any, passiveName: any) => {
   }: any) => innerSum + (passive.includes(passiveName) && passiveValue), 0), 0);
 }
 
-export const getTimeToLevel = (pet: any, multi: any, copies: any, targetLevel: any, isShiny: any) => {
+export const getTimeToLevel = (pet: any, multi: any, copies: any, targetLevel: any, isShiny: any, maxShinyLevel: number = BASE_MAX_SHINY_LEVEL) => {
   const currentLevel = isShiny ? pet?.shinyLevel : pet?.breedingLevel;
   const currentProgress = isShiny ? pet?.shinyProgress : pet?.breedingProgress;
-  const target = Math.min(isShiny ? MAX_SHINY_LEVEL : MAX_BREEDABILITY_LEVEL, Number(targetLevel) || 0);
+  const target = Math.min(isShiny ? maxShinyLevel : MAX_BREEDABILITY_LEVEL, Number(targetLevel) || 0);
 
   if (currentLevel >= target) return 0;
 
@@ -343,6 +369,14 @@ export const calcUpgradeBonus = (upgrade: any, upgradeIndex: any, account: any) 
     return 5 * level;
   }
   return 0;
+}
+
+// game: TotalTrekkingHR. Each Flashy gives x1.5 on a team with no combat pet, each Fastidious x1.5 on a team with one;
+// an empty slot ("none") is no combat pet.
+export const getCombatMixGeneMulti = (team: any[]) => {
+  const hasCombatPet = team?.some((teamMember: any) => teamMember?.name !== 'none' && teamMember?.gene?.abilityType === 0);
+  const count = (gene: string) => team?.filter((teamMember: any) => teamMember?.gene?.name === gene)?.length ?? 0;
+  return Math.pow(1.5, hasCombatPet ? count('Fastidious') : count('Flashy'));
 }
 
 export const getForageSpeed = ({ team, previousTeam, teamMember, position }: any) => {
@@ -411,21 +445,24 @@ export const calcBreedabilityMulti = (account: any, characters: any) => {
     ])
   }
 }
+// game: "Breeding:ShinySpdMulti"
 export const calcShinyLvMulti = (account: any, characters: any) => {
-  const spelunkerObolMulti = getLabBonus(account?.lab.labBonuses, 8); // gem multi
-  const emeraldUlthuriteBonus = getJewelBonus(account?.lab.jewels, 15, spelunkerObolMulti);
+  const spelunkerObolMulti = getLabBonus(account?.lab?.labBonuses, 8); // gem multi
+  const emeraldUlthuriteBonus = getJewelBonus(account?.lab?.jewels, 15, spelunkerObolMulti);
   const fasterShinyLevelBonus = getShinyBonus(account?.breeding?.pets, 'Faster_Shiny_Mob_Lv_Up_Rate');
   const starSign = getStarSignBonus(getBestActiveCharacter(characters), account, 'Shiny_Mob_LV_spd') ?? 0;
   const summoningBonus = getWinnerBonus(account, '<x Shiny EXP', false);
   const lampBonus = getLampBonus({ holesObject: account?.hole?.holesObject, t: 0, i: 1, account });
   const breedingBonus = calcUpgradeBonus(account?.breeding?.petUpgrades?.[12], 12, account);
   const cropDepotShinyBonus = account?.farming?.cropDepot?.shiny?.value ?? 0;
+  const shinyOverLevelBonus = 10 * (account?.breeding?.shinyOverLevels ?? 0);
 
   const value = (1 + (emeraldUlthuriteBonus
       + (fasterShinyLevelBonus
         + (cropDepotShinyBonus
           + starSign + breedingBonus))) / 100)
     * (1 + summoningBonus / 100)
+    * (1 + shinyOverLevelBonus / 100)
     * (1 + lampBonus / 100);
 
   return {
@@ -439,6 +476,7 @@ export const calcShinyLvMulti = (account: any, characters: any) => {
         percent('Breeding bonus', breedingBonus)
       ]),
       multiplier('Summoning bonus', 1 + summoningBonus / 100),
+      multiplier('Shiny levels past 20', 1 + shinyOverLevelBonus / 100),
       multiplier('Lamp bonus', 1 + lampBonus / 100)
     ])
   };

@@ -1,6 +1,7 @@
 import { Card, CardContent, Stack, Typography, Chip } from '@mui/material';
 import { cleanUnderscore, notateNumber, commaNotation } from '@utility/helpers';
 import React from 'react';
+import BlackStars from './BlackStars';
 
 
 const CardView = ({ filteredPalette, selectedSlots }) => {  
@@ -17,7 +18,7 @@ const CardView = ({ filteredPalette, selectedSlots }) => {
         // Skip if item is not an object (the final bonus is a number)
         if (typeof item !== 'object' || !item) return null;
 
-        const { name, description, bonus, level, chance, active } = item;
+        const { name, description, bonus, level, chance, active, blackStars, blackStarMulti } = item;
         const hasBonus = bonus !== undefined && bonus !== null && bonus !== 0;
         const isTop3 = topIndices.has(index);
         const chanceValue = 1 / chance;
@@ -64,6 +65,14 @@ const CardView = ({ filteredPalette, selectedSlots }) => {
                   Level: {notateNumber(level)}
                 </Typography>
               )}
+              {blackStars > 0 ? (
+                <Stack direction={'row'} alignItems={'center'} gap={1} sx={{ mb: 1 }}>
+                  <BlackStars count={blackStars} size={18}/>
+                  <Typography variant={'body2'} sx={{ color: 'text.secondary' }}>
+                    {notateNumber(blackStarMulti ?? 1, 'MultiplierInfo')}x bonus
+                  </Typography>
+                </Stack>
+              ) : null}
               {chance !== undefined && chance > 0 && (
                 <Typography variant={'body2'} sx={{ mb: 1, color: 'text.secondary' }}>
                   Chance: 1 in {formattedChance}

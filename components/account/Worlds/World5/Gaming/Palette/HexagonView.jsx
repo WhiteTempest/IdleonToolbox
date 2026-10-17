@@ -1,6 +1,7 @@
 import { Box, Tooltip, Typography, Stack, Chip } from '@mui/material';
 import { cleanUnderscore, notateNumber, prefix, commaNotation } from '@utility/helpers';
 import React from 'react';
+import BlackStars from './BlackStars';
 
 const HexagonView = ({ palette, hexagonPositions, gridBounds, hexagonSize, itemMatchesSearch, searchTerm, selectedSlots }) => {
 
@@ -35,7 +36,7 @@ const HexagonView = ({ palette, hexagonPositions, gridBounds, hexagonSize, itemM
         {palette.map((item, index) => {
           if (typeof item !== 'object' || !item) return null;
 
-          const { name, description, bonus, level, chance, x0, x1, x2, active } = item;
+          const { name, description, bonus, level, chance, x0, x1, x2, active, blackStars, blackStarMulti } = item;
           const position = hexagonPositions[index];
           const hasLevel = level !== undefined && level > 0.5;
           const hexImage = hasLevel ? null : 'GamingHexB.png';
@@ -85,6 +86,9 @@ const HexagonView = ({ palette, hexagonPositions, gridBounds, hexagonSize, itemM
                   </Stack>
                   {level !== undefined && (
                     <Typography>Lv. {notateNumber(level)}</Typography>
+                  )}
+                  {blackStars > 0 && (
+                    <Typography>Black Stars: {blackStars} ({notateNumber(blackStarMulti ?? 1, 'MultiplierInfo')}x bonus)</Typography>
                   )}
                   {description && (
                     <Typography>{cleanUnderscore(description)}</Typography>
@@ -236,6 +240,7 @@ const HexagonView = ({ palette, hexagonPositions, gridBounds, hexagonSize, itemM
                             Lv. {level}
                           </Typography>
                         )}
+                        <BlackStars count={blackStars}/>
                         {chance !== undefined && chance > 0 && (
                           <Typography
                             variant='caption'

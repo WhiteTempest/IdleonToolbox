@@ -1,5 +1,5 @@
 import { cleanUnderscore, createArrayOfArrays, growth, notateNumber, round, tryToParse } from '@utility/helpers';
-import { cauldrons, p2w, sigils, vials } from '@website-data';
+import { cauldrons, gameTables, p2w, sigils, vials } from '@website-data';
 import { liveEntries } from '@parsers/catalog';
 import { isArtifactAcquired } from '@parsers/world-5/sailing';
 import { getSaltLickBonus } from '@parsers/world-3/saltLick';
@@ -123,6 +123,25 @@ export const isPrismaBubble = (account: any, bubbleIndex: any) => {
   return -1 !== (account?.alchemy?.prismaBubbles || '')?.indexOf(bubbleIndex + ',')
 }
 
+// game: CauldronStats("CauldronCosts"), the bubbleCost table. `discounts` are the factors the game multiplies a cost by,
+// each already floored as the game floors it. A liquid takes none, the Bits bubbles only the Bargain Tag and S-M-R-T
+// ones and are never clamped or rounded; every other material takes all five, then is clamped to [1, max] and rounded.
+export const getBubbleUpgradeCost = ({ rawName, bubbleIndex, level, baseCost, discounts = {} }: {
+  rawName: string; bubbleIndex: number; level: number; baseCost: number;
+  discounts?: { cauldronBubble?: number; cauldronLevel?: number; vialAndBubble?: number; bargainTag?: number; smrt?: number };
+}) => {
+  const table = gameTables.bubbleCost;
+  if (/^Liquid\d$/.test(rawName)) return baseCost + Math.floor(level / table.liquidStep);
+  const { cauldronBubble = 1, cauldronLevel = 1, vialAndBubble = 1, bargainTag = 1, smrt = 1 } = discounts;
+  if (rawName === 'Bits') return baseCost * Math.pow(table.bitsRate, level) * bargainTag * smrt;
+  const [rate, decay, offset] = bubbleIndex > table.highAboveIndex
+    ? [table.highRate, table.highDecay, table.highOffset]
+    : [table.lowRate, table.lowDecay, table.lowOffset];
+  const cost = baseCost * Math.pow(rate - (decay * level) / (offset + level), level)
+    * cauldronBubble * cauldronLevel * vialAndBubble * bargainTag * smrt;
+  return Math.round(Math.min(table.max, Math.max(1, cost)));
+}
+
 export const getLiquidCauldrons = (account: any) => {
   const liquidCauldrons = account?.alchemy?.cauldronsInfo?.slice(18) ?? [];
   return LIQUID_INFO.map((_, index: any) => {
@@ -149,14 +168,14 @@ export const getLiquidCauldrons = (account: any) => {
     }
     const bubbleBonus = getBubbleBonus(account, 'DA_DAILY_DRIP', false);
     const vialBonus = getVialsBonusByEffect(account?.alchemy?.vials, null, `Liquid${index + 1}Cap`)
-    const spelunkerObolMulti = getLabBonus(account?.lab.labBonuses, 8); // gem multi
-    const blackDiamondRhinestone = getJewelBonus(account?.lab.jewels, 16, spelunkerObolMulti);
+    const spelunkerObolMulti = getLabBonus(account?.lab?.labBonuses, 8); // gem multi
+    const blackDiamondRhinestone = getJewelBonus(account?.lab?.jewels, 16, spelunkerObolMulti);
     const mealBonus = getMealsBonusByEffectOrStat(account, null, `Liquid${index === 0 || index === 1
       ? '12'
       : '34'}`, blackDiamondRhinestone);
     // game: 5 * RiftStuff("RiftSkillBonus,4", 1), alchemy's second mastery tier (+5% all liquid cap at 200)
     const skillMasteryBonus = isMasteryBonusUnlocked(account?.rift, account?.totalSkillsLevels?.alchemy?.rank, 1);
-    const viaductOfGods = getLabBonus(account?.lab.labBonuses, 6);
+    const viaductOfGods = getLabBonus(account?.lab?.labBonuses, 6);
     const p2wBonus = account?.alchemy?.p2w?.liquids?.[index]?.capacity?.level ?? 0;
     const stampBonus = getStampsBonusByEffect(account, 'Cap_for_all_Liquids_in_Alchemy');
     const arcadeBonus = getArcadeBonus(account?.arcade?.shop, 'Cap_for_all_Liquids')?.bonus

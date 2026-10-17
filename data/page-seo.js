@@ -78,6 +78,7 @@ export const PAGE_SEO = {
   "/account/world-7/glimbo": { title: "Glimbo | Idleon Toolbox", description: "Track your Glimbo Swap Meet trades, max level bonuses, and currency costs in Legends of Idleon World 7" },
   "/account/world-7/jelly-operator": { title: "Jelly Operator | Idleon Toolbox", description: "Track your Jelly Operator obstructions, cell upgrades, bloodcells and bonuses in Legends of Idleon World 7 Research" },
   "/account/world-7/legend-talents": { title: "Legend Talents | Idleon Toolbox", description: "View your Legend talent levels, bonus effects, and upgrade costs in Legends of Idleon World 7" },
+  "/account/world-7/menagerie": { title: "Luminous Menagerie | Idleon Toolbox", description: "Track your Luminous Menagerie missions, unlocks, boosts, jellyfish and Lumi gains in Legends of Idleon World 7" },
   "/account/world-7/minehead": { title: "Minehead | Idleon Toolbox", description: "Track your Minehead upgrade levels, opponent stats, and bonus progression in Legends of Idleon World 7" },
   "/account/world-7/research": { title: "Research | Idleon Toolbox", description: "Keep track of your research level, observations and grid bonuses" },
   "/account/world-7/s3": { title: "World 7 Skill 3 | Idleon Toolbox", description: "World 7 third skill tracker for Legends of Idleon - coming soon" },
@@ -91,7 +92,7 @@ export const PAGE_SEO = {
   "/guilds/detail": { title: "Guild History | Idleon Toolbox", description: "Weekly GP progress and contributors for Legends of Idleon guilds." },
   "/guilds/ecosystem": { title: "Guild Ecosystem | Idleon Toolbox", description: "Ecosystem-wide guild statistics: total guilds, active guilds, member health, and guild point output across all of Legends of Idleon." },
   "/": { title: "Home | Idleon Toolbox", description: "Power up your Legends of Idleon adventure with Idleon Toolbox's essential tools and resources for optimizing gameplay, character builds, crafting, and more." },
-  "/leaderboards": { title: "Leaderboards | Idleon Toolbox", description: "View Legends of Idleon leaderboards for skills, tasks, characters, caverns, and more with player rankings and stats" },
+  "/leaderboards": { title: "Leaderboards | Idleon Toolbox", description: "View Legends of Idleon leaderboards for your account, characters, skills, combat and every world, with player rankings and stats" },
   "/patch-notes": { title: "Patch Notes | Idleon Toolbox", description: "View the latest Idleon Toolbox patch notes, new features, bug fixes, and changelog for every version" },
   "/settings": { title: "Settings | Idleon Toolbox", description: "Configure your Idleon Toolbox preferences and manage your profile" },
   "/statistics": { title: "Statistics | Idleon Toolbox", description: "Explore community statistics and visualizations for Legends of Idleon including class distribution, skill levels, and player progression data" },
@@ -117,6 +118,7 @@ export const PAGE_SEO = {
   "/tools/wardrobe": { title: "Wardrobe | Idleon Toolbox", description: "Dress a Legends of Idleon character in any hat, weapon, cape, costume, trophy, nametag or companion and watch it move the way the game draws it" },
   "/wiki": { title: "Wiki | Idleon Toolbox", description: "Search every Legends of Idleon item, monster, NPC and quest to see what drops it, what it crafts, and which quests use it" },
   "/wiki/[kind]/[slug]": { title: "Wiki | Idleon Toolbox", description: "A Legends of Idleon item, monster, NPC, quest, shop or area, and everything it connects to." },
-  "/wiki/[kind]": { title: "Wiki | Idleon Toolbox", description: "Browse every Legends of Idleon item, monster, NPC, quest, shop and area." },
+  "/wiki/[kind]/[slug]/[entity]": { title: "Wiki | Idleon Toolbox", description: "A Legends of Idleon game system entry, and everything it connects to." },
+  "/wiki/[kind]": { title: "Wiki | Idleon Toolbox", description: "Browse a Legends of Idleon wiki category or game system, and every page in it." },
   "/wiki/changelog": { title: "Game changelog | Idleon Toolbox", description: "What each Legends of Idleon patch changed: items, monsters, recipes, companions and talents, version by version." }
 };

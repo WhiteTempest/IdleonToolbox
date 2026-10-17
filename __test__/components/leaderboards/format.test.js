@@ -41,8 +41,8 @@ describe('formatMetricValue', () => {
   });
 
   it('treats bits as plain numbers', () => {
-    expect(formatMetricValue('bits', 2.7576e119, { scale: 2.7576e119 })).toBe('2.76E119');
-    expect(formatExactValue('bits', 2.7576e119)).toBe('2.75760E119');
+    expect(formatMetricValue('bits', 2.7576e119, { scale: 2.7576e119 })).toBe('2.76e119');
+    expect(formatExactValue('bits', 2.7576e119)).toBe('2.75760e119');
   });
 
   it('shows a dash for a missing value', () => {
@@ -57,20 +57,20 @@ describe('formatMetricValue short form', () => {
     expect(formatMetricValue('default', 35_000_000)).toBe('35.0M');
     expect(formatMetricValue('default', 1e6)).toBe('1.00M');
     expect(formatMetricValue('default', 4.9047e18)).toBe('4.90QQ');
-    expect(formatMetricValue('default', 1.3176e62)).toBe('1.32E62');
-    expect(formatMetricValue('default', 6.9e36)).toBe('6.90E36');
-    expect(formatMetricValue('default', 9.996e62)).toBe('1.00E63');
+    expect(formatMetricValue('default', 1.3176e62)).toBe('1.32e62');
+    expect(formatMetricValue('default', 6.9e36)).toBe('6.90e36');
+    expect(formatMetricValue('default', 9.996e62)).toBe('1.00e63');
   });
 
   it('moves to the next suffix when rounding reaches 1000', () => {
     expect(formatMetricValue('default', 999_600_000)).toBe('1.00B');
     expect(formatMetricValue('default', 999_700, { scale: 2e6 })).toBe('1.00M');
-    expect(formatMetricValue('default', 999.7e18)).toBe('1.00E21');
+    expect(formatMetricValue('default', 999.7e18)).toBe('1.00e21');
   });
 
   it('keeps one notation across a board that reaches E notation', () => {
     expect(formatMetricValue('default', 5.11e19)).toBe('51.1QQ');
-    expect(formatMetricValue('default', 5.11e19, { scale: 1.57e25 })).toBe('5.11E19');
+    expect(formatMetricValue('default', 5.11e19, { scale: 1.57e25 })).toBe('5.11e19');
   });
 });
 
@@ -84,7 +84,7 @@ describe('formatExactValue', () => {
     // Past a trillion a double has no real decimals.
     expect(formatExactValue('default', 980059689370745.6)).toBe('980,059,689,370,746');
     expect(formatExactValue('points', 16278.42)).toBe('16,278.42 pts');
-    expect(formatExactValue('default', 1.3176090741400986e62)).toBe('1.31761E62');
+    expect(formatExactValue('default', 1.3176090741400986e62)).toBe('1.31761e62');
   });
 });
 
@@ -117,7 +117,7 @@ describe('formatStep', () => {
     expect(formatStep('default', 2333, { scale: 1e8 })).toBe('2,333');
     expect(formatStep('default', 1)).toBe('1');
     expect(formatStep('default', 2.5e9)).toBe('2.50B');
-    expect(formatStep('bits', 5.69e20, { scale: 2.7e119 })).toBe('5.69E20');
+    expect(formatStep('bits', 5.69e20, { scale: 2.7e119 })).toBe('5.69e20');
   });
 });
 
@@ -212,16 +212,42 @@ describe('round 4 value rules', () => {
   });
 });
 
-describe('masterclass tab', () => {
-  it('sits after Misc', () => {
-    expect(TABS).toEqual(['Overview', 'General', 'Tasks', 'Skills', 'Character', 'Misc', 'Masterclass', 'Caverns']);
+describe('display tabs', () => {
+  const redox = { key: 'redoxSaltRank', label: 'Redox Salt Rank', section: 'World 3', notation: 'default' };
+  const bells = { key: 'bellRings', label: 'Bell Rings', section: 'Caverns', notation: 'default' };
+
+  it('lists the display tabs', () => {
+    expect(TABS).toEqual(['Overview', 'Account', 'Character', 'Skills', 'Combat', 'Worlds']);
   });
 
-  it('resolves a moved board to its new category, so an old jump link still opens it', () => {
-    const index = buildMetaIndex({ createdAt: 1, totalPlayers: 1, categories: [
-      { category: 'masterclass', metrics: [{ key: 'totalRoyalStatueLevels', label: 'Total Royal Statue Levels', section: 'Royal Guardian', notation: 'default' }] }
+  it('indexes boards under their display tab, keeping section order', () => {
+    const index = buildMetaIndex({ tabs: [{ key: 'worlds', label: 'Worlds', sections: [
+      { name: 'World 3', metrics: [redox] }, { name: 'Caverns', metrics: [bells] }
+    ] }] });
+    expect(index.categories.worlds).toEqual({ metrics: ['redoxSaltRank', 'bellRings'], sections: [
+      { name: 'World 3', metrics: ['redoxSaltRank'] }, { name: 'Caverns', metrics: ['bellRings'] }
     ] });
-    expect(index.byKey.totalRoyalStatueLevels.category).toBe('masterclass');
-    expect(TABS.find((tab) => tab.toLowerCase() === index.byKey.totalRoyalStatueLevels.category)).toBe('Masterclass');
+    expect(index.byKey.redoxSaltRank.category).toBe('worlds');
+    expect(TABS.find((tab) => tab.toLowerCase() === index.byKey.redoxSaltRank.category)).toBe('Worlds');
+  });
+
+  it('ignores an unknown tab', () => {
+    const index = buildMetaIndex({ tabs: [{ key: 'future', label: 'Future', sections: [{ name: 'Next', metrics: [bells] }] }] });
+    expect(index.byKey.bellRings.category).toBe('future');
+    expect(TABS.find((tab) => tab.toLowerCase() === 'future')).toBeUndefined();
+  });
+
+  it('prefers tabs over categories', () => {
+    const index = buildMetaIndex({
+      categories: [{ category: 'misc', metrics: [{ ...redox, section: 'Salt Ranks' }] }],
+      tabs: [{ key: 'worlds', label: 'Worlds', sections: [{ name: 'World 3', metrics: [redox] }] }]
+    });
+    expect(Object.keys(index.categories)).toEqual(['worlds']);
+    expect(index.byKey.redoxSaltRank).toEqual({ ...redox, category: 'worlds' });
+  });
+
+  it('still builds from categories when meta has no tabs', () => {
+    const index = buildMetaIndex({ categories: [{ category: 'misc', metrics: [{ ...redox, section: 'Salt Ranks' }] }] });
+    expect(index.categories.misc.sections).toEqual([{ name: 'Salt Ranks', metrics: ['redoxSaltRank'] }]);
   });
 });

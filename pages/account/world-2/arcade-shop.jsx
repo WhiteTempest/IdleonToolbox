@@ -2,33 +2,43 @@ import { Card, CardContent, Checkbox, Divider, FormControlLabel, FormGroup, Stac
 import React, { useContext, useState } from 'react';
 import { AppContext } from 'components/common/context/AppProvider';
 import { cleanUnderscore, commaNotation, notateNumber, prefix } from 'utility/helpers';
+import {
+  ARCADE_MAX_LEVEL,
+  ARCADE_OMEGA_LEVEL,
+  ARCADE_SUPER_LEVEL,
+  formatArcadeEffect,
+  getArcadeCapCost,
+  isArcadePlaceholder
+} from '@parsers/world-2/arcade';
 import styled from '@emotion/styled';
 import { getStampBonus } from '@parsers/world-1/stamps';
 import { NextSeo } from 'next-seo';
 import { CardTitleAndValue } from '@components/common/styles';
 import { CardWithBreakdown } from '@components/common/Breakdown/CardWithBreakdown';
 
-const MAX_LEVEL = 100;
+// The game's Royal and Omega ball glyphs (font 472) and Super / Omega level banners (font 675)
+const ROYAL_BALL_ICON = 'etc/RoyalBall.png';
+const OMEGA_BALL_ICON = 'etc/OmegaBall.png';
+const ARCADE_SUPER_BANNER = 'etc/ArcadeSuper.png';
+const ARCADE_OMEGA_BANNER = 'etc/ArcadeOmega.png';
 
 const ArcadeShop = () => {
   const { state } = useContext(AppContext);
-  const { balls, goldBalls, shop, royalBalls, goldBallMulti } = state?.account?.arcade || {};
+  const { balls, goldBalls, shop, royalBalls, omegaBalls, goldBallMulti } = state?.account?.arcade || {};
   const [hideMaxed, setHideMaxed] = useState(false);
   const [hideSuper, setHideSuper] = useState(false);
+  const [hideOmega, setHideOmega] = useState(false);
 
   const passesFilter = (upgrade) => {
-    const isMaxed = upgrade.level === MAX_LEVEL;
-    const isSuper = upgrade.level > MAX_LEVEL;
-    if (hideMaxed && isMaxed) return false;
-    if (hideSuper && isSuper) return false;
+    if (isArcadePlaceholder(upgrade)) return false;
+    if (hideMaxed && upgrade.level === ARCADE_MAX_LEVEL) return false;
+    if (hideSuper && upgrade.level === ARCADE_SUPER_LEVEL) return false;
+    if (hideOmega && upgrade.level >= ARCADE_OMEGA_LEVEL) return false;
     return true;
   };
 
+  // game: "DungeonCalc:ArcadeCost" (gold balls below Lv 100; Royal and Omega balls are getArcadeCapCost)
   const getCost = (level, upgradeIndex) => {
-    if (level === 100) {
-      return 5;
-    }
-
     const arcadeStamp = getStampBonus(state?.account, 'misc', 'StampC5', 0);
     const arcadeStampMath = Math.max(0.6, 1 - arcadeStamp / 100);
 
@@ -51,7 +61,7 @@ const ArcadeShop = () => {
 
   const getCostToMax = (level, upgradeIndex) => {
     let total = 0;
-    for (let i = level; i < MAX_LEVEL; i++) {
+    for (let i = level; i < ARCADE_MAX_LEVEL; i++) {
       total += getCost(i, upgradeIndex);
     }
     return total;
@@ -61,7 +71,7 @@ const ArcadeShop = () => {
   const inactiveUpgrades = shop?.filter((u) => !u.active && passesFilter(u)) || [];
 
   // Calculate total cost to max for all upgrades
-  const totalCostToMax = shop?.reduce((total, upgrade) => {
+  const totalCostToMax = shop?.filter((upgrade) => !isArcadePlaceholder(upgrade))?.reduce((total, upgrade) => {
     const upgradeIndex = parseInt(upgrade.iconName.replace('PachiShopICON', ''), 10);
     return total + getCostToMax(upgrade.level, upgradeIndex);
   }, 0) || 0;
@@ -70,16 +80,18 @@ const ArcadeShop = () => {
     const { level, effect, iconName, bonus } = upgrade;
     // Extract upgrade index from iconName (format: PachiShopICON{index})
     const upgradeIndex = parseInt(iconName.replace('PachiShopICON', ''), 10);
-    const eff = cleanUnderscore(effect.replace('{', notateNumber(bonus, 'MultiplierInfo').replace('.00', '')));
+    const eff = cleanUnderscore(formatArcadeEffect(effect, bonus));
     const cost = getCost(level, upgradeIndex);
     const costToMax = getCostToMax(level, upgradeIndex);
-    const isMaxed = level === MAX_LEVEL;
-    const isSuper = level > MAX_LEVEL;
+    const capCost = getArcadeCapCost(level);
+    const isMaxed = level === ARCADE_MAX_LEVEL;
+    const isSuper = level === ARCADE_SUPER_LEVEL;
+    const isOmega = level >= ARCADE_OMEGA_LEVEL;
     return (
       <Card key={`${iconName}-${index}`}
             sx={{
-              outline: isMaxed || isSuper ? '1px solid' : '',
-              outlineColor: isMaxed ? 'success.light' : isSuper ? 'info.dark' : ''
+              outline: isMaxed || isSuper || isOmega ? '1px solid' : '',
+              outlineColor: isMaxed ? 'success.light' : isSuper ? 'info.dark' : isOmega ? 'secondary.main' : ''
             }}>
         <CardContent sx={{ width: 330 }}>
           <Stack direction={'row'} gap={2} flexWrap={'wrap'}>
@@ -87,10 +99,10 @@ const ArcadeShop = () => {
             <Stack>
               <Typography variant={'body1'} style={{ fontWeight: 'bold' }}>{eff}</Typography>
               <Divider sx={{ my: .5 }}/>
-              {level < MAX_LEVEL ? <>
-                <Typography variant={'body2'}>Lv: {level} / {MAX_LEVEL}</Typography>
-              </> : isSuper ? (
-                <Typography>Super!</Typography>
+              {level < ARCADE_MAX_LEVEL ? <>
+                <Typography variant={'body2'}>Lv: {level} / {ARCADE_MAX_LEVEL}</Typography>
+              </> : isOmega || isSuper ? (
+                <LevelBanner src={`${prefix}${isOmega ? ARCADE_OMEGA_BANNER : ARCADE_SUPER_BANNER}`} alt={isOmega ? 'Omega' : 'Super'}/>
               ) : (
                 <Typography>Maxed</Typography>
               )}
@@ -98,6 +110,15 @@ const ArcadeShop = () => {
                 <Typography variant={'body2'}>Cost: {commaNotation(cost, 2)}</Typography>
                 <Typography variant={'body2'}>Cost To Max: {commaNotation(costToMax, 2)}</Typography>
               </> : null}
+              {capCost ? (
+                <Stack direction={'row'} alignItems={'center'} gap={.5}>
+                  <Typography variant={'body2'}>Cost: {capCost.cost}</Typography>
+                  <img width={18} height={18} src={`${prefix}${capCost.currency === 'omega' ? OMEGA_BALL_ICON : ROYAL_BALL_ICON}`}
+                       alt={capCost.currency === 'omega' ? 'Omega balls' : 'Royal balls'}/>
+                </Stack>
+              ) : isOmega ? (
+                <Typography variant={'body2'}>Omega Status Achieved!</Typography>
+              ) : null}
             </Stack>
           </Stack>
         </CardContent>
@@ -128,8 +149,14 @@ const ArcadeShop = () => {
                            breakdown={goldBallMulti?.breakdown}/>
         <CardTitleAndValue title="Royal balls">
           <Stack direction="row" gap={2}>
-            <BallIcon blue src={`${prefix}data/PachiBall1.png`} alt="arcade-royal-balls"/>
+            <BallIcon src={`${prefix}${ROYAL_BALL_ICON}`} alt="arcade-royal-balls"/>
             <Typography>{royalBalls}</Typography>
+          </Stack>
+        </CardTitleAndValue>
+        <CardTitleAndValue title="Omega balls">
+          <Stack direction="row" gap={2}>
+            <BallIcon src={`${prefix}${OMEGA_BALL_ICON}`} alt="arcade-omega-balls"/>
+            <Typography>{commaNotation(omegaBalls ?? 0)}</Typography>
           </Stack>
         </CardTitleAndValue>
         {totalCostToMax > 0 && (
@@ -146,6 +173,10 @@ const ArcadeShop = () => {
             <FormControlLabel
               control={<Checkbox size="small" checked={hideSuper} onChange={(e) => setHideSuper(e.target.checked)}/>}
               label="Hide Super!"
+            />
+            <FormControlLabel
+              control={<Checkbox size="small" checked={hideOmega} onChange={(e) => setHideOmega(e.target.checked)}/>}
+              label="Hide Omega!"
             />
           </FormGroup>
         </CardTitleAndValue>
@@ -179,8 +210,15 @@ const UpgradeIcon = styled.img`
 const BallIcon = styled.img`
   width: 24px;
   height: 24px;
-  ${({ gold, blue }) => blue ? `filter: hue-rotate(230deg) brightness(2);`
-          : gold ? `filter: hue-rotate(70deg) brightness(2);` : ''}
+  ${({ gold }) => gold ? `filter: hue-rotate(70deg) brightness(2);` : ''}
+`;
+
+// The Super / Omega banner the arcade card draws in place of the level
+const LevelBanner = styled.img`
+  width: auto;
+  height: 14px;
+  align-self: flex-start;
+  margin: 4px 0;
 `;
 
 export default ArcadeShop;

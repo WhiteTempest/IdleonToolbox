@@ -6,6 +6,7 @@ import ViewModuleIcon from '@mui/icons-material/ViewModule';
 import { IconLayoutDashboardFilled, IconInfoCircleFilled } from '@tabler/icons-react';
 import CardView from './Palette/CardView';
 import HexagonView from './Palette/HexagonView';
+import { DOUBLER_ICONS, DoublerUsageCard } from '@components/account/Worlds/World7/Menagerie/menagerie.utils';
 import { CardWithBreakdown } from '@components/common/Breakdown/CardWithBreakdown';
 import Tooltip from '@components/Tooltip';
 
@@ -29,6 +30,7 @@ const GRID_BOUNDS = { width: _maxX - _minX, height: _maxY - _minY, offsetX: _min
 
 const Palette = ({ account }) => {
   const { palette, paletteFinalBonus, paletteLuck, selectedSlots } = account?.gaming || {};
+  const blackStars = account?.menagerie?.doublers?.blackStars;
   const [viewMode, setViewMode] = useState('card');
   const [searchTerm, setSearchTerm] = useState('');
   if (!palette) return null;
@@ -82,6 +84,7 @@ const Palette = ({ account }) => {
         title={'Selected Slots'}
         value={selectedSlots}
       />
+      <DoublerUsageCard title={'Black Stars'} doubler={blackStars} icon={DOUBLER_ICONS.blackStars}/>
       <TextField
         label="Search by name or description"
         variant="outlined"
