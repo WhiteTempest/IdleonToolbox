@@ -39,6 +39,7 @@ import { useAlertSettingsProps } from '@components/common/context/DashboardSetti
 import { pickerItemLabel } from '@utility/dashboard/quickEdit';
 import { formatArcadeEffect } from '@parsers/world-2/arcade';
 import { BASE_MAX_SHINY_LEVEL } from '@parsers/world-4/breeding';
+import { formatEta } from '@components/account/Misc/class-specific/RoyalGuardian/formatEta';
 
 // Every refinery alert draws the same salt icon, and one salt can raise several of them at once,
 // so a corner glyph says which condition fired without having to hover each copy.
@@ -54,6 +55,7 @@ const alertBadges = {
   saltDeficit: { Icon: ArrowDropDownIcon, color: '#d62727', border: '#833b3b', size: 36 },
   saltMaterials: { Icon: WarningRoundedIcon, color: '#d1921e', border: '#7a5a1e', size: 18 },
   rankUp: { Icon: ArrowDropUpIcon, color: '#66bb6a', size: 36 },
+  deficit: { Icon: ArrowDropDownIcon, color: '#d62727', size: 36 },
   sharedLink: { Icon: LinkIcon, color: '#90caf9', size: 18 },
   locked: { Icon: LockIcon, color: '#d1921e', size: 15 }
 };
@@ -766,6 +768,19 @@ const Account = ({ account, characters, trackers, lastUpdated }) => {
                         : ''} EXP/hr`
                     }))}/>}
                   iconPath={'etc/RGunit0'} maxWidth={RG_LIST_TOOLTIP_WIDTH}/> : null}
+              {alerts?.['World 7']?.royalGuardian?.missingWorkers ?
+                <Alert target={'World 7.royalGuardian.missingWorkers'}
+                  title={<RoyalGuardianList
+                    headline={`${alerts?.['World 7']?.royalGuardian?.missingWorkers?.count} outpost${alerts?.['World 7']?.royalGuardian?.missingWorkers?.count === 1
+                      ? ' needs'
+                      : 's need'} more Workers to empty their resource ${alerts?.['World 7']?.royalGuardian?.missingWorkers?.beforeReset
+                      ? `before the reset in ${formatEta(alerts?.['World 7']?.royalGuardian?.missingWorkers?.horizon)}`
+                      : `within ${alerts?.['World 7']?.royalGuardian?.missingWorkers?.horizon}h`} - retrain Traders or Surveyors there as Workers`}
+                    entries={alerts?.['World 7']?.royalGuardian?.missingWorkers?.outposts?.map((outpost) => ({
+                      ...outpost,
+                      detail: `+${outpost?.workers} Worker${outpost?.workers === 1 ? '' : 's'}, empties in ${formatEta(outpost?.hoursToEmpty)}`
+                    }))}/>}
+                  iconPath={'etc/RGunit0'} badge={'deficit'} maxWidth={RG_LIST_TOOLTIP_WIDTH}/> : null}
               {alerts?.['World 7']?.royalGuardian?.strandedWorkers ?
                 <Alert target={'World 7.royalGuardian.strandedWorkers'}
                   title={<RoyalGuardianList
@@ -967,6 +982,36 @@ const Account = ({ account, characters, trackers, lastUpdated }) => {
                 <Alert target={'World 7.menagerie.affordableBoosts'}
                   title={`You can afford ${alerts?.['World 7']?.menagerie?.affordableBoosts?.length} Menagerie boost${alerts?.['World 7']?.menagerie?.affordableBoosts?.length === 1 ? '' : 's'}`}
                   iconPath={`data/MenaIconP${alerts?.['World 7']?.menagerie?.affordableBoosts?.[0]?.index}`}/> : null}
+              {alerts?.['World 7']?.menagerie?.lumiBoost ?
+                <Alert target={'World 7.menagerie.lumiBoost'}
+                  title={`You can afford the Lumi/hr boost (Lv. ${alerts?.['World 7']?.menagerie?.lumiBoost?.level + 1}, ${notateNumber(alerts?.['World 7']?.menagerie?.lumiBoost?.cost, 'Big')} Lumi)`}
+                  iconPath={'data/MenaIconP1'}/> : null}
+              {alerts?.['World 7']?.menagerie?.missionBoost ?
+                <Alert target={'World 7.menagerie.missionBoost'}
+                  title={`You can afford the Mission boost (Lv. ${alerts?.['World 7']?.menagerie?.missionBoost?.level + 1}, ${notateNumber(alerts?.['World 7']?.menagerie?.missionBoost?.cost, 'Big')} Lumi)`}
+                  iconPath={'data/MenaIconP0'}/> : null}
+              {alerts?.['World 7']?.menagerie?.pinkJelly?.map((upgrade) =>
+                <Alert target={'World 7.menagerie.pinkJelly'}
+                  key={`menagerie-pink-${upgrade}`}
+                  title={`You can afford the Pink jelly ${upgrade} upgrade`}
+                  iconPath={'data/MenaJelly1'}/>)}
+              {alerts?.['World 7']?.menagerie?.blueJelly ?
+                <Alert target={'World 7.menagerie.blueJelly'}
+                  title={`You have ${notateNumber(alerts?.['World 7']?.menagerie?.blueJelly, 'Big')} ladles to give the Blue jelly`}
+                  iconPath={'data/MenaJelly2'}/> : null}
+              {alerts?.['World 7']?.menagerie?.redJelly ?
+                <Alert target={'World 7.menagerie.redJelly'}
+                  title={`Red jelly reading ready: ${alerts?.['World 7']?.menagerie?.redJelly?.daysRested} days rested, ${alerts?.['World 7']?.menagerie?.redJelly?.readingMulti}x gains`}
+                  iconPath={'data/MenaJelly3'}/> : null}
+              {alerts?.['World 7']?.menagerie?.silverJelly?.map((upgrade) =>
+                <Alert target={'World 7.menagerie.silverJelly'}
+                  key={`menagerie-silver-${upgrade}`}
+                  title={`You can afford the Silver jelly ${upgrade} upgrade`}
+                  iconPath={'data/MenaJelly4'}/>)}
+              {alerts?.['World 7']?.menagerie?.yellowJelly ?
+                <Alert target={'World 7.menagerie.yellowJelly'}
+                  title={'Yellow jelly construction purchase ready'}
+                  iconPath={'data/MenaJelly5'}/> : null}
               {alerts?.['World 7']?.menagerie?.unusedDoublers?.map(({ key, left }) =>
                 <Alert target={'World 7.menagerie.unusedDoublers'}
                   key={`menagerie-doubler-${key}`}
@@ -995,12 +1040,12 @@ const Account = ({ account, characters, trackers, lastUpdated }) => {
 
 // Icons are the Menagerie boost that grants each doubler; Omnijade comes from the Ninja knowledge upgrade.
 const MENAGERIE_DOUBLER_ALERTS = {
-  blackStars: { name: 'Black Star', plural: 'Black Stars', iconPath: 'data/MenaIconP2' },
-  organicLabels: { name: 'Organic Label', plural: 'Organic Labels', iconPath: 'data/MenaIconP6' },
-  minehead: { name: 'Minehead doubler', plural: 'Minehead doublers', iconPath: 'data/MenaIconP8' },
-  sushi: { name: 'Sushi Station doubler', plural: 'Sushi Station doublers', iconPath: 'data/MenaIconP10' },
+  blackStars: { name: 'Black Star', plural: 'Black Stars', iconPath: 'etc/BlackStar' },
+  organicLabels: { name: 'Organic Label', plural: 'Organic Labels', iconPath: 'etc/OrganicLabel' },
+  minehead: { name: 'Minehead doubler', plural: 'Minehead doublers', iconPath: 'etc/MineheadDoubler' },
+  sushi: { name: 'Sushi Station doubler', plural: 'Sushi Station doublers', iconPath: 'etc/SushiDoubler' },
   jellyOperator: { name: 'Jelly Operator doubler', plural: 'Jelly Operator doublers', iconPath: 'data/MenaIconP12' },
-  omnijade: { name: 'Omnijade', plural: 'Omnijade', iconPath: 'data/NjUpgI31' }
+  omnijade: { name: 'Omnijade', plural: 'Omnijade', iconPath: 'etc/Omnijade' }
 };
 
 const MenagerieAlertList = ({ headline, entries = [] }) => <Stack gap={.5}>

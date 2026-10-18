@@ -36,8 +36,9 @@ import { getGoldCostToMaxLevel, getStampsPerDay } from '@parsers/world-1/stamps'
 import { getTomeWishPity } from '@parsers/world-4/tome';
 import { BOSS_RESPAWN_ALERTS } from './bossRespawns';
 import { getTesseractBonus } from '@parsers/class-specific/tesseract';
-import { getIdleGuards, getSpareWorkers } from '@parsers/class-specific/royalGuardian';
+import { getIdleGuards, getMissingWorkers, getSpareWorkers } from '@parsers/class-specific/royalGuardian';
 import { getCompassBonus } from '@parsers/class-specific/compass';
+import { calcTotalItemOwned } from '@parsers/storage';
 
 // The game hard caps Arcanist weapon and ring drops at 100 each per day.
 const ARCANIST_DAILY_DROP_CAP = 100;
@@ -1494,8 +1495,54 @@ const pickOutpostEntry = ({ name, mapIndex, world, monsterRawName, monsterName }
 // Same order as the doubler cards on the Menagerie Boosts tab
 const MENAGERIE_DOUBLERS = ['blackStars', 'organicLabels', 'minehead', 'sushi', 'jellyOperator', 'omnijade'];
 
+const MENAGERIE_MISSION_BOOST = 0;
+const MENAGERIE_LUMI_BOOST = 1;
+const PINK_UPGRADES = ['Shell', 'Lumi rate'];
+const SILVER_UPGRADES = ['Obol MISC multi', 'Fragments per auto trash'];
+
+const getAffordableBoost = (menagerie, index) => {
+  const boost = menagerie?.boosts?.[index];
+  return boost?.visible && boost?.affordable ? { index, level: boost.level, cost: boost.cost } : null;
+};
+
+const getJellyAlerts = (menagerie, options, account, characters) => {
+  const result = {};
+  const jellies = menagerie?.jellies;
+  const isUnlocked = (index) => jellies?.sideUnlocked?.[index]?.unlocked;
+  if (options?.pinkJelly?.checked && isUnlocked(0)) {
+    const percent = Math.min(100, Math.max(1, Number(options?.pinkJelly?.props?.value) || 25));
+    const budget = (account?.currencies?.rawMoney ?? 0) * (percent / 100);
+    const upgrades = PINK_UPGRADES.filter((_, index) => (jellies?.pink?.costs?.[index] ?? Infinity) <= budget);
+    if (upgrades.length > 0) result.pinkJelly = upgrades;
+  }
+  if (options?.blueJelly?.checked && isUnlocked(1)) {
+    const ladles = calcTotalItemOwned(account?.storage, characters, 'Ladle');
+    if (ladles > 0) result.blueJelly = ladles;
+  }
+  if (options?.redJelly?.checked && isUnlocked(2)) {
+    const { level = 0, readingMulti = 1, chaptersTracked = 0 } = jellies?.red ?? {};
+    const threshold = Math.max(1, Number(options?.redJelly?.props?.value) || 2);
+    // The Read button does nothing at 0 days rested or with no pages tracked
+    if (level > 0 && chaptersTracked > 0 && readingMulti >= threshold) {
+      result.redJelly = { daysRested: level, readingMulti };
+    }
+  }
+  if (options?.silverJelly?.checked && isUnlocked(3)) {
+    const fragments = account?.currencies?.ObolFragments ?? 0;
+    const silver = jellies?.silver;
+    const upgrades = SILVER_UPGRADES.filter((_, index) => (silver?.levels?.[index] ?? 0) < (silver?.maxLevels?.[index] ?? 0)
+      && (silver?.costs?.[index] ?? Infinity) <= fragments);
+    if (upgrades.length > 0) result.silverJelly = upgrades;
+  }
+  if (options?.yellowJelly?.checked && isUnlocked(4)) {
+    const { progress = 0, requirement = Infinity } = jellies?.yellow ?? {};
+    if (progress >= requirement) result.yellowJelly = true;
+  }
+  return result;
+};
+
 // Hidden rows are still in the parser output (the page dims them), so every alert keeps only the visible ones.
-const getMenagerieAlerts = (menagerie, options) => {
+const getMenagerieAlerts = (menagerie, options, account, characters) => {
   const result = {};
   if (options?.claimableMissions?.checked) {
     const missions = menagerie?.missions?.filter(({ visible, canClaim }) => visible && canClaim) ?? [];
@@ -1515,8 +1562,15 @@ const getMenagerieAlerts = (menagerie, options) => {
       result.affordableBoosts = boosts.map(({ index, level, cost }) => ({ index, level, cost }));
     }
   }
+  const lumiBoost = options?.lumiBoost?.checked && getAffordableBoost(menagerie, MENAGERIE_LUMI_BOOST);
+  if (lumiBoost) result.lumiBoost = lumiBoost;
+  const missionBoost = options?.missionBoost?.checked && getAffordableBoost(menagerie, MENAGERIE_MISSION_BOOST);
+  if (missionBoost) result.missionBoost = missionBoost;
+  Object.assign(result, getJellyAlerts(menagerie, options, account, characters));
   if (options?.unusedDoublers?.checked) {
+    const enabled = options?.unusedDoublers?.props?.value ?? {};
     const doublers = MENAGERIE_DOUBLERS
+      .filter((key) => enabled[key] !== false)
       .map((key) => ({ key, left: menagerie?.doublers?.[key]?.left ?? 0 }))
       .filter(({ left }) => left > 0);
     if (doublers.length > 0) {
@@ -1666,14 +1720,17 @@ export const getWorld7Alerts = (account, fields, options, characters) => {
     const slotUnitsOf = ({ unitSlots }, type) => (unitSlots ?? []).filter((unit) => unit === type).length;
     const slotWorkersOf = (outpost) => slotUnitsOf(outpost, 0);
 
+    // game: "RestockRes" only refills a node, and only levels it up, when that node is ALREADY
+    // spent at the daily reset. So the deadline deciding whether a Worker is really spare is the
+    // reset itself, not a rolling window: a node that misses it by an hour loses the level up.
+    // The fixed hour count stays for anyone who wants it, and is the fallback when the save is
+    // too old to say when the next reset lands. Spare and missing Workers share this deadline so
+    // the two alerts can never pull one outpost in opposite directions.
+    const workerHorizonFixed = rgOptions?.overkillWorkers?.checked && !rgOptions?.overkillBeforeReset?.checked;
+    const resetHorizon = workerHorizonFixed ? null : hoursUntilDailyReset(account);
+    const horizon = resetHorizon ?? (rgOptions?.overkillWorkers?.props?.value ?? 24);
+
     if (rgOptions?.overkillWorkers?.checked) {
-      // game: "RestockRes" only refills a node, and only levels it up, when that node is ALREADY
-      // spent at the daily reset. So the deadline deciding whether a Worker is really spare is the
-      // reset itself, not a rolling window: a node that misses it by an hour loses the level up.
-      // The fixed hour count stays for anyone who wants it, and is the fallback when the save is
-      // too old to say when the next reset lands.
-      const resetHorizon = rgOptions?.overkillBeforeReset?.checked ? hoursUntilDailyReset(account) : null;
-      const horizon = resetHorizon ?? (rgOptions?.overkillWorkers?.props?.value ?? 24);
       const overkill = collectors
         .map((outpost) => ({ outpost, workers: getSpareWorkers(outpost, horizon, workerRateBonus) }))
         .filter(({ workers }) => workers > 0)
@@ -1690,6 +1747,30 @@ export const getWorld7Alerts = (account, fields, options, characters) => {
           beforeReset: resetHorizon != null,
           surveyors,
           outposts: overkill
+        };
+      }
+    }
+
+    // Without Resource Replenish a node never refills, so the reset is no deadline at all. A save
+    // older than the reset says nothing about today's nodes either.
+    if (rgOptions?.missingWorkers?.checked && outpostStats?.restockUnlocked && (workerHorizonFixed || resetHorizon != null)) {
+      const nodeDrain = Object.fromEntries((account?.royalGuardian?.resources ?? [])
+        .map(({ index, drainRate }) => [index, drainRate ?? 0]));
+      const missing = collectors
+        .map((outpost) => ({ outpost, need: getMissingWorkers(outpost, horizon, workerRateBonus, nodeDrain) }))
+        // Only what the player can act on: enough Traders or Surveyors in the slots to retrain.
+        .filter(({ need }) => need && need.missing <= need.swappable)
+        .map(({ outpost, need }) => ({
+          ...pickOutpostEntry(outpost),
+          workers: need.missing,
+          hoursToEmpty: need.hoursToEmpty
+        }));
+      if (missing.length > 0) {
+        royalGuardian.missingWorkers = {
+          count: missing.length,
+          horizon,
+          beforeReset: resetHorizon != null,
+          outposts: missing
         };
       }
     }
@@ -2024,7 +2105,7 @@ export const getWorld7Alerts = (account, fields, options, characters) => {
     }
   }
   if (fields?.menagerie?.checked && account?.menagerie?.unlocked) {
-    const menagerie = getMenagerieAlerts(account.menagerie, options?.menagerie);
+    const menagerie = getMenagerieAlerts(account.menagerie, options?.menagerie, account, characters);
     if (Object.keys(menagerie).length > 0) {
       alerts.menagerie = menagerie;
     }

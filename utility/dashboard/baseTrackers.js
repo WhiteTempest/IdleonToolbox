@@ -616,6 +616,11 @@ export const baseTrackers = {
             helperText: 'Measure that alert against the time left until the daily reset instead of the hours above. A resource only restocks and gains a level if it is already empty when the reset lands, so this is the deadline that actually matters. Falls back to the hours above if your save is older than the reset'
           },
           {
+            name: 'missingWorkers',
+            checked: true,
+            helperText: 'Alert when an outpost needs more Workers to empty its resource before the daily reset, and has Traders or Surveyors that could become them. A resource only restocks and gains a level if it is already empty when the reset lands. Uses the hours above instead when that alert measures against them'
+          },
+          {
             name: 'strandedWorkers',
             checked: true,
             helperText: 'Alert when an outpost\'s resources are all empty and nothing better is in range, while Workers are still assigned to it. They add collection rate to a resource that has none left, so Traders or Surveyors would earn rank EXP instead'
@@ -772,15 +777,45 @@ export const baseTrackers = {
         options: [
           { name: 'claimableMissions', checked: true, helperText: 'Alert when a Menagerie mission is ready to claim' },
           { name: 'affordableUnlocks', checked: true, helperText: 'Alert when you can afford a Menagerie unlock' },
+          { name: 'lumiBoost', checked: true, helperText: 'Alert when you can afford the Lumi/hr boost' },
+          { name: 'missionBoost', checked: true, helperText: 'Alert when you can afford the extra missions boost' },
           {
             name: 'affordableBoosts',
             checked: false,
             helperText: 'Alert when you can afford a Menagerie boost level'
           },
           {
-            name: 'unusedDoublers',
+            name: 'pinkJelly',
+            type: 'input',
             checked: true,
-            helperText: 'Alert when you have doublers, Black Stars, Organic Labels or Omnijade left to place'
+            helperText: 'Alert when you can afford a Pink jelly upgrade with your coins',
+            props: { label: 'Max coin spend', value: 25, minValue: 1, maxValue: 100, endAdornment: '%', helperText: '' }
+          },
+          { name: 'blueJelly', checked: true, helperText: 'Alert when you have ladles to give the Blue jelly' },
+          {
+            name: 'redJelly',
+            type: 'input',
+            checked: true,
+            helperText: 'Alert when the Red jelly reading multi reaches this value',
+            props: { label: 'Reading multi', value: 2, minValue: 1, endAdornment: 'x', helperText: '' }
+          },
+          { name: 'silverJelly', checked: true, helperText: 'Alert when you can afford a Silver jelly upgrade with Obol Fragments' },
+          { name: 'yellowJelly', checked: true, helperText: 'Alert when a Yellow jelly construction purchase is ready' },
+          {
+            name: 'unusedDoublers',
+            type: 'array',
+            checked: true,
+            helperText: 'Alert when you have doublers, Black Stars, Organic Labels or Omnijade left to place',
+            props: {
+              value: {
+                blackStars: true,
+                organicLabels: true,
+                minehead: true,
+                sushi: true,
+                jellyOperator: true,
+                omnijade: true
+              }
+            }
           }
         ]
       },
