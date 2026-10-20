@@ -1,30 +1,35 @@
 // @vitest-environment jsdom
 import '../../polyfills';
 import React from 'react';
-import { describe, expect, it, vi } from 'vitest';
-import { render } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { fireEvent, render, within } from '@testing-library/react';
 import { ThemeProvider } from '@mui/material';
 import darkTheme from '../../styles/theme/darkTheme';
 import { getCompanions } from '@parsers/misc';
 
 vi.mock('next/router', () => ({ useRouter: () => ({ push: vi.fn(), query: {}, asPath: '/' }) }));
 vi.mock('next-seo', () => ({ NextSeo: () => null }));
+// The worker's Pet Mart history; each test sets what the API "returned".
+const petMartHistory = vi.hoisted(() => ({ data: undefined, isSuccess: false }));
+vi.mock('@hooks/usePetMartHistory', () => ({ usePetMartHistory: () => petMartHistory }));
 
 const { AppContext } = await import('@components/common/context/AppProvider');
 const Pets = (await import('../../pages/account/prem-currency/pets')).default;
 
 // companion index 1 = Rift_Slug
-const renderPets = (copies) => {
+const renderPets = (copies, { plusView = false, filter, petMart } = {}) => {
   const companions = getCompanions({ l: copies }, []);
   const { container } = render(
     <ThemeProvider theme={darkTheme}>
-      <AppContext.Provider value={{ state: { account: { companions } }, reparseOwnAccount: vi.fn() }}>
+      <AppContext.Provider value={{ state: { account: { companions, tournament: { petMart } } }, reparseOwnAccount: vi.fn() }}>
         <Pets/>
       </AppContext.Provider>
     </ThemeProvider>
   );
-  const cardOf = (index) => container.querySelector(`img[alt="${companions.list[index].name}"]`).closest('.MuiCard-root');
-  return { cardOf };
+  if (plusView) fireEvent.click(container.querySelector('button[value="plus"]'));
+  if (filter) fireEvent.click(container.querySelector(`input[value="${filter}"]`));
+  const cardOf = (index) => container.querySelector(`img[alt="${companions.list[index].name}"]`)?.closest('.MuiCard-root') ?? null;
+  return { cardOf, companions, container };
 };
 
 describe('Pets page: Pet Mart+ tradability', () => {
@@ -48,5 +53,159 @@ describe('Pets page: Pet Mart+ tradability', () => {
     const card = cardOf(1);
     expect(card.textContent).toContain('Tradable: 1/1');
     expect(card.textContent).not.toContain('Pet Mart+ tradable');
+  });
+});
+
+describe('Pets page: Pet Mart+ view', () => {
+  // The Base / Pet Mart+ choice is remembered in localStorage; each test starts from Base.
+  beforeEach(() => localStorage.clear());
+  const { companions: catalog } = renderPets([]);
+  const pooled = catalog.list.map((comp, index) => ({ ...comp, index })).filter((comp) => comp.upgradeCost > 0);
+  const [upgradedPet, ownedPet, unownedPet] = pooled;
+  const noPlusIndex = catalog.list.findIndex((comp) => comp.name && comp.effect && !(comp.upgradeCost > 0));
+  // upgradedPet: one tradable + copy; ownedPet: a base copy only; unownedPet: no copy at all.
+  const copies = [`${upgradedPet.index},1,0,0,1`, `${ownedPet.index},1,0,0,0`];
+
+  it('lists only the + pool, each as its + version with the + bonus', () => {
+    const { cardOf, container } = renderPets(copies, { plusView: true });
+    expect(container.textContent).toMatch(/Upgraded 1\/\d+/);
+    expect(cardOf(noPlusIndex)).toBeNull();
+    const card = cardOf(upgradedPet.index);
+    expect(card.textContent).toContain(`${upgradedPet.name.replace(/_/g, ' ')}+`);
+    expect(card.textContent).toContain('Tradable: 1/1');
+  });
+
+  it.each([
+    ['upgraded', () => upgradedPet, false, false, '1'],
+    ['owned, not upgraded', () => ownedPet, true, false, '1'],
+    ['not owned', () => unownedPet, true, true, '0.4']
+  ])('%s: price shown %s, needs base pet %s, opacity %s', (_, pet, price, needsBase, opacity) => {
+    const { cardOf } = renderPets(copies, { plusView: true });
+    const card = cardOf(pet().index);
+    expect(card.querySelector('img[alt="Pet Crystals"]') !== null).toBe(price);
+    expect(card.textContent.includes('Needs the base pet')).toBe(needsBase);
+    // The fade sits on the card body so the Pet Mart line under it stays readable.
+    expect(getComputedStyle(card.querySelector('.MuiCardContent-root > .MuiStack-root')).opacity).toBe(opacity);
+  });
+
+  it('Missing hides upgraded pets, Tradable keeps only tradable + copies', () => {
+    const missing = renderPets(copies, { plusView: true, filter: 'missing' });
+    expect([upgradedPet, ownedPet, unownedPet].map((pet) => missing.cardOf(pet.index) !== null)).toEqual([false, true, true]);
+    const tradable = renderPets(copies, { plusView: true, filter: 'tradable' });
+    expect([upgradedPet, ownedPet, unownedPet].map((pet) => tradable.cardOf(pet.index) !== null)).toEqual([true, false, false]);
+  });
+});
+
+describe('Pets page: Pet Mart+ sales history', () => {
+  beforeEach(() => {
+    localStorage.clear();
+    // 12:00 UTC on Oct 20 is inside the rotation that opened at the Oct 19 20:00 UTC restock.
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(Date.UTC(2026, 9, 20, 12));
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+    Object.assign(petMartHistory, { data: undefined, isSuccess: false });
+  });
+
+  const { companions: catalog } = renderPets([]);
+  const [loggedPet, olderPet, todayPet, unseenPet] = catalog.list
+    .map((comp, index) => ({ ...comp, index }))
+    .filter((comp) => comp.upgradeCost > 0)
+    .map((comp) => comp.index);
+  const days = [
+    { date: '2026-10-10', shopDay: 225, source: 'live', base: [{ index: olderPet, list: 50, price: 50 }], plus: [{ index: loggedPet, list: 900, price: 900 }] },
+    { date: '2026-08-25', shopDay: 179, source: 'live', base: [], plus: [{ index: loggedPet, list: 900, price: 900 }, { index: olderPet, list: 400, price: 400 }] }
+  ];
+  // Today the base counter sells unseenPet and the + counter sells todayPet's upgrade.
+  const petMart = {
+    shopDay: 235,
+    offers: [{ companionIndex: unseenPet, listPrice: 80, price: 80 }],
+    plusOffers: [{ companionIndex: todayPet, listPrice: 500, price: 500 }]
+  };
+  const footerOf = (cardOf, index) => cardOf(index).textContent;
+
+  it.each([
+    ['+: seen on two days, shows the latest', true, () => loggedPet, 'Last appeared Oct 10'],
+    ['+: seen once', true, () => olderPet, 'Last appeared Aug 25'],
+    ["+: in today's rotation", true, () => todayPet, 'In the Pet Mart today'],
+    ['+: never seen', true, () => unseenPet, null],
+    ['base: seen by a logged rotation', false, () => olderPet, 'Last appeared Oct 10'],
+    ["base: in today's rotation", false, () => unseenPet, 'In the Pet Mart today'],
+    ['base: only its upgrade was seen', false, () => loggedPet, null]
+  ])('%s', (_, plusView, pet, line) => {
+    Object.assign(petMartHistory, { data: { days }, isSuccess: true });
+    const { cardOf } = renderPets([], { plusView, petMart });
+    const text = footerOf(cardOf, pet());
+    if (line) expect(text).toContain(line);
+    else expect(text).not.toMatch(/in the Pet Mart|appeared/i);
+  });
+
+  it('keeps the Pet Mart line unfaded on a missing pet', () => {
+    Object.assign(petMartHistory, { data: { days }, isSuccess: true });
+    const { cardOf } = renderPets([], { petMart });
+    const card = cardOf(unseenPet);
+    expect(getComputedStyle(card.querySelector('.MuiCardContent-root > .MuiStack-root')).opacity).toBe('0.4');
+    const line = [...card.querySelectorAll('p')].find((p) => p.textContent === 'In the Pet Mart today');
+    const faded = [];
+    for (let node = line; node !== card; node = node.parentElement) faded.push(getComputedStyle(node).opacity);
+    expect(faded.every((opacity) => Number(opacity || 1) === 1)).toBe(true);
+  });
+
+  it("shows only today's offers while the history is unavailable", () => {
+    const { cardOf } = renderPets([], { plusView: true, petMart });
+    expect(footerOf(cardOf, todayPet)).toContain('In the Pet Mart today');
+    expect(footerOf(cardOf, loggedPet)).not.toMatch(/appeared/i);
+  });
+
+  it.each([
+    ['oldest', () => [unseenPet, olderPet, loggedPet, todayPet]],
+    ['newest', () => [todayPet, loggedPet, olderPet, unseenPet]]
+  ])('sorts by last in the Pet Mart: %s', (sortBy, expected) => {
+    Object.assign(petMartHistory, { data: { days }, isSuccess: true });
+    const { cardOf, container } = renderPets([], { plusView: true, petMart });
+    fireEvent.mouseDown(within(container).getByRole('combobox'));
+    fireEvent.click(document.querySelector(`li[data-value="${sortBy}"]`));
+    const order = expected().map((index) => cardOf(index));
+    for (let i = 1; i < order.length; i++) {
+      expect(order[i - 1].compareDocumentPosition(order[i]) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    }
+  });
+});
+
+describe('Pet Mart tab: Past Rotations', () => {
+  beforeEach(() => {
+    localStorage.clear();
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(Date.UTC(2026, 9, 20, 12));
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+    Object.assign(petMartHistory, { data: undefined, isSuccess: false });
+  });
+
+  const petMart = { shopDay: 235, offers: [{ companionIndex: 9, listPrice: 250, price: 250 }], plusOffers: [] };
+  const logged = (date, shopDay) => ({ date, shopDay, source: 'live', base: [{ index: 9, list: 250, price: 250 }], plus: [] });
+  const sectionText = async (days) => {
+    Object.assign(petMartHistory, { data: { days }, isSuccess: true });
+    const PetMart = (await import('@components/account/Pets/PetMart')).default;
+    const { container } = render(<ThemeProvider theme={darkTheme}>
+      <PetMart petMart={petMart} companions={getCompanions({ l: [] }, []).list}/>
+    </ThemeProvider>);
+    const text = container.textContent;
+    return text.slice(text.indexOf('Past Rotations'));
+  };
+
+  it.each([
+    ['nothing logged yet', [], null, true],
+    ['only today logged', [logged('2026-10-19', 235)], 'Logged daily since Oct 19', true],
+    ['a past day logged', [logged('2026-10-19', 235), logged('2026-10-18', 234)], 'Logged daily since Oct 18', false]
+  ])('%s', async (_, days, since, empty) => {
+    const text = await sectionText(days);
+    expect(text.startsWith('Past Rotations')).toBe(true);
+    if (since) expect(text).toContain(since);
+    else expect(text).not.toContain('Logged daily since');
+    expect(text.includes('Past rotations show up here after the next restock.')).toBe(empty);
+    expect(text.includes('Oct 18, 2026')).toBe(!empty);
   });
 });

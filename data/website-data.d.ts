@@ -921,6 +921,13 @@ declare module '@website-data' {
     owlBonusPerFeather: number[];
     clamWorkBonusNames: string[];
     menagerieConstBuildBonusPerLevel: number[];
+    menagerieCostExponent: {
+      groups: {
+          indices: number[];
+          exponent: number;
+        }[];
+      otherwise: number;
+    };
     scurgeUpgradeLevelReq: number[];
     coralKidDivinityLevelReq: number[];
     riftSpelunkingMasteryRewards: string[];
@@ -967,6 +974,10 @@ declare module '@website-data' {
     sneakingKnowledgeRoot: {
       root: number;
     };
+    worshipMapType: number[];
+    worshipExpRewards: {
+      base: number;
+    };
     bubbleCost: {
       liquidStep: number;
       bitsRate: number;
@@ -999,6 +1010,10 @@ declare module '@website-data' {
         growth: number;
         pivot: number;
       };
+    };
+    artifactFormText: {
+      artifact: number;
+      forms: string[];
     };
   };
   export const gamingImports: {
@@ -11483,10 +11498,6 @@ declare module '@website-data' {
       lockedFrom: number;
       unlockSquare: number;
     };
-    worshipMapType: number[];
-    worshipExpRewards: {
-      base: number;
-    };
     shrineHours: {
       floorBelow: number;
       perLevel: number;
@@ -12013,10 +12024,6 @@ declare module '@website-data' {
     arcadeMaxLevel: number;
     krukBubblesDaily: {
       base: number;
-    };
-    artifactFormText: {
-      artifact: number;
-      forms: string[];
     };
     vaultRowFills: {
       discount: number;

@@ -1289,19 +1289,6 @@
     "lockedFrom": 36,
     "unlockSquare": 86
   },
-  "worshipMapType": [
-    26,
-    63,
-    30,
-    107,
-    155,
-    208,
-    259,
-    308
-  ],
-  "worshipExpRewards": {
-    "base": 15
-  },
   "shrineHours": {
     "floorBelow": 20,
     "perLevel": 20,
@@ -2169,19 +2156,6 @@
   "arcadeMaxLevel": 100,
   "krukBubblesDaily": {
     "base": 20
-  },
-  "artifactFormText": {
-    "artifact": 33,
-    "forms": [
-      "Gives_+1_Gallery_Slots_for_Trophies_in_World_7!",
-      "Gives_+1_Gallery_Slots_for_Trophies_in_World_7!",
-      "Gives_+2_Gallery_Slots_for_Trophies!",
-      "Gives_+2_Gallery_Slots_and_makes_1_of_them_Featured_grade!",
-      "Gives_+2_Gallery_Slots_and_makes_both_of_them_Featured_grade!",
-      "Gives_+2_Gallery_Slots_and_makes_1_of_them_Featured_grade_and_1_of_them_Masterpiece!",
-      "Gives_+2_Gallery_Slots_and_makes_1_of_them_Featured_grade_and_1_of_them_World_Class!",
-      "Gives_+3_Gallery_Slots_and_makes_1_of_them_Featured_grade_and_2_of_them_World_Class!"
-    ]
   },
   "vaultRowFills": {
     "discount": 13,

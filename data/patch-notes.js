@@ -4,6 +4,43 @@ import React from 'react';
 /* eslint-disable react/jsx-key */
 export const patchNotes = [
   {
+    'ver': '3.3.98',
+    'gameVer': '2.3.540',
+    'date': '20/10/2026',
+    'features': [
+      'Minehead, Sushi Station and Jelly Operator upgrades show which ones can take a Menagerie doubler and their doubled value; palette colours show their value with one or two Black Stars',
+      'Dashboard: new World 5 Gaming alerts for the Bog Log minigame being ready, and for the snail upgrade success chance reaching a set percent',
+      'Pets: see when each pet and Pet Mart+ upgrade was last in the Pet Mart, sort by it, and browse past Pet Mart rotations',
+      'Breeding: Shinies tab now shows your Shiny OverLVs and their multiplier',
+      'Characters: new Divinity section showing each character linked god(s) and divinity style',
+      'Breakdowns: each source now shows how much of your total it makes up, and the top groups show what +10% more bonus there would add, with the best one highlighted. Toggle with the pie icon'
+    ],
+    'fixes': [
+      'Gem Shop: fixed the Time Skips and Premium Stones headings being swapped'
+    ]
+  },
+  {
+    'ver': '3.3.97',
+    'gameVer': '2.3.540',
+    'date': '19/10/2026',
+    'features': [
+      'Pets: new Pet Mart+ view showing owned, buyable and missing upgrades with their bonuses, and the Pet Mart moved from Tournament into the Pets page with a restock timer and your daily free gems',
+      'Menagerie: Hide purchased unlocks toggle on the Unlocks tab',
+      'Sneaking Detection: each ninja card now shows its stealth, and the info icon lists every stealth source',
+      'Sailing: redesigned boat and captain cards with next chest treasure and artifact chance per rarity, upgrade breakpoints, captain EXP progress and time to clear a cloud; minimum travel time now has a full breakdown',
+      'Dashboard: Royal Guardian Guards that only reach an empty resource now have their own alert, off by default, so the unneeded range alert only lists Guards you can swap for good',
+      'Item Planner: redesigned with per-plan progress, always-visible count controls that work on phones, upgrade chains for gear, and materials that stay correct after game updates'
+    ],
+    'fixes': [
+      'Refinery: Max rank (no deficit) no longer shows 0 when the previous salt is turned off',
+      'Spelunking: max stamina now matches the game, so the characters at full stamina alert and time to full work again',
+      'Statues: Statue Flair banners show again (including the new Elegant tier), and Royal Statues prices marble up to Flair Lv 4 even before the Menagerie unlock',
+      'Menagerie: Yellow Jellyfish bonuses now show how much each level adds',
+      'Jelly Operator doublers now use their in-game icon on the Menagerie, Jelly Operator and dashboard',
+      'Material Tracker: trackers no longer disappear after a reload when an Active Stuff Calculator snapshot had filled the browser storage, and a full storage now shows an error instead of failing silently'
+    ]
+  },
+  {
     'ver': '3.3.96',
     'gameVer': '2.3.540',
     'date': '17/10/2026',

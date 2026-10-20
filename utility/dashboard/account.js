@@ -30,6 +30,7 @@ import { isPast } from 'date-fns';
 import { getIsland } from '@parsers/world-2/islands';
 import { getLegendTalentBonus } from '@parsers/world-7/legendTalents';
 import { isSuperbitUnlocked } from '@parsers/world-5/gaming';
+import { getPetMartGems } from '@parsers/world-7/tournament';
 import { MINE_CURRENCY_UPGRADE_INDICES } from '@parsers/world-7/minehead';
 import { isHatRackEligible } from '@parsers/world-3/hatRack';
 import { getGoldCostToMaxLevel, getStampsPerDay } from '@parsers/world-1/stamps';
@@ -46,7 +47,6 @@ const ARCANIST_DAILY_DROP_CAP = 100;
 // Weekly boss difficulty stops at 5 skulls, and trophies only drop on a new weekly best.
 const MAX_WEEKLY_BOSS_SKULLS = 5;
 // game: claim button gate 0.1 <= getServerVarLoad("GemPM_x")
-const MIN_PET_MART_GEMS_SERVER_VAR = 0.1;
 
 // getAllItems rebuilds a multi-thousand-item array from every inventory, storage and the forge,
 // and useAlerts calls each world's alert function once per checked tracker subgroup with the same
@@ -263,11 +263,9 @@ export const getGeneralAlerts = (account, fields, options, characters, lastUpdat
       }
     }
     if (options?.etc?.petMartGems?.checked) {
-      const lastClaimedShopDay = account?.accountOptions?.[516] ?? 0;
-      const currentShopDay = account?.tournament?.global?.S ?? 0;
-      // The game only offers the claim while the GemPM_x server var is at least 0.1
-      const gemsOffered = Number(account?.serverVars?.GemPM_x) >= MIN_PET_MART_GEMS_SERVER_VAR;
-      if (gemsOffered && currentShopDay >= 1 && lastClaimedShopDay < currentShopDay) {
+      const { claimable } = getPetMartGems(account?.tournament?.global?.S ?? 0,
+        Number(account?.accountOptions?.[516]) || 0, Number(account?.serverVars?.GemPM_x) || 0);
+      if (claimable) {
         etc.petMartGems = true;
       }
     }
@@ -831,6 +829,9 @@ export const getWorld3Alerts = (account, fields, options, characters) => {
         // Without a salt or printer feeding it there is no limit to hit, and a salt on auto refine
         // never banks power to rank up with.
         if (!limitedBy || !unlocked || !active || autoRefinePercentage > 0) return;
+        // A feeder turned off already drains this salt's stock, so neither "room to rank" nor
+        // "would cause a deficit" holds until it is back on.
+        if (!limitedBy.isPrinter && !limitedBy.active) return;
         if (!saltBalance?.props?.value?.[rawName]) return;
         const previousSaltName = limitedBy?.name;
         if (rank < maxSafeRank) {
@@ -1109,7 +1110,7 @@ export const getWorld5Alerts = (account, fields, options, characters) => {
   if (!account?.finishedWorlds?.World4) return alerts;
   if (fields?.gaming?.checked && account?.gaming?.unlocked) {
     const gaming = {};
-    const { shovel, sprouts, squirrel, drops } = options?.gaming || {};
+    const { shovel, sprouts, squirrel, drops, bogLog, snail } = options?.gaming || {};
     if (sprouts?.checked && account?.gaming?.availableSprouts >= account?.gaming?.sproutsCapacity) {
       gaming.sprouts = account?.gaming?.availableSprouts;
     }
@@ -1134,6 +1135,16 @@ export const getWorld5Alerts = (account, fields, options, characters) => {
       if (hours >= squirrel?.props?.value) {
         gaming.squirrel = totalHoursBetweenDates(new Date().getTime(), timePassed);
       }
+    }
+    const isImportAcquired = (importName) => account?.gaming?.imports?.some(({ name, acquired }) => name === importName && acquired);
+    if (bogLog?.checked && isImportAcquired('Bog_Log') && account?.gaming?.bogLogReady) {
+      gaming.bogLog = true;
+    }
+    const { successChance, maxLevel } = account?.gaming?.snail || {};
+    const snailChance = (successChance ?? 0) * 100;
+    if (snail?.checked && isImportAcquired('Immortal_Snail') && account?.gaming?.snailLevel < maxLevel
+      && snailChance >= snail?.props?.value) {
+      gaming.snail = snailChance;
     }
     if (Object.keys(gaming).length > 0) {
       alerts.gaming = gaming;
@@ -1469,9 +1480,9 @@ export const getWorld6Alerts = (account, fields, options, characters) => {
   if (fields?.etc?.checked) {
     const etc = {};
     const { emperor } = options?.etc;
-    // The configured threshold can sit above the account's attempt cap (6 base, 11 with Jade
-    // Emporium, 23 fully upgraded), which would stop the alert from ever firing.
-    const threshold = Math.min(emperor?.props?.value ?? 0, account?.emperor?.maxAttempts ?? Infinity);
+    // Clamp to the first count where the next daily refill would be lost, so the alert still fires
+    // on accounts whose cap sits below the configured value (the printed cap itself is unreachable).
+    const threshold = Math.min(emperor?.props?.value ?? 0, account?.emperor?.noWasteAttempts ?? Infinity);
     if (emperor?.checked && account?.emperor?.attempts >= threshold) {
       etc.emperorAttempts = account?.emperor?.attempts;
     }
@@ -1521,7 +1532,7 @@ const getJellyAlerts = (menagerie, options, account, characters) => {
   }
   if (options?.redJelly?.checked && isUnlocked(2)) {
     const { level = 0, readingMulti = 1, chaptersTracked = 0 } = jellies?.red ?? {};
-    const threshold = Math.max(1, Number(options?.redJelly?.props?.value) || 2);
+    const threshold = Math.max(1, Number(options?.redJelly?.props?.value) || 1);
     // The Read button does nothing at 0 days rested or with no pages tracked
     if (level > 0 && chaptersTracked > 0 && readingMulti >= threshold) {
       result.redJelly = { daysRested: level, readingMulti };
@@ -1788,9 +1799,9 @@ export const getWorld7Alerts = (account, fields, options, characters) => {
       }
     }
 
-    if (rgOptions?.idleGuards?.checked) {
+    if (rgOptions?.idleGuards?.checked || rgOptions?.parkedGuards?.checked) {
       const guardRangeBonus = outpostStats?.guardRangeBonus ?? 0;
-      const idleGuards = outposts
+      const guards = outposts
         // An outpost waiting on a rewire to a fresh node in reach may need its Guards to make it,
         // and idleOutposts already reports that one.
         .filter(({ mode, connectedNodes, freshNodeInReach }) => mode === 1 || !(freshNodeInReach
@@ -1799,15 +1810,15 @@ export const getWorld7Alerts = (account, fields, options, characters) => {
           const { spare, parked } = getIdleGuards(outpost, guardRangeBonus);
           // Dropping a link to an empty node only pays when nothing fresh in reach wants the slot.
           return { ...pickOutpostEntry(outpost), spare, parked: outpost.freshNodeInReach ? 0 : parked };
-        })
-        .filter(({ spare, parked }) => spare + parked > 0);
-      if (idleGuards.length > 0) {
-        royalGuardian.idleGuards = {
-          count: idleGuards.length,
-          parked: idleGuards.some(({ parked }) => parked > 0),
-          surveyors,
-          outposts: idleGuards
-        };
+        });
+      const idleGuards = guards.filter(({ spare }) => spare > 0);
+      if (rgOptions?.idleGuards?.checked && idleGuards.length > 0) {
+        royalGuardian.idleGuards = { count: idleGuards.length, surveyors, outposts: idleGuards };
+      }
+      // Its own option: the node refills at the reset, so acting on it is a swap and a rewire every day.
+      const parkedGuards = guards.filter(({ parked }) => parked > 0);
+      if (rgOptions?.parkedGuards?.checked && parkedGuards.length > 0) {
+        royalGuardian.parkedGuards = { count: parkedGuards.length, surveyors, outposts: parkedGuards };
       }
     }
 

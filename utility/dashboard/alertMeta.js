@@ -112,7 +112,7 @@ export const alertMeta = {
       },
       familyObols: { label: 'Empty family obol slots', group: 'Account' },
       freeCompanion: { label: 'Free companion to claim', group: 'Events', page: { pathname: '/account/prem-currency/pets', label: 'Pets' } },
-      petMartGems: { label: 'Free Pet Mart gems', group: 'Events', page: { pathname: '/account/misc/tournament', query: { t: 'Pet Mart' }, label: 'Pet Mart' } },
+      petMartGems: { label: 'Free Pet Mart gems', group: 'Events', page: { pathname: '/account/prem-currency/pets', query: { t: 'Pet Mart' }, label: 'Pet Mart' } },
       tournamentRegister: {
         label: 'Not registered for the Pet Tournament',
         help: 'Alerts when you have not registered for the current Pet Tournament.',
@@ -520,6 +520,15 @@ export const alertMeta = {
         label: 'Shovel not clicked',
         help: 'Alerts when this many hours have passed since you clicked the shovel.',
         unit: 'h'
+      },
+      bogLog: {
+        label: 'Bog Log ready',
+        help: 'Alerts when the Bog Log minigame is ready to play.'
+      },
+      snail: {
+        label: 'Snail success chance',
+        help: 'Alerts when the snail upgrade success chance reaches this percent. Skipped at max level.',
+        unit: '%'
       }
     }
   },
@@ -690,7 +699,7 @@ export const alertMeta = {
     options: {
       emperor: {
         label: 'Emperor attempts stacked',
-        help: 'Alerts at this number, or at your attempt cap if it is lower.',
+        help: 'Alerts at this number, or earlier if your next daily refill would be lost. The game skips the whole refill when it would pass the cap, so the cap shown in game is never reached.',
         unit: 'attempts'
       }
     }
@@ -757,7 +766,12 @@ export const alertMeta = {
       },
       idleGuards: {
         label: 'Guards with unneeded range',
-        help: 'Alerts when an outpost has Guards whose range it does not need, so they could be Traders or Surveyors. Also lists Guards that only reach an empty resource: swapping them drops that connection, so rewire it after the daily reset.',
+        help: 'Alerts when an outpost has Guards whose range it does not need, so they could be Traders or Surveyors.',
+        group: 'Units'
+      },
+      parkedGuards: {
+        label: 'Guards on empty resources',
+        help: 'Alerts when an outpost has Guards that only reach an empty resource, so they could be Traders or Surveyors until the daily reset. Swapping them drops that connection, so it has to be rewired after every reset.',
         group: 'Units'
       },
       sharedNodes: {
@@ -946,7 +960,7 @@ export const alertMeta = {
       },
       redJelly: {
         label: 'Red jelly reading ready',
-        help: 'Alerts when you have tracked pages and the reading multi from days rested reaches this value. Days rested go up once a day.',
+        help: 'Alerts when you have tracked pages and the reading multi reaches this value. Best: read daily (1x) or wait for 12x to 18x. 2x to 9x gives fewer page levels.',
         group: 'Jellies',
         page: { query: { t: 'Jellies' }, label: 'Jellies' }
       },

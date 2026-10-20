@@ -1546,6 +1546,7 @@ export interface Account {
         x11: number;
         level?: number;
         omnijadeLevels: number;
+        omnijadePlaced: boolean;
         value: number;
         isUnlocked: boolean;
         isSpecialUpgrade: boolean;
@@ -1669,8 +1670,10 @@ export interface Account {
           name: string;
           floor: number;
           baseStealth: number;
+          baseSources: Record<string, any>[];
           floorMateBonus: number;
           stealth: number;
+          stealthBreakdown: Record<string, any>;
           detection: number;
         }[];
       flowerStacks: number[];
@@ -2809,6 +2812,7 @@ export interface Account {
     statueFlair: {
       unlocked: boolean;
       maxLevel: number;
+      levelCap: number;
       statues: {
           index: number;
           name: string;
@@ -3406,12 +3410,16 @@ export interface Account {
         firstBonusIndex: number;
         secondBonusIndex: number;
         firstBonusDescription: string;
+        firstBonusName: string;
+        secondBonusName: string;
         secondBonusDescription: string;
         firstBonusValue: number;
         secondBonusValue: number;
         exp: string;
         firstBonus: number;
         secondBonus: number;
+        expValue: number;
+        expReqValue: number;
         expReq: string;
       }[];
     boats: {
@@ -3460,6 +3468,14 @@ export interface Account {
         };
         maxTime: number;
         timeLeft: number;
+        cloud: null;
+        chestOdds: {
+          tiers: Record<string, any>[];
+          rareScale: number;
+          expectedTreasure: number;
+          expectedArtifactChance: number;
+          noArtifactsLeft: boolean;
+        };
       }[];
     lootMulti: {
       value: number;
@@ -3476,12 +3492,16 @@ export interface Account {
         firstBonusIndex: number;
         secondBonusIndex: number;
         firstBonusDescription: string;
+        firstBonusName: string;
+        secondBonusName: string;
         secondBonusDescription: string;
         firstBonusValue: number;
         secondBonusValue: number;
         exp: string;
         firstBonus: number;
         secondBonus: number;
+        expValue: number;
+        expReqValue: number;
         expReq: string;
         cost: number;
       }[];
@@ -3509,9 +3529,19 @@ export interface Account {
     };
     minimumTravelTime: number;
     minimumTravelTimeBreakdown: {
-        name: string;
-        value: number;
-      }[];
+      statName: string;
+      totalValue: string;
+      tree: {
+          name: string;
+          combine?: string;
+          children?: Record<string, any>[];
+          unit: string;
+          value?: number;
+        }[];
+      combine: string;
+      round: string;
+      min: number;
+    };
   };
   accountLevel: number;
   highscores: {
@@ -4179,6 +4209,10 @@ export interface Account {
           level: number;
           maxLevel: number;
         };
+        menagerie: null | {
+          bonus: number;
+          maxBonus: number;
+        };
         menagerieMaxLevelBonus: number;
       }[];
     pointsLeftToSpend: number;
@@ -4331,6 +4365,7 @@ export interface Account {
         description: string;
         cost: number;
         costItem: null | string;
+        divinityLevelReq: number;
         bonus: number;
       }[];
     coralKidUpgradeLevelTotal: number;
@@ -4390,6 +4425,15 @@ export interface Account {
         totalValue: string;
         tree: Record<string, any>[];
       };
+    };
+    singularity: {
+      points: number;
+      kills: number;
+      hours: number;
+      baseValue: number;
+      killMulti: number;
+      timeMulti: number;
+      totalValue: number;
     };
   };
   clamWork: {
@@ -4516,6 +4560,11 @@ export interface Account {
     leaderboard: any[];
     petMart: {
       shopDay: number;
+      gems: {
+        offered: boolean;
+        claimable: boolean;
+        amount: number;
+      };
       petCrystals: number;
       offers: any[];
       plusOffers: any[];
@@ -4814,7 +4863,10 @@ export interface Account {
         claims: number;
         progress: number;
         requirement: number;
+        increment: number;
+        claimable: number;
         isLogScale: boolean;
+        isBits: boolean;
         canClaim: boolean;
         visible: boolean;
       }[];
@@ -4826,6 +4878,7 @@ export interface Account {
         owned: boolean;
         affordable: boolean;
         visible: boolean;
+        rankRequired: number;
       }[];
     boosts: {
         index: number;
@@ -4836,6 +4889,7 @@ export interface Account {
         cost: number;
         affordable: boolean;
         visible: boolean;
+        rankRequired: number;
       }[];
     visible: {
       missions: number;
@@ -4858,6 +4912,7 @@ export interface Account {
         readingMulti: number;
         chaptersTracked: number;
         chapterSlots: number;
+        chapterPages: number[];
       };
       silver: {
         levels: number[];
@@ -4871,23 +4926,12 @@ export interface Account {
         requirement: number;
         progress: number;
         bonuses: number[];
+        perLevel: number[];
       };
       green: {
         nametagsDeposited: number;
         nametagsRequired: number;
       };
-    };
-    scurge: {
-      unlocked: boolean;
-      exp: number;
-      level: number;
-      expReq: number;
-      upgrades: {
-          index: number;
-          level: number;
-          levelReq: number;
-        }[];
-      startingExp: number;
     };
     doublers: {
       minehead: {
@@ -6028,6 +6072,7 @@ export interface Character {
     };
     value: number;
     effectiveValue: number;
+    guaranteedLeft: number;
     cap: number;
     capped: boolean;
     embiggener: number;

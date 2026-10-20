@@ -729,7 +729,8 @@ export const sections = [
   { name: 'Post Office' },
   { name: 'Anvil Details' },
   { name: 'Chips' },
-  { name: 'Equipped Bubbles' }
+  { name: 'Equipped Bubbles' },
+  { name: 'Divinity' }
 ];
 
 export const isProd = process.env.NODE_ENV === 'production';
@@ -1182,4 +1183,12 @@ export const getNextCompanionClaim = (account) => {
   const anchor = account?.companions?.freeClaimAnchor ?? 0;
   if (!isFinite(anchor)) return new Date().getTime();
   return anchor + FREE_COMPANION_CLAIM_ANCHOR_OFFSET_MS;
+};
+
+// The Pet Mart restocks both counters (and the free gems) at 20:00 UTC: the game's "New Pets in"
+// text counts down to the next point where (GlobalTime + 14400) is a whole number of days.
+const PET_MART_RESTOCK_OFFSET_S = 14400;
+export const getNextPetMartRestock = (now = Date.now()) => {
+  const shifted = now / 1000 + PET_MART_RESTOCK_OFFSET_S;
+  return ((Math.floor(shifted / 86400) + 1) * 86400 - PET_MART_RESTOCK_OFFSET_S) * 1000;
 };

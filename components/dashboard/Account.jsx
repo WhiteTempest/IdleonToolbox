@@ -538,6 +538,13 @@ const Account = ({ account, characters, trackers, lastUpdated }) => {
                 <Alert target={'World 5.gaming.shovel'}
                   title={`${alerts?.['World 5']?.gaming?.shovel} hours has passed since you've clicked the shovel`}
                   iconPath={'data/GamingItem1'}/> : null}
+              {alerts?.['World 5']?.gaming?.bogLog ?
+                <Alert target={'World 5.gaming.bogLog'} title={'The Bog Log minigame is ready to play'}
+                  iconPath={'data/GamingItem5'}/> : null}
+              {alerts?.['World 5']?.gaming?.snail ?
+                <Alert target={'World 5.gaming.snail'}
+                  title={`Snail upgrade success chance is ${notateNumber(alerts?.['World 5']?.gaming?.snail, 'MultiplierInfo')}%`}
+                  iconPath={'data/GamingItem7'}/> : null}
 
               {alerts?.['World 5']?.sailing?.chests > 0 ? <Alert target={'World 5.sailing.chests'} key={'sailing-chest-alert'}
                                                                  title={`You've reached the maximum capacity of chests`}
@@ -801,17 +808,25 @@ const Account = ({ account, characters, trackers, lastUpdated }) => {
                       ? ' has'
                       : 's have'} Guards whose range ${alerts?.['World 7']?.royalGuardian?.idleGuards?.count === 1 ? 'it does' : 'they do'} not need - ${alerts?.['World 7']?.royalGuardian?.idleGuards?.surveyors
                       ? 'Traders or Surveyors would earn rank EXP instead'
-                      : 'Traders would earn Trade rank EXP instead'}${alerts?.['World 7']?.royalGuardian?.idleGuards?.parked
-                      ? '. Swapping a Guard that reaches an empty resource drops that connection, so rewire it after the daily reset'
-                      : ''}`}
+                      : 'Traders would earn Trade rank EXP instead'}`}
                     entries={alerts?.['World 7']?.royalGuardian?.idleGuards?.outposts?.map((outpost) => ({
                       ...outpost,
-                      detail: [
-                        outpost?.spare > 0 ? `${outpost?.spare} spare Guard${outpost?.spare === 1 ? '' : 's'}` : null,
-                        outpost?.parked > 0 ? `${outpost?.parked} Guard${outpost?.parked === 1 ? '' : 's'} on an empty resource` : null
-                      ].filter(Boolean).join(', ')
+                      detail: `${outpost?.spare} spare Guard${outpost?.spare === 1 ? '' : 's'}`
                     }))}/>}
                   iconPath={'etc/RGunit2'} maxWidth={RG_LIST_TOOLTIP_WIDTH}/> : null}
+              {alerts?.['World 7']?.royalGuardian?.parkedGuards ?
+                <Alert target={'World 7.royalGuardian.parkedGuards'}
+                  title={<RoyalGuardianList
+                    headline={`${alerts?.['World 7']?.royalGuardian?.parkedGuards?.count} outpost${alerts?.['World 7']?.royalGuardian?.parkedGuards?.count === 1
+                      ? ' has'
+                      : 's have'} Guards that only reach an empty resource - ${alerts?.['World 7']?.royalGuardian?.parkedGuards?.surveyors
+                      ? 'Traders or Surveyors'
+                      : 'Traders'} would earn rank EXP until the daily reset. Swapping them drops that connection, so rewire it after the reset`}
+                    entries={alerts?.['World 7']?.royalGuardian?.parkedGuards?.outposts?.map((outpost) => ({
+                      ...outpost,
+                      detail: `${outpost?.parked} Guard${outpost?.parked === 1 ? '' : 's'} on an empty resource`
+                    }))}/>}
+                  iconPath={'etc/RGunit2'} badge={'deficit'} maxWidth={RG_LIST_TOOLTIP_WIDTH}/> : null}
               {alerts?.['World 7']?.royalGuardian?.sharedNodes ?
                 <Alert target={'World 7.royalGuardian.sharedNodes'}
                   title={<RoyalGuardianList
@@ -1038,13 +1053,13 @@ const Account = ({ account, characters, trackers, lastUpdated }) => {
   </>
 };
 
-// Icons are the Menagerie boost that grants each doubler; Omnijade comes from the Ninja knowledge upgrade.
+// Icons are the glyphs the game draws beside each doubler's left count (DOUBLER_ICONS).
 const MENAGERIE_DOUBLER_ALERTS = {
   blackStars: { name: 'Black Star', plural: 'Black Stars', iconPath: 'etc/BlackStar' },
   organicLabels: { name: 'Organic Label', plural: 'Organic Labels', iconPath: 'etc/OrganicLabel' },
   minehead: { name: 'Minehead doubler', plural: 'Minehead doublers', iconPath: 'etc/MineheadDoubler' },
   sushi: { name: 'Sushi Station doubler', plural: 'Sushi Station doublers', iconPath: 'etc/SushiDoubler' },
-  jellyOperator: { name: 'Jelly Operator doubler', plural: 'Jelly Operator doublers', iconPath: 'data/MenaIconP12' },
+  jellyOperator: { name: 'Jelly Operator doubler', plural: 'Jelly Operator doublers', iconPath: 'etc/JellyOpDoubler' },
   omnijade: { name: 'Omnijade', plural: 'Omnijade', iconPath: 'etc/Omnijade' }
 };
 

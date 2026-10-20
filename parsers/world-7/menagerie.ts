@@ -104,6 +104,16 @@ export const getDoublerMulti = (idleonData: any, spelunkRow: number, upgradeInde
   return Array.isArray(doubled) && doubled.some((id: any) => Number(id) === Math.round(upgradeIndex)) ? 2 : 1;
 };
 
+const DOUBLER_ELIGIBLE_IDS: Record<keyof typeof DOUBLER_SPELUNK_ROW, number[]> = {
+  minehead: mineheadDoublerIds,
+  sushi: sushiDoublerIds,
+  jellyOperator: jellyDoublerIds
+};
+
+// the game only lets a doubler sit on the upgrade ids listed in research[59 | 60 | 61]
+export const isDoublerEligible = (kind: keyof typeof DOUBLER_SPELUNK_ROW, upgradeIndex: number): boolean =>
+  DOUBLER_ELIGIBLE_IDS[kind].includes(Math.round(upgradeIndex));
+
 // game: GA.Menagerie[5][i] (Scurge upgrade levels, Clam Work page 2)
 export const getScurgeUpgradeLevel = (account: any, index: number): number =>
   num(getSave(account)?.[SCURGE_UPGRADES]?.[index]);
@@ -187,13 +197,10 @@ export const getShellExpReq = (rank: number): number => Math.round(Math.min(15, 
   + Math.min(1, Math.floor(rank / 8))
   + Math.min(2, Math.floor(rank / 22))));
 
-// game: "MenagerieStuff:CostExponent"
-const getCostExponent = (index: number) => {
-  if ([8, 10, 12].includes(index)) return 35;
-  if ([17, 5, 2].includes(index)) return 22.8;
-  if (index === 6) return 3.5;
-  if ([0, 1, 7].includes(index)) return 2.1;
-  return 1.3;
+// game: "MenagerieStuff:CostExponent" (gameTables.menagerieCostExponent: the first group holding the row wins)
+const getCostExponent = (index: number): number => {
+  const { groups, otherwise } = gameTables.menagerieCostExponent;
+  return groups.find(({ indices }: { indices: number[] }) => indices.includes(index))?.exponent ?? otherwise;
 };
 
 // game: "MenagerieStuff:Cost"
@@ -472,7 +479,8 @@ export const getMenagerie = (idleonData: any, account: any, dropRate: number = 1
       // game: "MenagerieStuff:ConstBuildREQ"
       requirement: 1e5 * Math.pow(Math.max(3.2, 8 - 0.15 * constTotal), constTotal),
       progress: getScalar(account, 15),
-      bonuses: constLevels.map((_, index) => getMenagerieConstBuildBonus(account, index))
+      bonuses: constLevels.map((_, index) => getMenagerieConstBuildBonus(account, index)),
+      perLevel: constLevels.map((_, index) => CONST_BUILD_BONUS_PER_LEVEL?.[index] ?? 0)
     },
     // game: ActorEvents_672 Click, jelly 6 claims the Top 0.01% Tome nametag once 12 Top 0.1% nametags are turned in (Spelunk[17][28])
     green: {

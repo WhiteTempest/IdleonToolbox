@@ -411,7 +411,14 @@ export const baseTrackers = {
             props: { label: 'Hours threshold', value: 1, minValue: 1 },
             checked: true
           },
-          { name: 'shovel', type: 'input', props: { label: 'Hours threshold', value: 1, minValue: 1 }, checked: true }
+          { name: 'shovel', type: 'input', props: { label: 'Hours threshold', value: 1, minValue: 1 }, checked: true },
+          { name: 'bogLog', checked: true },
+          {
+            name: 'snail',
+            type: 'input',
+            props: { label: 'Success chance threshold', value: 90, minValue: 1, maxValue: 100 },
+            checked: true
+          }
         ]
       },
       sailing: {
@@ -560,9 +567,9 @@ export const baseTrackers = {
           {
             name: 'emperor',
             type: 'input',
-            props: { label: 'Attempts', value: 20 },
+            props: { label: 'Attempts', value: 19 },
             checked: true,
-            helperText: 'Alerts at this number, or at your attempt cap if it\'s lower'
+            helperText: 'Alerts at this number, or earlier if your next daily refill would be lost'
           }
         ]
       }
@@ -628,7 +635,12 @@ export const baseTrackers = {
           {
             name: 'idleGuards',
             checked: true,
-            helperText: 'Alert when an outpost has Guards whose range it does not need. Guards only add range, so they could be Traders or Surveyors and earn rank EXP instead. Also lists Guards that only reach an empty resource: swapping them drops that connection, so rewire it after the daily reset'
+            helperText: 'Alert when an outpost has Guards whose range it does not need. Guards only add range, so they could be Traders or Surveyors and earn rank EXP instead'
+          },
+          {
+            name: 'parkedGuards',
+            checked: false,
+            helperText: 'Alert when an outpost has Guards that only reach an empty resource, so they could be Traders or Surveyors until the daily reset. Swapping them drops that connection, so it has to be rewired after every reset'
           },
           {
             name: 'sharedNodes',
@@ -797,7 +809,7 @@ export const baseTrackers = {
             type: 'input',
             checked: true,
             helperText: 'Alert when the Red jelly reading multi reaches this value',
-            props: { label: 'Reading multi', value: 2, minValue: 1, endAdornment: 'x', helperText: '' }
+            props: { label: 'Reading multi', value: 1, minValue: 1, endAdornment: 'x', helperText: '' }
           },
           { name: 'silverJelly', checked: true, helperText: 'Alert when you can afford a Silver jelly upgrade with Obol Fragments' },
           { name: 'yellowJelly', checked: true, helperText: 'Alert when a Yellow jelly construction purchase is ready' },
