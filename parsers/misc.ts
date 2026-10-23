@@ -146,7 +146,8 @@ export const getFriendBonusStats = (account: any = {}) => {
       2
       + (hasSpearfish ? companionList?.[44]?.bonus ?? 0 : 0)
       + 2 * (hasMrPig ? companionList?.[30]?.bonus ?? 0 : 0)
-      + (getEventShopBonus(account, 22) ? 1 : 0)
+      + getEventShopBonus(account, 22)
+      + getEventShopBonus(account, 67)
     )
   );
 
@@ -1497,6 +1498,11 @@ export const getCompanions = (companionObject: any = {}, accountOptions: any = [
 export const isCompanionBonusActive = (account: any, index: any) => {
   return account?.companions?.list?.at(index)?.acquired;
 }
+
+// game: _customBlock_Companions(index) - the owned companion's bonus (its upgraded one once upgraded), else 0.
+// Companions(0) also needs the logged-in character's divinity: use isKingDootActive for it.
+export const getCompanionBonus = (account: any, index: number): number =>
+  isCompanionBonusActive(account, index) ? Number(account?.companions?.list?.at(index)?.bonus) || 0 : 0;
 
 // Pet Mart+ flag (game: _customBlock_CompLV2): true only when the companion is
 // both acquired and upgraded to level >= 1. Formulas multiply this flag by their own constant.
