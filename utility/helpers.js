@@ -463,6 +463,14 @@ export const getBitIndex = (e) => {
 // tests that assumes a positive number - the game only ever notates magnitudes, so a negative falls
 // through to `Math.floor(e)` and prints raw digits. Callers that can produce a signed value must
 // notate `Math.abs()` and render the sign themselves.
+// notateNumber rounds up like the game, so 9,997,104 of a 10M target would read as 10M / 10M.
+// A progress amount floors to the three digits the ladder shows first.
+export const notateProgress = (n) => {
+  if (!Number.isFinite(n) || n < 1e3) return notateNumber(n);
+  const step = Math.pow(10, Math.floor(Math.log10(n)) - 2);
+  return notateNumber(Math.floor(n / step) * step);
+};
+
 export const notateNumber = (e, s) => {
   // The game prints NaNEInfinity here (a Bits bubble's cost overflows past ~Lv 1000).
   if (e === Infinity) return '∞';
@@ -657,12 +665,16 @@ export const getDuration = (start, end) => {
 // (timeAway.GlobalTime is when that snapshot happened). Null once the save is older than the reset
 // it was counting down to, because then there is nothing left to read a deadline off.
 export const hoursUntilDailyReset = (account, now = Date.now()) => {
-  const restock = account?.timeAway?.ShopRestock;
-  const savedAt = account?.timeAway?.GlobalTime;
-  if (!Number.isFinite(restock) || !Number.isFinite(savedAt)) return null;
-  const elapsed = Math.max(0, now / 1000 - savedAt);
-  const remaining = restock - elapsed;
+  if (!Number.isFinite(account?.timeAway?.GlobalTime)) return null;
+  const remaining = (getDailyResetAt(account) - Math.max(now, account.timeAway.GlobalTime * 1000)) / 1000;
   return remaining > 0 ? remaining / 3600 : null;
+};
+
+// Timestamp (ms) of the daily reset the save was counting down to; in the past once the save
+// outlived it. `fallbackSavedAt` stands in for GlobalTime on saves without one. NaN without ShopRestock.
+export const getDailyResetAt = (account, fallbackSavedAt = Date.now()) => {
+  const savedAt = account?.timeAway?.GlobalTime;
+  return (Number.isFinite(savedAt) ? savedAt * 1000 : fallbackSavedAt) + account?.timeAway?.ShopRestock * 1000;
 };
 
 export const totalHoursBetweenDates = (start, end) => {

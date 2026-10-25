@@ -688,7 +688,15 @@ export const alertMeta = {
         label: 'Familiar upgrade below level',
         help: 'Alerts while the familiar upgrade is below this level and not maxed.'
       },
-      battleAttempts: { label: 'Battle attempts left', page: { query: { t: 'Battles' }, label: 'Battles' } }
+      battleAttempts: { label: 'Battle attempts left', page: { query: { t: 'Battles' }, label: 'Battles' } },
+      familiarExp: {
+        label: 'Unclaimed familiar EXP',
+        help: 'Alerts once this many hours of familiar EXP are waiting. Claim it by standing in the Summoning area with the Summoning skill selected.'
+      },
+      familiarLevelUp: {
+        label: 'Familiar EXP gives a level',
+        help: 'Alerts once claiming the familiar EXP would give at least one character a Summoning level.'
+      }
     }
   },
   'account.World 6.etc': {
@@ -966,7 +974,7 @@ export const alertMeta = {
       },
       silverJelly: {
         label: 'Silver jelly upgrades affordable',
-        help: 'Alerts when your Obol Fragments cover a Silver jelly upgrade that is not maxed.',
+        help: 'Alerts when your Obol Fragments cover a Silver jelly upgrade that is not maxed. Each upgrade can be turned off on its own.',
         group: 'Jellies',
         page: { query: { t: 'Jellies' }, label: 'Jellies' }
       },
@@ -1052,6 +1060,10 @@ export const alertMeta = {
       unendingEnergy: {
         label: 'Unending Energy past 10 hours',
         help: 'Alerts when a character with the Unending Energy prayer has been AFK for more than 10 hours.'
+      },
+      ruckSack: {
+        label: 'Ruck Sack while AFK',
+        help: 'Alerts when an AFK character has the Ruck Sack prayer equipped (its curse lowers AFK gains).'
       },
       chargeOverdue: { label: 'Worship charge full', help: 'Alerts within 5% of max charge.' }
     }
@@ -1212,6 +1224,7 @@ export const alertMeta = {
   'timers.General.weekly': { label: 'Weekly reset', icon: 'etc/Weekly', options: {} },
   'timers.General.serverWeekly': { label: 'Server weekly reset', icon: 'etc/Server', options: {} },
   'timers.General.companions': { label: 'Next free companion', icon: 'afk_targets/Dog', page: { pathname: '/account/prem-currency/pets', label: 'Pets' }, options: {} },
+  'timers.General.crystalIsland': { label: 'Crystal Island best visit', help: 'Counts down to 13 unclaimed days, the most giant crystal mobs (27). Turns green for the last day before it caps at 14 (15 mobs).', icon: 'afk_targets/Crystal_Carrot', page: { pathname: '/account/world-2/islands', label: 'Islands' }, options: {} },
   'timers.General.syphonCharge': { label: 'Charge Syphon overflow', icon: 'data/UISkillIcon475', page: { pathname: '/account/world-3/worship', label: 'Worship' }, options: {} },
   'timers.General.closestFullWorship': { label: 'Closest full worship', icon: 'data/WorshipSkull3', page: { pathname: '/account/world-3/worship', label: 'Worship' }, options: {} },
   'timers.General.dungeonHappyHour': { label: 'Dungeon happy hour', icon: 'etc/Happy_Hour', page: { pathname: '/account/misc/dungeons', label: 'Dungeons' }, options: {} },
@@ -1220,7 +1233,25 @@ export const alertMeta = {
 
   // Timers: Other
   'timers.Etc.library': { label: 'Library books', icon: 'data/Libz', options: {} },
-  'timers.Etc.minibosses': { label: 'Boss and miniboss respawns', icon: 'monsters/poopBig/static', page: { pathname: '/account/world-3/death-note', label: 'Death note' }, options: {} },
+  'timers.Etc.minibosses': {
+    label: 'Boss and miniboss respawns',
+    icon: 'monsters/poopBig/static',
+    page: { pathname: '/account/world-3/death-note', label: 'Death note' },
+    options: {
+      bosses: {
+        label: 'Bosses to show',
+        help: 'Only the ticked bosses appear in the Bosses timer.',
+        itemIcons: {
+          drDefecaus: 'monsters/poopBig/static',
+          babaYaga: 'monsters/babayaga/static',
+          dilapidatedSlush: 'etc/mini3b',
+          mutatedMush: 'etc/mini4b',
+          domeoMagmus: 'etc/mini5a',
+          dementedSpiritlord: 'etc/mini6a'
+        }
+      }
+    }
+  },
   'timers.Etc.bonusTimeLeft': { label: 'Vote bonus week', icon: 'etc/VoteBallot', page: { pathname: '/account/world-2/vote-ballot', query: { t: 'Bonus' }, label: 'Vote ballot' }, options: {} },
   'timers.Etc.meritocracyTimeLeft': { label: 'Meritocracy vote week', icon: 'etc/VoteBallot', page: { pathname: '/account/world-2/vote-ballot', query: { t: 'Meritocracy' }, label: 'Meritocracy' }, options: {} },
 

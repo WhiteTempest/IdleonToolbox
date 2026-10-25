@@ -31,6 +31,7 @@ import {
   Typography
 } from '@mui/material';
 import { cleanUnderscore, notateNumber, parseShorthandNumber, prefix, splitTime } from '@utility/helpers';
+import { cleanUpgradeName } from '@utility/goals/registry/names';
 import { formatEta } from '@components/account/Misc/class-specific/RoyalGuardian/formatEta';
 import { IconInfoCircleFilled, IconList, IconTable } from '@tabler/icons-react';
 import Tooltip from '@components/Tooltip';
@@ -39,6 +40,10 @@ import { useLocalStorage } from '@mantine/hooks';
 import { getLegendTalentBonus } from '@parsers/world-7/legendTalents';
 
 const maxUpgradesOptions = [5, 10, 25, 50, 100, 200, 300];
+// The simulation runs synchronously on every render, so an uncapped custom max froze the page,
+// and being stored, froze it again on every later visit.
+const MAX_CUSTOM_UPGRADES = 500;
+const clampCustomMax = (value) => Math.min(MAX_CUSTOM_UPGRADES, Math.max(0, parseInt(value || 0, 10) || 0));
 // 'Game order' is Summary sorted by in-game list position: reordering single steps would scatter
 // one upgrade's levels across the list, so the only useful in-game ordering is one row per upgrade.
 const groupModes = ['None', 'Upgrade', 'Summary', 'Game order'];
@@ -132,6 +137,10 @@ const GenericUpgradeOptimizer = ({
     key: `${resourceKey}:genericUpgradeOptimizer:customMaxUpgrades`,
     defaultValue: 10
   });
+  // What's typed but not yet committed; null shows the stored value
+  const [customMaxDraft, setCustomMaxDraft] = useState(null);
+  const customMaxInput = customMaxDraft
+    ?? (customMaxUpgrades === '' || customMaxUpgrades == null ? '' : String(clampCustomMax(customMaxUpgrades)));
   const [costSortOrder, setCostSortOrder] = useLocalStorage({
     key: `${resourceKey}:genericUpgradeOptimizer:costSortOrder`,
     defaultValue: 'none'
@@ -215,7 +224,7 @@ const GenericUpgradeOptimizer = ({
   let optimizedUpgrades = [];
   if (character) {
     const maxToUse = maxUpgradesMode === 'custom'
-      ? Math.max(0, parseInt(customMaxUpgrades || 0, 10) || 0)
+      ? clampCustomMax(customMaxUpgrades)
       : maxUpgrades;
     optimizedUpgrades = getOptimizedUpgradesFn(character, account, category, maxToUse, {
       onlyAffordable,
@@ -597,6 +606,19 @@ const GenericUpgradeOptimizer = ({
     valueCommitDebouncersRef.current[key](rawValue);
   };
 
+  // Debounced so typing "300" doesn't run the simulation for 3 and 30 on the way there
+  const handleCustomMaxChange = (rawValue) => {
+    setCustomMaxDraft(rawValue);
+    if (!valueCommitDebouncersRef.current.customMaxUpgrades) {
+      valueCommitDebouncersRef.current.customMaxUpgrades = debounce((rawVal) => {
+        const v = parseInt(rawVal, 10);
+        setCustomMaxUpgrades(isNaN(v) ? '' : Math.max(1, clampCustomMax(v)));
+        setCustomMaxDraft(null);
+      }, 400);
+    }
+    valueCommitDebouncersRef.current.customMaxUpgrades(rawValue);
+  };
+
   const handleRphDialogClose = () => {
     Object.entries(resourcePerHourInput).forEach(([key, rawValue]) => {
       handleValueCommit(key, rawValue);
@@ -654,9 +676,7 @@ const GenericUpgradeOptimizer = ({
             /> : null}
             <Box>
               <Typography variant="subtitle1">
-                {cleanUnderscore(upgrade.name.replace(/[船般航舞製]/, '')
-                  .replace('(Tap_for_more_info)', '')
-                  .replace('(#)', ''))} ({formatLevel(upgrade)})
+                {cleanUpgradeName(upgrade.name)} ({formatLevel(upgrade)})
                 {renderUnlockChip(upgrade)}
               </Typography>
               <Typography variant="caption" color="text.secondary">
@@ -730,7 +750,7 @@ const GenericUpgradeOptimizer = ({
           />
         </TableCell> : null}
         <TableCell>
-          {cleanUnderscore(upgrade.name.replace(/[船般航舞製]/, '').replace('(Tap_for_more_info)', '').replace('(#)', ''))}
+          {cleanUpgradeName(upgrade.name)}
           {renderUnlockChip(upgrade)}
         </TableCell>
         <TableCell>{formatLevel(upgrade)}</TableCell>
@@ -852,19 +872,11 @@ const GenericUpgradeOptimizer = ({
           <TextField
             size="small"
             type="number"
-            inputProps={{ min: 1 }}
+            inputProps={{ min: 1, max: MAX_CUSTOM_UPGRADES }}
             sx={{ width: 120 }}
             label="Custom Max"
-            value={customMaxUpgrades}
-            onChange={(e) => {
-              const v = parseInt(e.target.value, 10);
-              if (isNaN(v)) {
-                setCustomMaxUpgrades('');
-              }
-              else {
-                setCustomMaxUpgrades(Math.max(1, v));
-              }
-            }}
+            value={customMaxInput}
+            onChange={(e) => handleCustomMaxChange(e.target.value)}
           />
         )}
         <Stack direction="row" alignItems="center" gap={0.5}>

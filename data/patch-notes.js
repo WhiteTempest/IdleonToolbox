@@ -4,6 +4,45 @@ import React from 'react';
 /* eslint-disable react/jsx-key */
 export const patchNotes = [
   {
+    'ver': '3.3.101',
+    'gameVer': '2.3.550',
+    'date': '25/10/2026',
+    'features': [
+      'Dashboard: choose which bosses and minibosses the Bosses timer shows'
+    ],
+    'fixes': [
+      'Goals: Breeding pets now show their own icon instead of a placeholder',
+      'Construction optimizer: steps now finish one inventory page before moving to the next, so no more flipping back and forth'
+    ]
+  },
+  {
+    'ver': '3.3.100',
+    'gameVer': '2.3.550',
+    'date': '24/10/2026',
+    'features': [
+      'Dashboard: new Goals section. Track stamps, meals, skills, page totals and much more, with progress, pins and "All characters" goals; add one from any page with "Add goal"',
+      'Dashboard: drag the Goals, Account, Characters and Timers buttons to reorder the sections',
+      'Material tracker: tracked materials are now item goals and show up in your dashboard goals',
+      'The Jars: shows total jars destroyed',
+      'Quick search: typing a page name also lists its breakdowns, and words can be typed in any order',
+      'Minehead: Crown Craze now shows your current Blue Crown chance and when it hits the 10% cap',
+      'Summoning: shows unclaimed familiar EXP, time since last claim and the Summoning levels claiming it gives, plus dashboard alerts when it piles up or would give a level',
+      'Dashboard: the Silver jelly alert can now be turned off for each upgrade separately',
+      'Dashboard: new Worship alert for AFK characters with the Ruck Sack prayer equipped',
+      'Event Shop: the current rotation is split into its three tiers with lock state and stars left, and off-rotation bonuses show the event they were last sold in',
+      'Dashboard: optional Crystal Island timer in General timers (off by default), counts down to 13 days and turns green on the last day before it caps'
+    ],
+    'fixes': [
+      'Dashboard: the card set alert no longer fires for characters meditating at the Divinity altar',
+      'Tournament: pets active only through a Pet Bonus Token are no longer listed as owned',
+      'Upgrade optimizers: a large custom Max Upgrades no longer freezes the page (capped at 500), and optimizers calculate about 5x faster',
+      'Dashboard: Dr Defecaus no longer resets to unkilled when the page loads an older save',
+      'Breeding: removed the inaccurate With kills times, the pet pages now show what Whale Wallop adds per kill',
+      'Slab: Gem to W7 no longer counts as a missing greenstack',
+      'Breakdowns: Copy as Image and Copy as Text now include the % of total column when it is shown'
+    ]
+  },
+  {
     'ver': '3.3.99',
     'gameVer': '2.3.550',
     'date': '22/10/2026',

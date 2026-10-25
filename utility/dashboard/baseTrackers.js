@@ -558,7 +558,14 @@ export const baseTrackers = {
             type: 'input',
             props: { label: 'Threshold', value: 10, minValue: 0, helperText: '' }
           },
-          { name: 'battleAttempts', checked: true }
+          { name: 'battleAttempts', checked: true },
+          {
+            name: 'familiarExp',
+            checked: true,
+            type: 'input',
+            props: { label: 'Hours', value: 24, minValue: 1, helperText: '' }
+          },
+          { name: 'familiarLevelUp', checked: false }
         ]
       },
       etc: {
@@ -817,7 +824,13 @@ export const baseTrackers = {
             helperText: 'Alert when the Red jelly reading multi reaches this value',
             props: { label: 'Reading multi', value: 1, minValue: 1, endAdornment: 'x', helperText: '' }
           },
-          { name: 'silverJelly', checked: true, helperText: 'Alert when you can afford a Silver jelly upgrade with Obol Fragments' },
+          {
+            name: 'silverJelly',
+            type: 'array',
+            checked: true,
+            helperText: 'Alert when you can afford a Silver jelly upgrade with Obol Fragments',
+            props: { value: { 'Obol MISC multi': true, 'Fragments per auto trash': true } }
+          },
           { name: 'yellowJelly', checked: true, helperText: 'Alert when a Yellow jelly construction purchase is ready' },
           {
             name: 'unusedDoublers',
@@ -876,7 +889,10 @@ export const baseTrackers = {
     },
     worship: {
       checked: true,
-      options: [{ name: 'unendingEnergy', checked: true }, { name: 'chargeOverdue', checked: true }]
+      options: [{ name: 'unendingEnergy', checked: true }, { name: 'ruckSack', checked: true }, {
+        name: 'chargeOverdue',
+        checked: true
+      }]
     },
     traps: {
       checked: true,
@@ -1001,6 +1017,7 @@ export const baseTrackers = {
       weekly: { checked: true, options: [] },
       serverWeekly: { checked: true, options: [] },
       companions: { checked: true, options: [] },
+      crystalIsland: { checked: false, options: [] },
       syphonCharge: { checked: true, options: [] },
       closestFullWorship: { checked: true, options: [] },
       dungeonHappyHour: { checked: true, options: [] },
@@ -1009,7 +1026,25 @@ export const baseTrackers = {
     },
     Etc: {
       library: { checked: true, options: [] },
-      minibosses: { checked: true, options: [] },
+      minibosses: {
+        checked: true,
+        options: [{
+          name: 'bosses',
+          type: 'array',
+          props: {
+            value: {
+              drDefecaus: true,
+              babaYaga: true,
+              dilapidatedSlush: true,
+              mutatedMush: true,
+              domeoMagmus: true,
+              dementedSpiritlord: true
+            }
+          },
+          checked: true,
+          helperText: 'Only the selected bosses are shown'
+        }]
+      },
       bonusTimeLeft: { checked: true, options: [] },
       meritocracyTimeLeft: { checked: true, options: [] }
     },

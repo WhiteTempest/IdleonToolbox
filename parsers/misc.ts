@@ -4,8 +4,10 @@ import {
   bonuses,
   bundles as bundlesData,
   cards as cardsData,
+  companionGroups,
   companions,
   deathNote,
+  eventShopRotations,
   generalSpelunky,
   items,
   killRoySkullShop,
@@ -463,6 +465,11 @@ export const isGreenstackable = (item: any): boolean =>
 export const isMissingGreenstack = (slabItem: any): boolean =>
   !!slabItem?.greenstackable && !slabItem?.greenStacked && !slabItem?.unobtainable && !slabItem?.unrealisticGreenstack;
 
+// Slab's greenstack total: the game counts every registered greenstack, so an unrealistic or unobtainable item the
+// account did stack counts; the rest stay out so 100% remains reachable.
+export const isCountedGreenstack = (slabItem: any): boolean =>
+  !!slabItem?.greenstackable && (!!slabItem?.greenStacked || (!slabItem?.unobtainable && !slabItem?.unrealisticGreenstack));
+
 export const getSlab = (idleonData: any) => {
   const lootyRaw = idleonData?.Cards?.[1] || tryToParse(idleonData?.Cards1);
   const greenStacks = tryToParse(idleonData?.GreenStacks) || idleonData?.GreenStacks || [];
@@ -490,10 +497,7 @@ export const getSlab = (idleonData: any) => {
     unrealisticGreenstack: unrealisticGreenstackItems?.[name]
   }));
   const missingItems = slabItems?.filter(({ obtained, unobtainable }) => !obtained && !unobtainable)?.length;
-  // The game counts every registered greenstack, so an unrealistic or unobtainable item the account
-  // did stack counts toward both sides; the rest stay out so 100% remains reachable.
-  const greenstackableItems = slabItems?.filter(({ greenstackable, greenStacked, unobtainable, unrealisticGreenstack }) =>
-    greenstackable && (greenStacked || (!unobtainable && !unrealisticGreenstack)));
+  const greenstackableItems = slabItems?.filter(isCountedGreenstack);
   const greenstackableCount = greenstackableItems?.length ?? 0;
   const greenstackableStackedCount = greenstackableItems?.filter(({ greenStacked }) => greenStacked)?.length ?? 0;
 
@@ -825,6 +829,11 @@ export const calculateTotalSkillsLevel = (characters: any) => {
   }, allSkills);
 }
 
+// The rift Skill Mastery tab: total skill level thresholds, one bonus each (the ranks getSkillRank counts)
+export const SKILL_MASTERY_THRESHOLDS = [150, 200, 300, 400, 500, 750, 1000];
+// research has no rift mastery bonuses in game, and character is not a skill
+export const SKILLS_WITHOUT_MASTERY = ['character', 'research'];
+
 export const getSkillRankColor = (level: any) => {
   return level < 300 ? 'white' : level >= 300 && level < 400 ? '#ffc277' : level >= 400 && level < 600
     ? '#cadadb'
@@ -1029,6 +1038,16 @@ export const getGoldenFoodMulti = (character: any, account: any, characters: any
 // How much of a golden food you have to OWN to raise it to the next beanstalk rank, indexed by its
 // current rank. Rank 3 is maxed, so there's no fourth entry.
 export const BEANSTALK_BREAKPOINTS = [10000, 100000, 1e6];
+
+// The Beanstalk's golden foods (ninjaExtraInfo[29] mixes in numbers) with their rank from the save, in save order
+export const getBeanstalkFoods = (beanstalkData: any) => ninjaExtraInfo[29].filter((str: any) => isNaN(str))
+  .map((gFood: string, index: number) => ({
+    ...((items as any)?.[gFood] || {}),
+    rawName: gFood,
+    active: beanstalkData?.[index] > 0,
+    rank: beanstalkData?.[index],
+    index
+  }));
 
 const goldenFoodEffects: Record<string, string> = (() => {
   const map: Record<string, string> = {};
@@ -1495,6 +1514,24 @@ export const getCompanions = (companionObject: any = {}, accountOptions: any = [
   };
 }
 
+export const isUnreleasedCompanion = (companion: any): boolean => companion?.effect === 'Not_officially_in_the_game_and_may_never_be';
+
+// The Pets page sets: the game's groups, plus the pets it has not put in a group yet but already priced for
+// Pet Mart+ (the 9999-priced filler entries read null and stay out). The game also leaves some live pets out of
+// every set (Glowfish): a real effect, rather than the placeholder text, is what tells them apart from the
+// unreleased ones. Takes the list with each pet's catalog position as index.
+export const getCompanionSets = (indexedCompanions: any[]) => {
+  const groupedIndices = new Set((companionGroups || []).flatMap((group: any) => group.indices));
+  const ungrouped = indexedCompanions.filter((comp) => !groupedIndices.has(comp.index) && comp.upgradeCost > 0);
+  const unreleasedIndices = ungrouped.filter(isUnreleasedCompanion).map((comp) => comp.index);
+  const otherIndices = ungrouped.filter((comp) => !isUnreleasedCompanion(comp)).map((comp) => comp.index);
+  const groups = [
+    ...(companionGroups || []),
+    ...(otherIndices.length > 0 ? [{ name: 'Not in a set', indices: otherIndices }] : [])
+  ];
+  return { groups, unreleasedIndices };
+};
+
 export const isCompanionBonusActive = (account: any, index: any) => {
   return account?.companions?.list?.at(index)?.acquired;
 }
@@ -1937,8 +1974,99 @@ export const getKillRoyClasses = (rooms: any, account: any, serverVars: any, ign
   });
 }
 
+// The event shop catalog: ninjaExtraInfo[39] pairs each bonus text ("Name@Description") with its price
+export const getEventShopItems = (): { text: string; price: string }[] => ninjaExtraInfo?.[39]?.toChunks(2)
+  .map(([text, price]: any) => ({ text, price })) ?? [];
+
+// The General page "Totals" lifetime counters: the task board keeps them in Tasks[0][group][index]
+export const LIFETIME_STATS = [
+  { key: 'highestDamage', name: 'Highest Damage', icon: 'StampA8', group: 1, index: 0 },
+  { key: 'poOrders', name: 'PO Orders', icon: 'DeliveryBox', group: 1, index: 5 },
+  { key: 'monstersKilled', name: 'Monsters Killed', icon: 'UISkillIcon110', group: 0, index: 0 },
+  { key: 'refinedSalts', name: 'Refined Salts', icon: 'TaskSc6', group: 2, index: 0 },
+  { key: 'matsPrinted', name: 'Mats Printed', icon: 'PrintSlot', group: 2, index: 3 },
+  { key: 'trashedCogs', name: 'Trashed Cogs', icon: 'Cog3B4', group: 2, index: 1 },
+  { key: 'plantsPicked', name: 'Plants Picked', icon: 'GamingPlant1', group: 4, index: 3 }
+];
+export const getLifetimeStat = (account: any, { group, index }: { group: number; index: number }): number =>
+  account?.tasks?.[0]?.[group]?.[index] ?? 0;
+
 // a.engine.getGameAttribute("OptionsListAccount")[310] - event currency
 export const getEventShopBonus = (account: any, bonusId: any): number => {
   if (!account?.accountOptions?.[311]) return 0;
   return -1 !== (account?.accountOptions?.[311]).indexOf(number2letter[bonusId]) ? 1 : 0;
+}
+
+export const EVENT_SHOP_TIERS = ['Regular', 'Blackmarket', 'Forbidden Aisle'];
+
+export interface EventShopBonus {
+  index: number;
+  name: string;
+  description: string;
+  price: number;
+  owned: boolean;
+  // The last rotation that sold it (off rotation only): its event, the dates it was on sale and its tier there
+  lastSold?: { event: string | null; from: string | null; to: string | null; tier: string } | null;
+}
+
+export interface EventShopTier {
+  name: string;
+  bonuses: EventShopBonus[];
+  owned: number;
+  starsLeft: number;
+  // The tier before it while some of its bonuses are not owned: the shop opens a tier once all of the previous one is
+  lockedBy: { name: string; owned: number; total: number } | null;
+}
+
+// The day before `date` ('YYYY-MM-DD'), the last day a rotation that stays open was on sale
+const dayBefore = (date: string): string => {
+  const [y, m, d] = date.split('-').map(Number);
+  const prev = new Date(Date.UTC(y, m - 1, d - 1));
+  return prev.toISOString().slice(0, 10);
+};
+
+// The Event Shop as the game sells it: the current rotation by tier, and every other bonus with the rotation that
+// last sold it. Rotations come oldest first, four bonuses per tier.
+export const getEventShopRotation = (account: any): {
+  tiers: EventShopTier[];
+  starsToFinish: number;
+  offRotation: EventShopBonus[];
+} => {
+  const bonusOf = (index: number, text: string, price: string): EventShopBonus => {
+    const [name, description] = text.split('@');
+    return { index, name, description, price: Number(price), owned: !!getEventShopBonus(account, index) };
+  };
+  const catalog = getEventShopItems().map(({ text, price }, index) => bonusOf(index, text, price));
+  const rotations: { event: string | null; start: string | null; staysOpen: boolean; ids: number[] }[] = eventShopRotations ?? [];
+  const current = rotations.at(-1)?.ids ?? [];
+
+  let previous: EventShopTier | null = null;
+  const tiers = EVENT_SHOP_TIERS.map((name, tier) => {
+    const bonuses = current.slice(4 * tier, 4 * tier + 4).map((index) => catalog[index]).filter(Boolean);
+    const owned = bonuses.filter((bonus) => bonus.owned).length;
+    const lockedBy: EventShopTier['lockedBy'] = previous && (previous.lockedBy || previous.owned < previous.bonuses.length)
+      ? { name: previous.name, owned: previous.owned, total: previous.bonuses.length }
+      : null;
+    const starsLeft = bonuses.filter((bonus) => !bonus.owned).reduce((sum, bonus) => sum + bonus.price, 0);
+    previous = { name, bonuses, owned, starsLeft, lockedBy };
+    return previous;
+  }).filter((tier) => tier.bonuses.length > 0);
+
+  const lastSold = new Map<number, EventShopBonus['lastSold']>();
+  rotations.slice(0, -1).forEach(({ event, start, staysOpen, ids }, at) => {
+    const next = rotations[at + 1]?.start;
+    ids.forEach((index, slot) => lastSold.set(index, {
+      event,
+      from: start,
+      to: staysOpen && next ? dayBefore(next) : null,
+      tier: EVENT_SHOP_TIERS[Math.floor(slot / 4)]
+    }));
+  });
+  const recency = (bonus: EventShopBonus) => bonus.lastSold?.from ?? '';
+  const offRotation = catalog
+    .filter((bonus) => !current.includes(bonus.index))
+    .map((bonus) => ({ ...bonus, lastSold: lastSold.get(bonus.index) ?? null }))
+    .sort((a, b) => Number(a.owned) - Number(b.owned) || recency(b).localeCompare(recency(a)) || a.index - b.index);
+
+  return { tiers, starsToFinish: tiers.reduce((sum, tier) => sum + tier.starsLeft, 0), offRotation };
 }
