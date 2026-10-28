@@ -1,14 +1,11 @@
-const { createHash } = require('node:crypto');
 const { existsSync, readFileSync } = require('node:fs');
 
-// The optimizer worker is prebuilt into public/ under a fixed name (see utility/build-worker.mjs),
-// so nothing in the URL changes when its contents do and a browser will happily keep running the
-// version it cached. Hashing it here gives the hook a cache buster. Both `dev` and `prebuild` run
-// the build script first, so the file is already on disk by the time this is read.
-const WORKER_FILE = 'public/construction-optimizer.worker.js';
-const workerHash = existsSync(WORKER_FILE)
-  ? createHash('sha256').update(readFileSync(WORKER_FILE)).digest('hex').slice(0, 8)
-  : 'missing';
+// The Web Workers are prebuilt into public/workers/ under content-hashed names (see
+// utility/build-worker.mjs), which writes their names to the manifest. Both `dev` and `prebuild` run
+// that script first, so the manifest is already on disk by the time this is read.
+// Next can be started from another folder (`next dev <dir>`), so resolve from this file, not the cwd.
+const WORKER_MANIFEST = require('node:path').join(__dirname, '.worker-manifest.json');
+const workers = existsSync(WORKER_MANIFEST) ? readFileSync(WORKER_MANIFEST, 'utf8') : '{}';
 
 module.exports = {
   reactStrictMode: false,
@@ -27,11 +24,14 @@ module.exports = {
   // empty. Bundling emotion puts everything on one instance. vercel/next.js#95834, #91411.
   transpilePackages: ['@emotion/react', '@emotion/styled', '@emotion/cache', '@emotion/server'],
   env: {
-    NEXT_PUBLIC_WORKER_HASH: workerHash
+    NEXT_PUBLIC_WORKERS: JSON.stringify(JSON.parse(workers))
   },
   images: {
     unoptimized: true,
   },
+  // Task worktrees live under the main checkout and junction its node_modules. Turbopack refuses
+  // files outside its root, so the worktree's dev server points the root at the main checkout.
+  ...(process.env.TURBOPACK_ROOT && { turbopack: { root: process.env.TURBOPACK_ROOT } }),
   // The deploy sets NEXT_BUILD_CPUS to render static pages on every core of its runner.
   ...(process.env.NEXT_BUILD_CPUS && { experimental: { cpus: Number(process.env.NEXT_BUILD_CPUS) } }),
 };

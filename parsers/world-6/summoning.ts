@@ -37,6 +37,8 @@ import { getTotalizerBonuses } from '@parsers/world-3/worship';
 import { getMenagerieBoost, getSumCostReduxMena } from '@parsers/world-7/menagerie';
 import { additiveGroup, createBreakdown, evaluateBreakdown, flat, multiplier, NUMBERED_GROUP, percent, productGroup } from '@parsers/breakdown';
 import type { StatBreakdown } from '@parsers/breakdown';
+import { OPT } from '@parsers/accountOptions';
+import { saveField } from '@parsers/saveField';
 
 export const summonEssenceColor = {
   0: 'white',
@@ -63,12 +65,12 @@ const stoneNames = {
 
 export const getSummoning = (idleonData: any, accountData: any, serializedCharactersData: any, characters: any[] = []) => {
   const rawSummon = tryToParse(idleonData?.Summon);
-  const killRoyKills = tryToParse(idleonData?.KRbest);
+  const killRoyKills = saveField(idleonData, 'KRbest');
   return parseSummoning(rawSummon, killRoyKills, accountData, serializedCharactersData, characters);
 }
 
 const parseSummoning = (rawSummon: any, killRoyKills: any, account: any, serializedCharactersData: any, characters: any[] = []) => {
-  const highestEndlessLevel = account?.accountOptions?.[319] ?? 0;
+  const highestEndlessLevel = account?.accountOptions?.[OPT.summoningHighestEndless] ?? 0;
   const upgradesLevels = rawSummon?.[0];
   const totalUpgradesLevels = upgradesLevels?.reduce((sum: any, level: any) => sum + level, 0) ?? 0;
   const summoningStuff = rawSummon?.[3];
@@ -378,7 +380,7 @@ const getArmyHealth = (upgrades: any, totalUpgradesLevels: any, account: any) =>
   const thirdMulti = upgrades.find(({ originalIndex }: any) => originalIndex === 61)?.value || 0;
   const endlessMulti = upgrades.find(({ originalIndex }: any) => originalIndex === 63)?.value || 0;
 
-  const highestEndlessLevel = account?.accountOptions?.[319] ?? 0;
+  const highestEndlessLevel = account?.accountOptions?.[OPT.summoningHighestEndless] ?? 0;
   return 1 * (1 + additiveArmyHealth)
     * (1 + firstMulti / 100)
     * (1 + (secondMulti
@@ -401,7 +403,7 @@ const getArmyDamage = (upgrades: any, totalUpgradesLevels: any, account: any) =>
   const fourthMulti = upgrades.find(({ originalIndex }: any) => originalIndex === 60)?.value || 0;
   const endlessMulti = upgrades.find(({ originalIndex }: any) => originalIndex === 64)?.value || 0;
 
-  const highestEndlessLevel = account?.accountOptions?.[319] ?? 0;
+  const highestEndlessLevel = account?.accountOptions?.[OPT.summoningHighestEndless] ?? 0;
   return 1 * (1 + (additiveArmyDamage))
     * (1 + firstMulti / 100)
     * (1 + (secondMulti
@@ -580,7 +582,7 @@ const getEssenceBoostBubble = (account: any, characters: any[], bubble: EssenceC
 // DNSM.SumAllEss: the multiplier every colour shares
 const getAllEssenceGroup = (account: any) => {
   const holesObject = account?.hole?.holesObject;
-  const highestEndlessLevel = account?.accountOptions?.[319] ?? 0;
+  const highestEndlessLevel = account?.accountOptions?.[OPT.summoningHighestEndless] ?? 0;
   const masteryUnlocked = isMasteryBonusUnlocked(account?.rift, account?.totalSkillsLevels?.summoning?.rank, ESSENCE_MASTERY_TIER);
   const essenceChapter = getBubbleBonus(account, 'ESSENCE_CHAPTER') * getTomeBubbleMulti(account?.tome?.totalPoints ?? 0);
   return productGroup('All essence bonuses', [

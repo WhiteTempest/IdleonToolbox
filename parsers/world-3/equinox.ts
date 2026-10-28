@@ -14,6 +14,8 @@ import { getResearchGridBonus } from '@parsers/world-7/research';
 import { getArmoryUpgradeBonus } from '@parsers/class-specific/royalGuardian';
 import { getLegendTalentBonus } from '@parsers/world-7/legendTalents';
 import { NUMBERED_GROUP, additiveGroup, createBreakdown, flat, multiplier, percent, productGroup } from '@parsers/breakdown';
+import { saveField } from '@parsers/saveField';
+import { OPT } from '@parsers/accountOptions';
 
 const DREAM_UPGRADES_OFFSET = 2;
 // Bar fill per hour before multipliers; the bundle raises it
@@ -46,7 +48,7 @@ export const getLockedEquinox = () => ({
 });
 
 export const getEquinox = (idleonData: any, account: any) => {
-  const weeklyBoss = tryToParse(idleonData?.WeeklyBoss) || idleonData?.WeeklyBoss;
+  const weeklyBoss = saveField(idleonData, 'WeeklyBoss') || idleonData?.WeeklyBoss;
   const dream = tryToParse(idleonData?.Dream) || idleonData?.Dream;
   return {
     ...parseEquinox(weeklyBoss || {}, dream || emptyDream(), account),
@@ -183,7 +185,7 @@ const parseEquinoxUpgrades = (challenges: any, dream: any, account: any) => {
   const nbChallengeUnlocked = UPGRADE_UNLOCK_CLOUDS.reduce((sum, index) => sum + getCloudBonus(challenges, index), 0);
   return equinoxUpgrades.map(({ name, description, maxLevel, bonus }, index) => {
     const realBonus = name === 'Hmm...' ? 0 : name === 'Food_Lust'
-      ? Math.min(parseInt(dream[index]), account?.accountOptions?.[193] ?? 0)
+      ? Math.min(parseInt(dream[index]), account?.accountOptions?.[OPT.foodLustStacks] ?? 0)
       : (bonus ?? 0) * dream[index] || 0;
     const winBonus = getWinnerBonus(account, '+{ Equinox Max LV');
     const cloudBonusMap = {

@@ -52,13 +52,15 @@ import { getGrimoireBonus } from '@parsers/class-specific/grimoire';
 import { getArmorSetBonus } from '@parsers/world-3/armorSmithy';
 import { getObolsBonus } from '@parsers/obols';
 import { getButtonBonus } from '@parsers/world-7/button';
+import { OPT } from '@parsers/accountOptions';
+import { saveField } from '@parsers/saveField';
 
 export const spicesNames = spiceNames;
 
 export const getCooking = (idleonData: any, account: any, characters?: any) => {
-  const cookingRaw = tryToParse(idleonData?.Cooking) || idleonData?.Cooking;
+  const cookingRaw = saveField(idleonData, 'Cooking') || idleonData?.Cooking;
   const mealsRaw = tryToParse(idleonData?.Meals) || idleonData?.Meals;
-  const territoryRaw = tryToParse(idleonData?.Territory) || idleonData?.Territory;
+  const territoryRaw = saveField(idleonData, 'Territory') || idleonData?.Territory;
   const cookMasterRaw = tryToParse(idleonData?.CookMaster) || idleonData?.CookMaster;
   return parseCooking(mealsRaw, territoryRaw, cookingRaw, account, cookMasterRaw, characters);
 }
@@ -105,7 +107,7 @@ const getSpices = (mealsRaw: any, territoryRaw: any, account: any) => {
     name: spicesNames[index]
   })).filter(({ amount }: any) => amount > 0);
 
-  const numberOfClaims = account?.accountOptions?.[100];
+  const numberOfClaims = account?.accountOptions?.[OPT.dailySpiceClaims];
   return {
     toClaim,
     available,
@@ -721,14 +723,14 @@ const getRibbonCountTree = (inputs: DailyRibbonInputs, expectedCount: number) =>
 };
 
 export const getKitchens = (idleonData: any, characters: any, account: any) => {
-  const cookingRaw = tryToParse(idleonData?.Cooking) || idleonData?.Cooking;
-  const atomsRaw = tryToParse(idleonData?.Atoms) || idleonData?.Atoms;
+  const cookingRaw = saveField(idleonData, 'Cooking') || idleonData?.Cooking;
+  const atomsRaw = saveField(idleonData, 'Atoms') || idleonData?.Atoms;
   return parseKitchens(cookingRaw, atomsRaw, characters, account);
 }
 
 export const parseKitchens = (cookingRaw: any, atomsRaw: any, characters: any, account?: any, options?: any) => {
   const { characterIndex, enableNanoChip } = options || {};
-  const arenaWave = account?.accountOptions?.[89];
+  const arenaWave = account?.accountOptions?.[OPT.highestArenaWave];
   const waveReqs = randomList?.[53];
   const globalKitchenUpgrades = cookingRaw?.reduce((sum: any, table: any) => {
     const [speedLv, fireLv, luckLv] = table.slice(6, 9);
@@ -1051,7 +1053,7 @@ export const getMealLevelCost = (level: any, achievements: any, account?: any, l
     * Math.pow(10, 22 * Math.floor((level + 1e3) / 1111))
     * (1 / Math.min(5, Math.max(1, 1 + (10 * getAchievementStatus(achievements, 233)) / 100)))
     * Math.max(0.001, Math.pow(Math.max(0.58, 0.8 - 0.22 * foodLustChallenge),
-      Math.min(account?.accountOptions?.[193] ?? 0,
+      Math.min(account?.accountOptions?.[OPT.foodLustStacks] ?? 0,
         getEquinoxBonus(localEquinoxUpgrades || account?.equinox?.upgrades, 'Food_Lust')))) *
     (10 + (level
       + Math.pow(level, 2)))

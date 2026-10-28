@@ -46,9 +46,11 @@ import { getStarSignBonus } from '@parsers/starSigns';
 import { getFountainBonusTotal } from '@parsers/world-5/caverns/the-fountain';
 import { NUMBERED_GROUP, additiveGroup, createBreakdown, divideGroup, flat, multiplier, percent, productGroup } from '@parsers/breakdown';
 import { getMenagerieBoost, getNightmarinerBonus, isMenagerieUnlockOwned } from '@parsers/world-7/menagerie';
+import { saveField } from '@parsers/saveField';
+import { OPT } from '@parsers/accountOptions';
 
 export const getSailing = (idleonData: any, artifactsList: any, charactersData: any, account: any, serverVars: any, charactersLevels: any) => {
-  const sailingRaw = tryToParse(idleonData?.Sailing) || idleonData?.Sailing;
+  const sailingRaw = saveField(idleonData, 'Sailing') || idleonData?.Sailing;
   const captainsRaw = tryToParse(idleonData?.Captains) || idleonData?.Captains;
   const boatsRaw = tryToParse(idleonData?.Boats) || idleonData?.Boats;
   const chestsRaw = tryToParse(idleonData?.SailChests) || idleonData?.SailChests;
@@ -159,7 +161,7 @@ const getMoneyValue = (lootItemCost: any, lootIndex: any, emeraldRelic: any) => 
 }
 
 export const getArtifacts = (idleonData: any, charactersData: any, account: any) => {
-  const sailingRaw = tryToParse(idleonData?.Sailing) || idleonData?.Sailing;
+  const sailingRaw = saveField(idleonData, 'Sailing') || idleonData?.Sailing;
   const acquiredArtifacts = sailingRaw?.[3];
   const lootPile = sailingRaw?.[1];
   return artifacts?.map((artifact, index) => getArtifact(artifact,
@@ -973,7 +975,7 @@ const getArtifact = (artifact: any, acquired: any, lootPile: any, index: any, ch
     bonus = artifact?.baseBonus * lavaLog(account?.atoms?.particles ?? 0);
   }
   else if (artifact?.name === 'Gold_Relic') {
-    const daysSinceLastSample = account?.accountOptions?.[125];
+    const daysSinceLastSample = account?.accountOptions?.[OPT.daysSinceLastSample];
     const goldRelicBonus = upgradedForm ? artifact?.[multiplierType] : 0;
     const daysBonus = 1 + ((daysSinceLastSample) * (2 + goldRelicBonus)) / 100;
     additionalData = `Days passed: ${daysSinceLastSample}. Bonus: ${String(notateNumber(daysBonus, 'MultiplierInfo')).replace('#', '')}x`;

@@ -6,10 +6,12 @@ import { getUpgradeVaultBonus } from '@parsers/misc/upgradeVault';
 import { getEventShopBonus } from '@parsers/misc';
 import { getMeritocracyBonus } from '@parsers/world-2/voteBallot';
 import type { IdleonData, Account } from '../types';
+import { saveField } from '@parsers/saveField';
+import { OPT } from '@parsers/accountOptions';
 
 export const getStatues = (idleonData: IdleonData, charactersData: any[], accountData: Account) => {
   const statuesRaw = tryToParse(idleonData?.StuG) || (idleonData as any)?.StatueG;
-  const rawSpelunking = tryToParse(idleonData?.Spelunk) || [];
+  const rawSpelunking = saveField(idleonData, 'Spelunk') || [];
   return parseStatues(statuesRaw, charactersData, rawSpelunking, accountData);
 };
 
@@ -46,7 +48,7 @@ export const parseStatues = (statuesRaw: any, charactersData: any[], rawSpelunki
     .filter(({ name }: any = {}) => name);
 
   const market = getZenithMarket(rawSpelunking);
-  const clusters = accountData?.accountOptions?.[486];
+  const clusters = accountData?.accountOptions?.[OPT.zenithClusters];
 
   return {
     statues,

@@ -16,13 +16,15 @@ import { getSushiBonus } from '@parsers/world-7/sushiStation';
 import { getMineheadBonusQTY } from '@parsers/world-7/minehead';
 import { NUMBERED_GROUP, additiveGroup, createBreakdown, multiplier, percent } from '@parsers/breakdown';
 import { isMenagerieUnlockOwned } from '@parsers/world-7/menagerie';
+import { OPT } from '@parsers/accountOptions';
+import { saveField } from '@parsers/saveField';
 
 // Crucible (hard arena) waves cleared, OptionsListAccount[628], against the randomList[115] wave list:
 // the count of waves reached in order, only once the Menagerie unlock 8 is owned.
 // game: "TalentCalc:arenaCruc"
 export const getArenaCrucibleCount = (account: any): number => {
   if (!isMenagerieUnlockOwned(account, 8)) return 0;
-  const bestWave = Number(account?.accountOptions?.[628]) || 0;
+  const bestWave = Number(account?.accountOptions?.[OPT.crucibleBestWave]) || 0;
   const waves: any[] = (randomList as any)?.[115] ?? [];
   const index = waves.findIndex((wave) => bestWave < Number(wave));
   return index === -1 ? waves.length : index;
@@ -32,11 +34,11 @@ export const getArenaCrucibleCount = (account: any): number => {
 export const getPetArenaCrucBonus = (account: any, index: number): number => getArenaCrucibleCount(account) > index ? 1 : 0;
 
 export const getBreeding = (idleonData: any, account: any, processedData: any) => {
-  const breedingRaw = tryToParse(idleonData?.Breeding) || idleonData?.Breeding;
+  const breedingRaw = saveField(idleonData, 'Breeding') || idleonData?.Breeding;
   const petsRaw = tryToParse(idleonData?.Pets) || idleonData?.Pets;
   const petsStoredRaw = tryToParse(idleonData?.PetsStored) || idleonData?.PetsStored;
-  const territoryRaw = tryToParse(idleonData?.Territory) || idleonData?.Territory;
-  const cookingRaw = tryToParse(idleonData?.Cooking) || idleonData?.Cooking;
+  const territoryRaw = saveField(idleonData, 'Territory') || idleonData?.Territory;
+  const cookingRaw = saveField(idleonData, 'Cooking') || idleonData?.Cooking;
   return parseBreeding(breedingRaw, territoryRaw, petsRaw, petsStoredRaw, cookingRaw, account, processedData);
 }
 
@@ -192,13 +194,13 @@ const parseBreeding = (breedingRaw: any, territoryRaw: any, petsRaw: any, petsSt
     speciesUnlocks,
     fencePets,
     fencePetsObject,
-    maxArenaLevel: account?.accountOptions?.[89],
+    maxArenaLevel: account?.accountOptions?.[OPT.highestArenaWave],
     // Crucible (hard arena) best wave, OptionsListAccount[628]
-    maxCrucibleLevel: account?.accountOptions?.[628] ?? 0,
+    maxCrucibleLevel: account?.accountOptions?.[OPT.crucibleBestWave] ?? 0,
     maxShinyLevel,
     shinyOverLevels,
     shinyOverLevelMulti: getShinyOverLevelMulti(shinyOverLevels),
-    timeToNextEgg: (account?.accountOptions?.[87] ?? 0) * 1000,
+    timeToNextEgg: (account?.accountOptions?.[OPT.breedingEggTimer] ?? 0) * 1000,
     petUpgrades: petUpgradesList,
     arenaBonuses,
     unlockedBreedingMulti,
@@ -232,7 +234,7 @@ const getLevelGoal = (level: number, isShiny: boolean) => isShiny
   : Math.pow(Math.pow(Math.E, Math.pow(level, 1.25)), 1 / 0.725) - 1;
 
 export const addBreedingChance = (idleonData: any, account: any) => {
-  const breedingRaw = tryToParse(idleonData?.Breeding) || idleonData?.Breeding;
+  const breedingRaw = saveField(idleonData, 'Breeding') || idleonData?.Breeding;
   let totalBreedabilityLv = 0;
   const pets = account?.breeding?.pets?.map((petList: any, worldIndex: any) => {
     return petList?.map((pet: any, petIndex: any) => {

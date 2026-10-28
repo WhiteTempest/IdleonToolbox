@@ -45,6 +45,8 @@ import {
   productGroup,
   sumGroup
 } from '@parsers/breakdown';
+import { saveField } from '@parsers/saveField';
+import { OPT } from '@parsers/accountOptions';
 
 export const MAX_VIAL_LEVEL = 13;
 // One row per cauldron / liquid, in save order: the slug the catalog and the rest of the app key by,
@@ -101,8 +103,8 @@ export const parseAlchemy = (idleonData: any, alchemyRaw: any, cauldronJobs1Raw:
   const vials = getVials(alchemyRaw?.[4]);
 
   const totalBubbleLevelsTill100 = alchemyRaw?.slice(0, 4)?.flat()?.reduce((sum: any, level: any) => sum + Math.min(100, level), 0);
-  const prismaFragments = account?.accountOptions?.[383];
-  const prismaBubbles = account?.accountOptions?.[384];
+  const prismaFragments = account?.accountOptions?.[OPT.prismaFragments];
+  const prismaBubbles = account?.accountOptions?.[OPT.prismaBubbles];
   return {
     p2w,
     bubbles,
@@ -158,7 +160,7 @@ export const getLiquidCauldrons = (account: any) => {
     if (bleachLiquidCauldron > index) {
       bleachLiquidBonus = .5 + saltLickBonus / 100;
     }
-    if (account?.accountOptions?.[123] > index) {
+    if (account?.accountOptions?.[OPT.dragonicCauldrons] > index) {
       if (bleachLiquidBonus === 0) {
         bleachLiquidBonus = 1;
       }
@@ -186,7 +188,7 @@ export const getLiquidCauldrons = (account: any) => {
     const maxLiquid = Math.ceil((1 + secondMath) * thirdMath);
 
     return {
-      isDragonic: account?.accountOptions?.[123] > index,
+      isDragonic: account?.accountOptions?.[OPT.dragonicCauldrons] > index,
       maxLiquid,
       maxLiquidBreakdown: createBreakdown(`${LIQUID_INFO[index]?.displayName} capacity`, maxLiquid, [
         sumGroup('Base capacity', [
@@ -238,7 +240,7 @@ const getPay2Win = (idleonData: any, alchemyActivity: any, serializedCharactersD
   const liquidMapping = { 0: 4, 1: 5, 2: 6 };
   const playersInLiquids = alchemyActivity.filter(({ activity }: any, index: any) => activity < 100 && activity >= 4 && activity !== -1 && index < serializedCharactersData?.length);
   const p2w: any = {};
-  const [cauldrons = [], liquids = [], vials, player, , remainingAttempts = []] = tryToParse(idleonData?.CauldronP2W) || idleonData?.CauldronP2W || [];
+  const [cauldrons = [], liquids = [], vials, player, , remainingAttempts = []] = saveField(idleonData, 'CauldronP2W') || idleonData?.CauldronP2W || [];
   p2w.cauldrons = CAULDRON_INFO.map((cauldron: any, index: any) => {
     const [speed = 0, newBubble = 0, boostReq = 0] = cauldrons.slice(index * 3, index * 3 + 3);
     return {
@@ -648,7 +650,7 @@ const getBestBubbleBreakthrough = (characters: any) => {
 // OptionsListAccount[32] holds one 0/1 digit per cauldron
 const IVORY_CAULDRON_MULTI = 1.5;
 const isIvoryCauldron = (account: any, cauldronIndex: number) =>
-  `${account?.accountOptions?.[32] ?? ''}`.charAt(cauldronIndex) === '1';
+  `${account?.accountOptions?.[OPT.ivoryCauldrons] ?? ''}`.charAt(cauldronIndex) === '1';
 
 export const applyNewBubbleChances = (account: any, characters: any) => {
   const bubbleBreakthrough = getBestBubbleBreakthrough(characters);
@@ -834,7 +836,7 @@ const getCauldronStats = (idleonData: any) => {
 };
 
 export const getSigils = (idleonData: any, alchemyActivity: any, serializedCharactersData: any) => {
-  const sigilsRaw = tryToParse(idleonData?.CauldronP2W) || idleonData?.CauldronP2W;
+  const sigilsRaw = saveField(idleonData, 'CauldronP2W') || idleonData?.CauldronP2W;
   return parseSigils(sigilsRaw, alchemyActivity, serializedCharactersData);
 };
 

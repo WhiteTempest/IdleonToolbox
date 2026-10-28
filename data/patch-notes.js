@@ -4,6 +4,34 @@ import React from 'react';
 /* eslint-disable react/jsx-key */
 export const patchNotes = [
   {
+    'ver': '3.3.103',
+    'gameVer': '2.3.550',
+    'date': '27/10/2026',
+    'features': [
+      'Sneaking: Items max level breakdown now shows each source per item',
+      'Palette: colors now show when their bonus stops counting past a limit, and Fastest to level skips colors that are already maxed',
+      'Exotic Market and Research grid: upgrades now show when their bonus stops counting past a limit',
+      'Research: added a toggle to hide found Observations',
+      'Goals: item and greenstack names link to their wiki page, showing where each item drops',
+      'Cooking: meal cards also show the ladles needed when cooking in a single kitchen, from your fastest to your slowest kitchen',
+      'Card Search: plan card presets, import them from your characters, and see each card value now and at max stars'
+    ],
+    'fixes': [
+      'Slab: Average Mana Potion no longer counts as a missing greenstack',
+      'Dashboard: the unmaxed talents alert now ignores talent tabs with no talent points left to spend',
+      'Characters: each character name now sits in its own header bar, with more spacing between characters'
+    ]
+  },
+  {
+    'ver': '3.3.102',
+    'gameVer': '2.3.550',
+    'date': '26/10/2026',
+    'features': [],
+    'fixes': [
+      'Farming and 3D Printer breakdowns: clearer note that the game itself ignores the listed bonuses (game bug)'
+    ]
+  },
+  {
     'ver': '3.3.101',
     'gameVer': '2.3.550',
     'date': '25/10/2026',
