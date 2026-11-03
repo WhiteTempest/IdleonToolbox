@@ -4,6 +4,41 @@ import React from 'react';
 /* eslint-disable react/jsx-key */
 export const patchNotes = [
   {
+    'ver': '3.3.107',
+    'gameVer': '2.3.561',
+    'date': '03/11/2026',
+    'features': [
+      'Cape Vine: new World 4 page with your capes, Golden Vines and bonuses, and its bonuses now count in your stats',
+      'Rift: Research Skill Mastery',
+      'Dashboard: alerts for capes missing from the Cape Vine and a Golden Vine ready to unlock'
+    ],
+    'fixes': [
+      'Printer: Yet Another Printer Multi now counts',
+      'Masterclass drops: Killroy now gives its full bonus',
+      'Spelunking: the Pit O Pages talent now counts for every character',
+      'Farming: Land Rank EXP now includes the Exotic Market, Menagerie and talent bonuses',
+      'Damage: Eclectic Sigils now add their Research Grid damage bonus',
+      'Royal Guardian: Expanded Barracks gives unit slots up to Lv 6',
+      'Hole: the Temple shows large torch counts and costs in M and B'
+    ]
+  },
+  {
+    'ver': '3.3.106',
+    'gameVer': '2.3.550',
+    'date': '02/11/2026',
+    'features': [],
+    'fixes': [
+      'Guild History: a guild page keeps its own title instead of switching back to the generic one',
+      'Login: email and Apple sign-ins are tracked correctly, and closing the login dialog cancels a Google sign-in in progress',
+      'Login: the numpad Enter key submits the email form, and password managers can fill it',
+      'Pinned pages: unpinning a page no longer removes other pins',
+      'Hole, Royal Armory and Highscores: descriptions no longer show raw @, $ or } symbols',
+      'Worship: the Spelunking POW and Research EXP totalizer stats show icons',
+      'Summoning: the Total bonus of Red Essence Ragin\', Teal Tirade, Teal Knowledge, Sharpened Spikes and Cost Laundering now matches the game',
+      'Summoning: army damage now counts Unit Obliteration'
+    ]
+  },
+  {
     'ver': '3.3.105',
     'gameVer': '2.3.550',
     'date': '01/11/2026',
