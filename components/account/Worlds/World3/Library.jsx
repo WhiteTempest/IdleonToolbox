@@ -1,77 +1,65 @@
-import React, { useState } from 'react';
+import React from 'react';
 import Timer from '../../../common/Timer';
-import { Collapse, Divider, Stack, Typography } from '@mui/material';
-import { prefix } from '@utility/helpers';
-import useRealDate from '@hooks/useRealDate';
-import Tooltip from '../../../Tooltip';
-import InfoIcon from '@mui/icons-material/Info';
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
-import ExpandLessIcon from '@mui/icons-material/ExpandLess';
+import { Box, Stack, Typography } from '@mui/material';
+import { formatDuration, formatNum } from '@utility/helpers';
+import useFormatDate from '@hooks/useFormatDate';
 import { Breakdown } from '@components/common/Breakdown/Breakdown';
+import Panel from '@components/common/cards/Panel';
+import InfoButton from '@components/common/InfoButton';
 
-const BookBreakpoint = ({ breakpoint, label, time, lastUpdated, getRealDateInMs }) => {
-  let endDate = new Date().getTime() + time * 1000;
-  endDate = getRealDateInMs(endDate);
-  return time > 0 ? <>
-    <Divider sx={{ my: 1 }} />
-    <Stack direction={'row'} gap={1}>
-      <Typography sx={{ width: 130 }}>{label || breakpoint} books
-        in: </Typography>
-      <Tooltip title={'End date: ' + endDate}>
-        <Timer type={'countdown'}
-          lastUpdated={lastUpdated}
-          staticTime={breakpoint === 0}
-          date={new Date().getTime() + time * 1000} />
-      </Tooltip>
-    </Stack>
-  </> : null;
+const NOTE_ROW_SX = { display: 'flex', justifyContent: 'space-between', gap: 3 };
+
+// A wait, measured from now (the parse already counts the time since the save), and the date it ends on.
+const WaitRow = ({ name, time }) => {
+  const formatDate = useFormatDate();
+  const endDate = new Date().getTime() + time * 1000;
+  return <Panel.Row name={name} sub={formatDate(endDate, { showSeconds: false })}
+                    value={<Timer type={'countdown'} date={endDate} component={'span'}/>}/>;
 };
 
-const Library = ({ libraryTimes, lastUpdated }) => {
-  const getRealDateInMs = useRealDate();
-  const [showMore, setShowMore] = useState(false);
-  let { bookCount, next, breakpoints, breakdown } = libraryTimes || {};
-  const nextDate = new Date().getTime() + next * 1000;
-  const nextEndDate = getRealDateInMs(nextDate);
+// live: a save to count from. A guest's library has books to count up to but no clock to count on, so it prints only the spans.
+const booksTake = (label) => `First ${label.replace('0 to ', '')} books take`;
 
+// The longer spans (40 to 100 books) are an ⓘ note on the first one's row, not a fold in the card: opened in it, they grew
+// the card, and on General's flowing columns every card after it moved.
+const Library = ({ libraryTimes, failed, live }) => {
+  const { bookCount, next, breakpoints, breakdown } = libraryTimes || {};
+  const extraBreakpoints = breakpoints?.filter(({ label, time }) => label && label !== '0 to 20' && time > 0);
+  const longerSpans = extraBreakpoints?.length ? <InfoButton label={'longer spans'}>
+    <Stack gap={0.75}>
+      {extraBreakpoints.map(({ label, time }) => <Box key={label} sx={NOTE_ROW_SX}>
+        <Typography variant={'body2'}>{booksTake(label)}</Typography>
+        <Typography variant={'body2'} sx={{ fontWeight: 500 }}>{formatDuration(time)}</Typography>
+      </Box>)}
+    </Stack>
+  </InfoButton> : null;
+  // A labelled breakpoint ("0 to 20") is how long that many books take from none, not a wait: a duration, with no date.
+  const breakpointRow = ({ breakpoint, label, time }) => {
+    if (!(time > 0)) return null;
+    if (label) {
+      return <Panel.Row key={label} value={formatDuration(time)}
+                        name={<Box component={'span'} sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5 }}>{booksTake(label)}{longerSpans}</Box>}/>;
+    }
+    return live ? <WaitRow key={breakpoint} name={`${breakpoint} books in`} time={time}/> : null;
+  };
   const mainBreakpoints = breakpoints?.filter(({ label }) => !label || label === '0 to 20');
-  const extraBreakpoints = breakpoints?.filter(({ label }) => label && label !== '0 to 20');
+  // The parser's total is seconds: the drawer is headed as its value reads
+  const checkoutTime = formatDuration(breakdown?.totalValue);
 
-  return <>
-    <Stack direction={'row'} alignItems={'center'} gap={1}>
-      <img width={24} src={`${prefix}data/Libz.png`} alt="Libz" />
-      <Typography sx={{ fontWeight: 'bold', fontSize: 16 }}>Library</Typography>
-      <Breakdown data={breakdown}>
-        <InfoIcon fontSize={'small'} />
-      </Breakdown>
-    </Stack>
-    <Typography sx={{ my: 1 }}>Book count: {bookCount}</Typography>
-    <Stack direction={'row'} gap={1} alignItems={'center'}>
-      <Typography sx={{ width: 130 }}>Next book in: </Typography> {next > 0 ?
-        <Tooltip title={'End date: ' + nextEndDate}>
-          <Timer type={'countdown'} lastUpdated={lastUpdated}
-            date={nextDate} />
-        </Tooltip> :
-        <Typography variant={'caption'}>Wait for game update</Typography>}
-    </Stack>
-    {mainBreakpoints?.map((bp, index) => (
-      <BookBreakpoint key={'book-timer-' + index} {...bp} lastUpdated={lastUpdated}
-        getRealDateInMs={getRealDateInMs} />
-    ))}
-    {extraBreakpoints?.length > 0 && <>
-      <Divider sx={{ my: 1 }} />
-      <Typography variant={'caption'} sx={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 0.5 }}
-        onClick={() => setShowMore(!showMore)}>
-        More breakpoints {showMore ? <ExpandLessIcon fontSize={'small'} /> : <ExpandMoreIcon fontSize={'small'} />}
-      </Typography>
-      <Collapse in={showMore}>
-        {extraBreakpoints.map((bp, index) => (
-          <BookBreakpoint key={'book-timer-extra-' + index} {...bp} lastUpdated={lastUpdated}
-            getRealDateInMs={getRealDateInMs} />
-        ))}
-      </Collapse>
-    </>}
-  </>
+  if (failed) {
+    return <Panel icon={'data/Libz.png'} title={'Library'}>
+      <Panel.KV label={'Books ready'} value={'-'}/>
+      <Panel.KV label={'Next book in'} value={'-'}/>
+    </Panel>;
+  }
+
+  return <Panel icon={'data/Libz.png'} title={'Library'}>
+    <Panel.KV label={'Books ready'} value={formatNum(bookCount)}/>
+    {breakdown ? <Panel.Row name={'Checkout time'}
+                            value={<Breakdown asValue title={'Checkout time'} data={{ ...breakdown, totalValue: checkoutTime }}>{checkoutTime}</Breakdown>}/> : null}
+    {live && next > 0 ? <WaitRow name={'Next book in'} time={next}/> : null}
+    {mainBreakpoints?.map(breakpointRow)}
+  </Panel>;
 };
 
 export default Library;

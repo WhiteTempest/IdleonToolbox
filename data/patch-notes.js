@@ -1,8 +1,68 @@
 import { Link, Typography } from '@mui/material';
 import React from 'react';
+import { replayWhatsNew } from '@utility/whatsNew';
 
 /* eslint-disable react/jsx-key */
 export const patchNotes = [
+  {
+    'ver': '4.0.2',
+    'gameVer': '2.3.561',
+    'date': '08/11/2026',
+    'features': [
+      'Dashboard: the reset tiles share one width, and "Hide characters without alerts" moved to the top bar',
+      'Characters: bigger icons for obols, equipment, bags, prayers, bubbles, post office and chips; re-rolled obols glow; skill ranks 1 to 3 are gold, silver and bronze',
+      'More compact pages: Bubbles, Construction, Anvil, Kitchens, Slab, Hole, Spelunking Lore, Tournament and General; Shrines and Statues show their EXP bars again, and the Account and Tools menus open under their buttons',
+      'Bubbles: each bubble shows a bar toward its cap with a tick at your efficiency threshold, a setting shows the % and target level under each one, and the dim setting fades much more',
+      'Characters: switch characters from the pinned bar, step by step or from a list of all of them, and Sections is a two-column checklist',
+      'Stamps: each category follows the game\'s 4-column book (or one row each with Rows), colours show which stamps can level up or are short on coins or materials, each state is a one-click filter again, and hovering a stamp previews it',
+      'Pets: each pet shows its bonus again, with Details for tradable copies, the Pet Mart+ price and when it was last in the Pet Mart',
+      'Pets: Tradable and Missing are one-click filters again'
+    ],
+    'fixes': [
+      'Dashboard: two World 7 alerts no longer sit out of line with the rest',
+      'Stamps: stamps you can level with coins no longer read as levelling at the previous reducer'
+    ]
+  },
+  {
+    'ver': '4.0.1',
+    'gameVer': '2.3.561',
+    'date': '08/11/2026',
+    'features': [
+      'Pages use more of a wide screen, and Page settings open in a panel under the page title',
+      'Dashboard: shorter character cards with their stats in a note; timers grouped by time or by world, two or three to a row; Vote and Meritocracy beside the resets; Later timers always shown',
+      'Compact cards with a Details switch on many pages, including Meals, Sailing, Summoning, Spelunking, Gem Shop and Exotic Market',
+      'Death Note: one table per world, with the multikill bonuses at the top',
+      'Characters: skills grouped by world with every rank, bigger talent and skill icons, and a green dot on the preset in use',
+      'Tome, Refinery and Sushi Station bonuses take much less room, and Pets, Bundles and Gallery tiles show their names'
+    ],
+    'fixes': [
+      'Super talents show their border again, and a talent with no max level reads 0 / 0 instead of blank',
+      'Owned and finished items no longer get a green border, and Menagerie\'s border is no longer cut off'
+    ]
+  },
+  {
+    'ver': '4.0.0',
+    'gameVer': '2.3.561',
+    'date': '07/11/2026',
+    'features': [
+      'The whole site is rebuilt, every page: new cards, tables and dialogs, and it all fits a phone',
+      <>The first visit after this update opens a short story of what changed, with your own characters, and a tour of the new layout. <Link component={'button'} type={'button'} onClick={replayWhatsNew} sx={{ verticalAlign: 'baseline' }}>Watch the story again</Link></>,
+      'The left menu is gone: Worlds, Account and Tools in the top bar open every page',
+      'A theme switch: Dark, Light or System, in the user menu, Settings and the footer',
+      'Dashboard: timers are one table from Ready now to Later, and tapping an alert or timer shows its meaning and settings',
+      'Characters opens on your first character, and two or more line up section by section',
+      'Settings that change a page\'s numbers moved behind one button beside the page title',
+      'Long lists have a toolbar to search, filter, sort and switch views',
+      'Numbers follow one rule: below 1M they show their decimals, from 1M up the game\'s short form',
+      'Sign in and Search are rebuilt: pick how you sign in and follow short steps; Search shows pinned and recent pages, and finds the closest match for a typo'
+    ],
+    'fixes': [
+      'Part of your save failing to load now shows that page at zero with one note, and numbers that rely on it show - instead of a wrong number',
+      'Signed-out pages no longer show NaN, undefined or repeated weeks',
+      'Game text and numbers now read as in the game on many pages, including Gaming, Sailing, Compass, Tesseract and Minehead',
+      'Dashboard timers no longer count the save\'s age twice, and a goal just short of its target no longer reads as reached'
+    ]
+  },
   {
     'ver': '3.3.107',
     'gameVer': '2.3.561',

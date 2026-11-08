@@ -1,4 +1,4 @@
-// Dr Defecaus and Baba Yaga respawn tracking for the dashboard Bosses card.
+// Dr Defecaus and Baba Yaga respawn tracking for the dashboard timers.
 // The game keeps both respawn timers in MonsterRespawnTime, a per-device array that never
 // reaches the cloud save, so Toolbox can only infer them:
 // - Defecaus: the daily reset loop re-arms his slot (MonsterRespawnTime[149] = 2), so he is up
@@ -50,6 +50,11 @@ export const isBabaUp = (stored, clock) => {
   const respawnAt = getBabaRespawnAt(stored);
   return !respawnAt || respawnAt <= clock;
 };
+
+// The player's number is the Miniboss kills stacked alert's. The alert and the timers' row both ask here, so they can't disagree.
+// Maxed counts whatever the number: 10 would otherwise never fire on a boss that stops at 6, the moment kills start going to waste.
+// 1 is the lowest: a player who kills each one as soon as it's up asked for it (OnionNinja); 2 stays the default.
+export const isMinibossReady = ({ current, maxed }, wanted) => Boolean(maxed) || current >= Math.max(1, Number(wanted));
 
 // General alert per tracked boss, keyed by the bossRespawns option's per-boss toggle.
 export const BOSS_RESPAWN_ALERTS = {

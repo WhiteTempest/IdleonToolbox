@@ -51,3 +51,13 @@ public/construction-optimizer.worker.js
 
 # graphify knowledge-graph output (generated locally)
 graphify-out/
+
+# hand-check output (tools/page-check.mjs)
+/.page-check
+
+# redesign screenshot harness (playwright.screens.config.js)
+/.screens/
+/.screens-light/
+/.screens-region/
+/.screens-report/
+/.screens-today/

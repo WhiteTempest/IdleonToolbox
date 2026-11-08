@@ -1,20 +1,24 @@
-import React, { useContext, useState } from 'react';
+import { useContext, useState } from 'react';
 import { AppContext } from '../../../components/common/context/AppProvider';
-import {
-  Card,
-  CardContent,
-  Checkbox,
-  FormControlLabel,
-  Stack,
-  Typography
-} from '@mui/material';
-import Grid from '@mui/material/Grid2';
-import { cleanUnderscore, numberWithCommas, prefix } from '@utility/helpers';
-import { monsterImage } from '@utility/spriteImages';
+import { Box, Stack, Typography } from '@mui/material';
+import { cleanUnderscore, formatNum, prefix, titleCaseName } from '@utility/helpers';
+import { monsterSprite } from '@utility/spriteImages';
 import { NextSeo } from 'next-seo';
-import { CardTitleAndValue } from '../../../components/common/styles';
+import { companions as companionsData } from '@website-data';
+import { MissingData, isSectionFailed } from '@components/common/styles';
 import Tabber from '../../../components/common/Tabber';
 import useTabIndex from '@hooks/useTabIndex';
+import PageSummary from '@components/common/cards/PageSummary';
+import StatTile from '@components/common/cards/StatTile';
+import CardGrid, { LABELED_TILE_MIN } from '@components/common/cards/CardGrid';
+import IconTile from '@components/common/cards/IconTile';
+import ItemCard from '@components/common/cards/ItemCard';
+import GameIcon, { MissingArt } from '@components/common/GameIcon';
+import StatusText from '@components/common/StatusText';
+import Toolbar from '@components/common/Toolbar';
+import useToolbarState from '@hooks/useToolbarState';
+import { getBundles } from '@parsers/misc';
+import { petCrystalIcon } from '@components/account/Pets/PetCollection';
 
 // The bundle list holds two different purchases. The bun_/bon_/ban_ bundles are the classic gem
 // shop ones, and the game ships a banner for each. The bin_ ones are the Pet Mart packs: a
@@ -23,113 +27,115 @@ import useTabIndex from '@hooks/useTabIndex';
 // the other's catalog. The Starter Pack offer gets its own tab for the same reason: three portrait
 // cards of which an account buys exactly one, so it neither fits the banner grid nor counts as three.
 const TABS = ['Bundles', 'Pet Mart', 'Starter Pack'];
+const BUNDLES_TOOLBAR = { hideOwned: false };
 
-const EvolvingBundle = ({ bundle, companion }) => <Card sx={{ height: '100%', opacity: bundle.owned ? 1 : 0.5 }}>
-  <CardContent>
-    <Stack direction={'row'} gap={2} alignItems={'center'}>
-      {companion ? <img width={42} height={42} style={{ objectFit: 'contain' }}
-                        src={monsterImage(companion.name)} alt={companion.name}/> : null}
-      <Stack>
-        <Typography>{cleanUnderscore(bundle.displayName)}</Typography>
-        <Typography variant={'body2'} color={'text.secondary'}>
-          {companion ? cleanUnderscore(companion.name) : ''} · ${bundle.price}
-        </Typography>
-      </Stack>
-    </Stack>
-    <Stack direction={'row'} gap={2} mt={1.5} alignItems={'center'}>
-      <Stack direction={'row'} gap={0.5} alignItems={'center'}>
-        <img src={`${prefix}data/PremiumGem.png`} alt={'gems'} width={20} height={20}/>
-        <Typography variant={'body2'}>{numberWithCommas(bundle.gems)}</Typography>
-      </Stack>
-      <Stack direction={'row'} gap={0.5} alignItems={'center'}>
-        <img src={`${prefix}data/PremiumGem.png`} alt={'pet crystals'} width={20} height={20}
-             style={{ filter: 'hue-rotate(280deg)' }}/>
-        <Typography variant={'body2'}>{numberWithCommas(bundle.petCrystals)}</Typography>
-      </Stack>
-    </Stack>
-  </CardContent>
-</Card>;
+const amountWith = (icon, value) => <Stack direction={'row'} gap={0.5} alignItems={'center'} component={'span'}>
+  {icon}{formatNum(value ?? 0)}
+</Stack>;
+
+// A banner tile is the game's art alone: its name, price and contents are drawn in it, so the tile says nothing beside
+// it. Bought is the art at full strength, not bought dimmed, and the note says which in words. Three banners to a desktop
+// row keep the art's small words readable; the card each, with its price and state under the art, ran the page half again
+// past the old one's height.
+const BANNER_GRID_SX = { gridTemplateColumns: 'repeat(auto-fill, minmax(min(340px, 100%), 1fr))' };
+const OFFER_GRID_SX = { gridTemplateColumns: 'repeat(auto-fill, minmax(min(240px, 100%), 1fr))' };
+const BANNER_ART = { banner: '711 / 130', offer: '320 / 446' };
+
+// A banner at the tile's width. Art the game data lacks (bon_q) draws GameIcon's dashed ? box in the banner's shape, never
+// the browser's broken image. An image that failed before hydration fired its error before React was listening.
+const BannerArt = ({ src, alt, aspectRatio }) => {
+  const [failed, setFailed] = useState(false);
+  const shape = { width: '100%', aspectRatio, display: 'flex' };
+  if (failed) return <MissingArt role={'img'} aria-label={alt} style={{ ...shape, fontSize: 24 }}>?</MissingArt>;
+  return <Box component={'img'} src={`${prefix}${src}`} alt={alt} onError={() => setFailed(true)}
+              ref={(img) => { if (img?.complete && img.naturalWidth === 0) setFailed(true); }}
+              sx={{ ...shape, height: 'auto', display: 'block' }}/>;
+};
 
 const Bundles = () => {
   const { state } = useContext(AppContext);
-  const [showMissingOnly, setShowMissingOnly] = useState(false);
   const [tab] = useTabIndex(TABS);
-
-  const bundles = state?.account?.bundles || [];
-  const companions = state?.account?.companions?.list || [];
-
-  const isPetMart = tab === 1;
-  const isStarterOffer = tab === 2;
-  const tabOf = ({ evolving, starterOffer }) => (evolving ? 1 : starterOffer ? 2 : 0);
-  const tabBundles = bundles.filter((bundle) => tabOf(bundle) === tab);
+  const failed = isSectionFailed(state?.account, 'bundles');
+  const [view, setView, resetView] = useToolbarState('bundles', BUNDLES_TOOLBAR);
+  const hideOwned = !failed && view.hideOwned;
+  // A failed section draws the game's bundles with no owned state (the parser's own empty save)
+  const bundles = failed ? getBundles(undefined) : state?.account?.bundles ?? [];
+  const classic = bundles.filter(({ evolving, starterOffer }) => !evolving && !starterOffer);
+  const packs = bundles.filter(({ evolving }) => evolving);
+  const offer = bundles.filter(({ starterOffer }) => starterOffer);
+  const ownedOf = (list) => (failed ? '-' : `${formatNum(list.filter(({ owned }) => owned).length)} / ${formatNum(list.length)}`);
+  const isOwned = ({ owned }) => !failed && Boolean(owned);
   // The offer is one purchase: owned once any card is, and then nothing of it is missing.
-  const offerOwned = isStarterOffer && tabBundles.some(({ owned }) => owned);
-  const visibleBundles = isStarterOffer
-    ? (showMissingOnly && offerOwned ? [] : tabBundles)
-    : tabBundles.filter(({ owned }) => !(showMissingOnly && owned));
+  const offerOwned = offer.some(isOwned);
 
-  const ownedCount = isStarterOffer ? (offerOwned ? 1 : 0) : tabBundles.filter(({ owned }) => owned).length;
-  const totalCount = isStarterOffer ? 1 : tabBundles.length;
-  const countTitle = isPetMart ? 'Owned Packs' : isStarterOffer ? 'Owned Offer' : 'Owned Bundles';
-  const allOwnedText = isPetMart
-    ? 'You\'ve purchased all Pet Mart packs'
-    : isStarterOffer ? 'You\'ve purchased the Starter Pack offer' : 'You\'ve purchased all bundles';
+  const tabBundles = [classic, packs, offer][tab] ?? [];
+  const shown = tab === 2
+    ? (hideOwned && offerOwned ? [] : offer)
+    : tabBundles.filter((bundle) => !(hideOwned && isOwned(bundle)));
+
+  const stateWord = (bundle) => (failed ? null : isOwned(bundle)
+    ? <StatusText status={'done'}>Owned</StatusText>
+    : <Typography variant={'body2'} color={'text.secondary'}>Not owned</Typography>);
+  const priceOf = ({ price }) => (price != null ? formatNum(price, 'price') : null);
+  const bannerTile = (bundle, art) => {
+    const state = stateWord(bundle);
+    const price = priceOf(bundle);
+    return <IconTile key={bundle.name} height={'auto'} status={failed || isOwned(bundle) ? undefined : 'dim'}
+                     details={state || price ? <Stack gap={0.5}>
+                       {state}
+                       {price ? <Typography variant={'body2'}>{price}</Typography> : null}
+                     </Stack> : undefined}
+                     icon={<BannerArt src={`data/${bundle.image ?? bundle.name}.png`} aspectRatio={BANNER_ART[art]}
+                                      alt={['Bundle', price].filter(Boolean).join(', ')}/>}/>;
+  };
+  // A Pet Mart pack has no art: its pet's sprite, its name and price, its pet and currencies in the note
+  const packTile = (bundle) => {
+    const companion = companionsData?.[bundle.companionIndex];
+    const name = titleCaseName(cleanUnderscore(bundle.displayName));
+    return <IconTile key={bundle.name} icon={companion?.name ? monsterSprite(companion.name) : undefined} alt={name} label={name}
+                     value={priceOf(bundle) ?? '-'} status={!failed && !isOwned(bundle) ? 'missing' : undefined}
+                     details={<Stack gap={1}>
+                       <Stack gap={0.25}>
+                         <Typography variant={'body2'} fontWeight={500}>{name}</Typography>
+                         {stateWord(bundle)}
+                       </Stack>
+                       <ItemCard.Facts rows={[
+                         companion?.name ? ['Pet', cleanUnderscore(companion.name)] : null,
+                         ['Price', priceOf(bundle) ?? '-'],
+                         ['Gems', amountWith(<GameIcon src={'data/PremiumGem.png'} size={16} alt={'Gems'}/>, bundle.gems)],
+                         ['Pet crystals', amountWith(petCrystalIcon(16), bundle.petCrystals)]
+                       ]}/>
+                     </Stack>}/>;
+  };
 
   return <>
     <NextSeo
       title="Bundles | Idleon Toolbox"
       description="Track your purchased premium bundles and their bonuses in Legends of Idleon"
     />
-    <Stack direction={'row'} flexWrap={'wrap'} gap={3} mb={4} alignItems="center">
-      <CardTitleAndValue
-        title={countTitle}
-        value={`${ownedCount} / ${totalCount}`}
-      />
-      <FormControlLabel
-        control={
-          <Checkbox
-            checked={showMissingOnly}
-            onChange={(e) => setShowMissingOnly(e.target.checked)}
-          />
-        }
-        label="Show missing only"
-      />
-    </Stack>
+    {failed ? <MissingData name={'Bundles'} failed atZero/> : null}
+    <PageSummary>
+      <StatTile label={'Bundles'} value={ownedOf(classic)}/>
+      <StatTile label={'Pet Mart packs'} value={ownedOf(packs)}/>
+      <StatTile label={'Starter Pack'} value={failed ? '-' : offerOwned
+        ? <StatusText status={'done'}>Owned</StatusText>
+        : 'Not owned'}/>
+    </PageSummary>
     <Tabber tabs={TABS} keepChildren>
-      <Grid container spacing={2}>
-        {isStarterOffer && visibleBundles.length > 0 ? <Grid size={12}>
-          <Typography variant={'body2'} color={'text.secondary'} mb={1}>
-            One per account. Each card also adds +1,000 base carry capacity.
-          </Typography>
-          <Stack direction={'row'} gap={2} flexWrap={'wrap'}>
-            {visibleBundles.map(({ name, owned, image }) => <img
-              key={name}
-              style={{ height: 445, maxWidth: '100%', objectFit: 'contain', opacity: owned ? 1 : 0.5 }}
-              src={`${prefix}data/${image}.png`}
-              alt={name}
-            />)}
-          </Stack>
-        </Grid> : visibleBundles.length > 0 ? (
-          visibleBundles.map((bundle) => {
-            const { name, owned, evolving } = bundle;
-            return (
-              <Grid size={{ xs: 12, sm: 12, md: 6, lg: 4 }} key={name}>
-                {evolving
-                  ? <EvolvingBundle bundle={bundle} companion={companions?.[bundle.companionIndex]}/>
-                  : <img
-                    style={{ width: '100%', height: '100%', objectFit: 'contain', opacity: owned ? 1 : 0.5 }}
-                    src={`${prefix}data/${name}.png`}
-                    alt={name}
-                  />}
-              </Grid>
-            );
-          })
-        ) : (
-          <Grid size={12}>
-            <Typography variant="body1" color="text.secondary">{allOwnedText}</Typography>
-          </Grid>
-        )}
-      </Grid>
+      <Box>
+        {failed ? null : <Toolbar state={view} defaults={BUNDLES_TOOLBAR} onChange={setView} onReset={resetView}
+                                  total={tabBundles.length} shown={shown.length}
+                                  noun={tab === 1 ? 'packs' : tab === 2 ? 'offers' : 'bundles'}>
+          <Toolbar.Filter name={'hideOwned'} label={'Hide owned'}/>
+        </Toolbar>}
+        {tab === 2 && shown.length ? <Typography variant={'body2'} color={'text.secondary'} sx={{ mb: 2 }}>
+          One per account. Each card also adds +1,000 base carry capacity.
+        </Typography> : null}
+        {shown.length ? <CardGrid size={'icon'} fill={tab === 1 ? LABELED_TILE_MIN : true}
+                                  sx={tab === 0 ? BANNER_GRID_SX : tab === 2 ? OFFER_GRID_SX : undefined}>
+          {shown.map((bundle) => (tab === 1 ? packTile(bundle) : bannerTile(bundle, tab === 2 ? 'offer' : 'banner')))}
+        </CardGrid> : null}
+      </Box>
     </Tabber>
   </>
 };

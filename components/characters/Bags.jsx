@@ -1,57 +1,30 @@
-import Tooltip from '../Tooltip';
-import { notateNumber, prefix } from 'utility/helpers';
-import styled from '@emotion/styled';
+import { cleanUnderscore } from 'utility/helpers';
+import { formatGame } from '@utility/gameNotation';
 import ItemDisplay from '../common/ItemDisplay';
 import { HIDDEN_INVENTORY_BAG } from '@parsers/character';
-import { Card, CardContent, Divider, Stack, Typography, useMediaQuery } from '@mui/material';
+import Panel from '@components/common/cards/Panel';
+import CardGrid from '@components/common/cards/CardGrid';
+import IconTile from '@components/common/cards/IconTile';
 
-const Bags = ({ bags, capBags }) => {
-  const isXs = useMediaQuery('(max-width: 370px)');
-
-  return (
-    <Card variant={'outlined'} sx={{height:'fit-content'}}>
-      <CardContent>
-        <Stack sx={{ width: 200 }} alignItems={'center'}>
-          <Stack direction={'row'} flexWrap={'wrap'}>
-            {bags?.map((bag, index) => {
-              if (bag?.displayName === HIDDEN_INVENTORY_BAG) return;
-              return <Tooltip key={bag?.displayName + index} title={<ItemDisplay {...bag}/>}>
-                <Bag exists={bag?.acquired}
-                     src={`${prefix}data/${bag?.rawName}.png`} alt=""/>
-              </Tooltip>;
-            })}
-          </Stack>
-          <Divider sx={{ my: 2 }} flexItem/>
-          <Stack direction={'row'} flexWrap={'wrap'} gap={isXs ? 1 : 0} justifyContent={'center'}>
-            {capBags?.map((item, index) => {
-              const { displayName, rawName, capacityPerSlot } = item;
-              return <Tooltip title={<ItemDisplay {...item}/>} key={displayName + index}>
-                <Stack alignItems={'center'}>
-                  <Bag exists={true}
-                       src={`${prefix}data/${rawName}.png`}
-                       alt=""/>
-                  <Typography variant={'caption'}>{notateNumber(capacityPerSlot)}</Typography>
-                </Stack>
-              </Tooltip>
-            })}
-          </Stack>
-        </Stack>
-      </CardContent>
-    </Card>
-  );
-};
-
-const Bag = styled.img`
-  filter: ${({ exists }) => exists ? 'grayscale(0)' : 'grayscale(1)'};
-  opacity: ${({ exists }) => exists ? '1' : '0.3'};
-  justify-self: center;
-  width: 48px;
-  height: 48px;
-
-  @media (max-width: 370px) {
-    width: 36px;
-    height: 36px;
-  }
-`;
+// The bag is all its tile says: the sheet's 40 px, as talents, skills and equipment (players asked for bigger icons). The
+// inventory bags keep the sheet's 44 px floor though they show no number: a bare tile went to 36 px beside another
+// character, under the sprite.
+const Bags = ({ bags, capBags }) => <Panel title={'Bags'}>
+  <Panel.Group label={'Inventory bags'}>
+    <CardGrid size={'icon'} sheetColumns={[8, 6]}>
+      {bags?.filter((bag) => bag?.displayName !== HIDDEN_INVENTORY_BAG).map((bag, index) => <IconTile
+        key={bag?.displayName + index} icon={`data/${bag?.rawName}.png`} alt={cleanUnderscore(bag?.displayName ?? '')} iconSize={40}
+        status={bag?.acquired ? undefined : 'missing'} details={<ItemDisplay {...bag}/>}/>)}
+    </CardGrid>
+  </Panel.Group>
+  <Panel.Group label={'Carry bags'}>
+    <CardGrid size={'icon'} sheetColumns={[8, 4]}>
+      {/* The game draws every MaxCapacity kind in Big */}
+      {capBags?.map((item, index) => <IconTile key={item?.displayName + index} icon={`data/${item?.rawName}.png`}
+                                               alt={cleanUnderscore(item?.displayName ?? '')} iconSize={40}
+                                               value={formatGame(item?.capacityPerSlot, 'Big', { whole: true })} details={<ItemDisplay {...item}/>}/>)}
+    </CardGrid>
+  </Panel.Group>
+</Panel>;
 
 export default Bags;

@@ -36,14 +36,14 @@ export const baseTrackers = {
           {
             name: 'miniBosses',
             type: 'input',
-            props: { label: 'Bosses threshold', value: 2, minValue: 2 },
+            props: { label: 'Bosses threshold', value: 2, minValue: 1 },
             checked: true
           },
           {
             name: 'bossRespawns',
             type: 'array',
             checked: true,
-            helperText: 'Alert when Dr Defecaus or Baba Yaga is up, based on the Bosses timer. Each boss can be turned off on its own',
+            helperText: 'Alert when Dr Defecaus or Baba Yaga is up, based on the timers. Each boss can be turned off on its own',
             props: { value: { drDefecaus: true, babaYaga: true } }
           },
           { name: 'newCharacters', checked: true },

@@ -1,116 +1,71 @@
-import React, { Fragment } from 'react';
-import { Box, Card, CardContent, Divider, Stack, Typography } from '@mui/material';
-import { cleanUnderscore, commaNotation, notateNumber, prefix } from '@utility/helpers';
-import ProgressBar from '@components/common/ProgressBar';
-import Tooltip from '@components/Tooltip';
-import InfoIcon from '@mui/icons-material/Info';
+import React from 'react';
+import { Box, LinearProgress, Stack } from '@mui/material';
+import { cleanUnderscore, formatNum } from '@utility/helpers';
+import { formatGame } from '@utility/gameNotation';
 import { getSpelunkingChapterName } from '@parsers/world-7/spelunking';
+import { createBreakdown, flatLines } from '@parsers/breakdown';
+import { Breakdown } from '@components/common/Breakdown/Breakdown';
+import CardGrid from '@components/common/cards/CardGrid';
+import Panel from '@components/common/cards/Panel';
+import { DIM } from '@components/common/cards/tokens';
 
-const milestoneCellSx = { textAlign: 'right', px: 1.25, py: 0.25 };
+// The game fills a chapter's { with its bonus in Small (Spelunk.ChapterBonus) and } with the same bonus in MultiplierInfo
+const bonusText = (value, isMulti) => (isMulti ? formatNum(value, 'mult', { bare: true }) : formatGame(value, 'Spelunk.ChapterBonus'));
 
-const MilestonesTooltip = ({ milestones, formatBonus, unit }) => (
-  <Stack gap={0.75}>
-    <Typography variant={'subtitle2'}>Levels to reach % of cap</Typography>
-    <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, auto)' }}>
-      {['Cap', 'Level', 'Bonus'].map((header) => (
-        <Typography key={header} variant={'caption'} color={'text.secondary'} sx={milestoneCellSx}>{header}</Typography>
-      ))}
-      {milestones.map(({ percent, level, bonus, reached }) => {
-        const rowSx = { ...milestoneCellSx, opacity: reached ? 0.5 : 1 };
-        return (
-          <Fragment key={percent}>
-            <Typography variant={'body2'} sx={rowSx}>{percent}%</Typography>
-            <Typography variant={'body2'} sx={rowSx}>{commaNotation(level)}</Typography>
-            <Typography variant={'body2'} sx={rowSx}>{formatBonus(bonus)}{unit}</Typography>
-          </Fragment>
-        );
-      })}
-    </Box>
-  </Stack>
-);
+const LINE_SX = { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1 };
+// On a phone the pages and the milestone take a line each, never a word apart
+const META_SX = { ...LINE_SX, flexWrap: 'wrap', rowGap: 0.5, '& > *': { whiteSpace: 'nowrap' } };
+const BAR_SX = { flex: 1, height: 6, borderRadius: 3, bgcolor: 'divider' };
+// The level sits level with the chapter's name, not in the middle of its three lines
+const ROW_SX = { alignItems: 'flex-start' };
+const UNREAD_SX = { alignItems: 'flex-start', opacity: DIM };
 
-const Chapters = ({ chapters }) => {
-  if (!chapters || !Array.isArray(chapters)) {
-    return <div>No chapters available</div>;
-  }
-
-  return (
-    <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '24px' }}>
-      {chapters.map((chapterGroup, groupIndex) => {
-        if (!chapterGroup || !Array.isArray(chapterGroup) || chapterGroup.length === 0) {
-          return null;
-        }
-
-        return (
-          <Stack key={groupIndex}>
-            <Stack direction={'row'} gap={1} alignItems={'center'} mb={1}>
-              <img style={{ width: 32, height: 32 }} src={`${prefix}data/Spelunking${groupIndex}.png`} alt=""/>
-              <Stack direction={'row'} alignItems={'center'} gap={1}>
-                <Typography variant="h6">{getSpelunkingChapterName(groupIndex)}</Typography>
-              </Stack>
-            </Stack>
-            <Card variant={'outlined'} sx={{ height: '100%' }}>
-              <CardContent>
-                {chapterGroup.map((chapter, index) => {
-                  // Format bonus values for replacements
-                  const smallBonus = notateNumber(chapter.bonus, 'Small');
-                  const multiplierBonus = notateNumber(chapter.bonus, 'MultiplierInfo');
-
-                  // Replace placeholders in chapter name
-                  let chapterName = cleanUnderscore(chapter.name).replace('|', ' ');
-                  chapterName = chapterName.replace(/{/g, smallBonus);
-                  chapterName = chapterName.replace(/}/g, multiplierBonus);
-
-                  const isDecay = chapter.maxBonus != null;
-
-                  // Format max bonus with same notation the name uses
-                  const hasMultiplierPlaceholder = chapter.name?.includes('}');
-                  const formatBonus = (value) => notateNumber(value, hasMultiplierPlaceholder ? 'MultiplierInfo' : 'Small');
-                  const formattedBonus = formatBonus(chapter.bonus);
-                  const formattedMax = isDecay
-                    ? formatBonus(chapter.maxBonus)
-                    : null;
-
-                  return (
-                    <Fragment key={chapter.name || index}>
-                      <Stack sx={{ opacity: chapter.level === 0 ? 0.5 : 1 }}>
-                        <Stack direction={'row'} gap={1} alignItems={'center'}>
-                          <Stack direction={'row'} alignItems={'center'} gap={1} flex={1}>
-                            <Typography variant="subtitle1">
-                              {chapterName}
-                            </Typography>
-                            <Typography variant="subtitle2" noWrap sx={{ ml: 'auto' }}>
-                              Lv. {chapter.level}
-                            </Typography>
-                            {chapter.milestones ? (
-                              <Tooltip title={<MilestonesTooltip milestones={chapter.milestones} formatBonus={formatBonus}
-                                                                 unit={chapter.name?.match(/[{}](x|%)/)?.[1] ?? ''}/>}>
-                                <InfoIcon sx={{ fontSize: 14 }} aria-label={'Levels to reach % of cap'}/>
-                              </Tooltip>
-                            ) : null}
-                          </Stack>
-                        </Stack>
-                        {isDecay ? (
-                          <ProgressBar
-                            percent={chapter.progression}
-                            tooltipTitle={`${formattedBonus} / ${formattedMax} cap`}
-                          />
-                        ) : (
-                          <Typography variant={'body2'} sx={{ mt: 0.5 }}>+{chapter.scalingValue} per level</Typography>
-                        )}
-                        <Typography variant="body2" color="text.secondary">Required pages: {commaNotation(chapter.requiredPages)}</Typography>
-                      </Stack>
-                      {chapterGroup.length - 1 !== index && <Divider sx={{ my: 2 }} />}
-                    </Fragment>
-                  );
-                })}
-              </CardContent>
-            </Card>
-          </Stack>
-        );
-      })}
-    </Box>
-  );
+// A chapter in three lines, as the old page had it: its bonus and level; the bar toward the cap (the name holds the
+// bonus, so the bar names only the cap) or the bonus a level gives; the pages it needs and its next milestone
+const chapterRow = (chapter, index) => {
+  const isMulti = Boolean(chapter?.name?.includes('}'));
+  const unit = chapter?.name?.match(/[{}](x|%)/)?.[1] ?? '';
+  const title = cleanUnderscore(chapter?.name).replace('|', ' ')
+    .replace(/{/g, bonusText(chapter?.bonus, false)).replace(/}/g, bonusText(chapter?.bonus, true));
+  const next = chapter?.milestones?.find(({ reached }) => !reached);
+  const nextText = next ? `${next.percent}% at Lv ${formatNum(next.level)}` : 'All reached';
+  // Info 5: the levels to each share of the cap, a table inside a hover note before, open as a list from the next one.
+  // The drawer is named after the chapter and totals the trigger's text.
+  const milestones = chapter?.milestones ? createBreakdown('Levels to reach % of cap', nextText,
+    flatLines(chapter.milestones.map(({ percent, level, bonus, reached }) => ({
+      name: `${percent}% of cap`,
+      value: level,
+      formatted: `Lv ${formatNum(level)} · ${bonusText(bonus, isMulti)}${unit}${reached ? ' · reached' : ''}`
+    }))), { combine: 'list' }) : null;
+  const percent = chapter?.progression ?? 0;
+  return <Panel.Row key={chapter?.name || index} name={title} value={formatNum(chapter?.level ?? 0, 'level')}
+                    sx={chapter?.level === 0 ? UNREAD_SX : ROW_SX}
+                    sub={<Stack component={'span'} gap={0.5} sx={{ mt: 0.5 }}>
+                      {chapter?.maxBonus != null
+                        ? <Box component={'span'} sx={LINE_SX}>
+                          <LinearProgress variant={'determinate'} value={Math.min(100, Math.max(0, percent))}
+                                          color={percent >= 100 ? 'success' : 'primary'} aria-label={`${title}: share of the cap`}
+                                          sx={BAR_SX}/>
+                          <Box component={'span'} sx={{ whiteSpace: 'nowrap' }}>
+                            {`${bonusText(chapter.maxBonus, isMulti)}${unit} cap`}
+                          </Box>
+                        </Box>
+                        : <span>{`+${formatGame(chapter?.scalingValue ?? 0, 'Spelunk.ChapterBonus')}${unit} per level`}</span>}
+                      <Box component={'span'} sx={META_SX}>
+                        <span>{`${formatNum(chapter?.requiredPages ?? 0)} pages required`}</span>
+                        {milestones ? <span><Breakdown asValue data={milestones} title={`${title}: milestones`}>
+                          {next ? `Next: ${nextText}` : nextText}</Breakdown></span> : null}
+                      </Box>
+                    </Stack>}/>;
 };
+
+// Each chapter group is a Panel of its chapters, the groups side by side (3 across at 1920, 2 at 1366), as the old page
+// laid them out: one group a row, each chapter a card, took a full screen more to scroll
+const Chapters = ({ chapters }) => <CardGrid size={'l'}>
+  {chapters?.map((chapterGroup, groupIndex) => (chapterGroup?.length
+    ? <Panel key={groupIndex} icon={`data/Spelunking${groupIndex}.png`} title={getSpelunkingChapterName(groupIndex)}>
+      {chapterGroup.map(chapterRow)}
+    </Panel> : null))}
+</CardGrid>;
 
 export default Chapters;
