@@ -5,6 +5,18 @@ import { replayWhatsNew } from '@utility/whatsNew';
 /* eslint-disable react/jsx-key */
 export const patchNotes = [
   {
+    'ver': '4.0.3',
+    'gameVer': '2.3.561',
+    'date': '09/11/2026',
+    'features': [
+      'Bubbles: the "Dim past level" setting explains that leaving it empty turns it off',
+      'Farming: Exotic Rotation has a Table view, one line per upgrade, so about twice the weeks fit a screen; Cards keeps the old look'
+    ],
+    'fixes': [
+      'Death Note: each world\'s table title is in its world\'s colour again'
+    ]
+  },
+  {
     'ver': '4.0.2',
     'gameVer': '2.3.561',
     'date': '08/11/2026',
@@ -16,11 +28,23 @@ export const patchNotes = [
       'Characters: switch characters from the pinned bar, step by step or from a list of all of them, and Sections is a two-column checklist',
       'Stamps: each category follows the game\'s 4-column book (or one row each with Rows), colours show which stamps can level up or are short on coins or materials, each state is a one-click filter again, and hovering a stamp previews it',
       'Pets: each pet shows its bonus again, with Details for tradable copies, the Pet Mart+ price and when it was last in the Pet Mart',
-      'Pets: Tradable and Missing are one-click filters again'
+      'Pets: Tradable and Missing are one-click filters again',
+      'Vote Ballot: this week\'s bonus stands out with a green border',
+      'Killroy: this week\'s schedule sits apart from the coming weeks',
+      'Tournament: a notice when you\'re not registered for the Pet Tournament or the Raid',
+      'Dashboard: the Vote and Meritocracy names link to their Vote Ballot tab',
+      'Dashboard: on a narrow window, each Account alerts group starts on its name\'s line, so the list is shorter',
+      'Refinery: each salt\'s power, rank up timer and fuel sit side by side in the salt table, and the squires sit beside the cycle times again',
+      'Tables on a phone: an opened row has more room, its numbers under the row\'s own',
+      'Bubbles: the target setting no longer adds a % under each bubble; the % is in its note and the table'
     ],
     'fixes': [
       'Dashboard: two World 7 alerts no longer sit out of line with the rest',
-      'Stamps: stamps you can level with coins no longer read as levelling at the previous reducer'
+      'Stamps: stamps you can level with coins no longer read as levelling at the previous reducer',
+      'Outposts: with Details on, the five ranks keep the game\'s order on every card',
+      'Sailing: artifact forms show in their colours again',
+      'Tournament: companion power shows its icon, and the champions\' names show in full',
+      'Refinery: salt tables no longer scroll sideways at some window widths, and a salt card no longer says "Rank up" while the table says to wait'
     ]
   },
   {
