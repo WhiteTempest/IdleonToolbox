@@ -5,15 +5,46 @@ import { replayWhatsNew } from '@utility/whatsNew';
 /* eslint-disable react/jsx-key */
 export const patchNotes = [
   {
+    'ver': '4.0.4',
+    'gameVer': '2.3.561',
+    'date': '10/11/2026',
+    'features': [
+      'Worlds, Account and Tools menus: bigger page names and icons on larger screens, so every icon can be made out',
+      'Characters: each character shows what it\'s doing, how long it\'s been AFK and its map under its name, even with no section on',
+      'Breakdowns: Copy as text and Copy as image are buttons next to the search again, no menu to open',
+      'Farming: the Bean Trade tile\'s i shows the exact amount once it passes a billion',
+      'Library: set your own book counts for the First N books take times in the General page settings (default 20 to 100)',
+      'Active Stuff Calculator: Obols now shows Obol Fragments gained per hour and per day',
+      'Goals: percent of max goals show two decimals and the level, so close entries read apart',
+      'Slab: clicking an item now offers a link to its wiki page',
+      'Dashboard: the Jelly operator operations alert has a minimum, so it only shows once that many operations are unused',
+      'Levels ahead setting on Coral Reef, Coral Kid, Minehead, Sushi Station, Jelly Operator and Sneaking upgrades shows the total cost of several levels',
+      'Equinox can show the bar requirement a few upgrade levels ahead and how long it takes to fill',
+      'Tome: entries with in-game help text now show it behind an info button'
+    ],
+    'fixes': [
+      'Farming: a crop family\'s max time under a second shows in milliseconds again instead of "<1s"',
+      'Sneaking upgrades were missing their Jade coin cost'
+    ]
+  },
+  {
     'ver': '4.0.3',
     'gameVer': '2.3.561',
     'date': '09/11/2026',
     'features': [
       'Bubbles: the "Dim past level" setting explains that leaving it empty turns it off',
-      'Farming: Exotic Rotation has a Table view, one line per upgrade, so about twice the weeks fit a screen; Cards keeps the old look'
+      'Farming: Exotic Rotation has a Table view, one line per upgrade, so about twice the weeks fit a screen; Cards keeps the old look',
+      'Top bar: the line under your name shows how long ago the game last saved (e.g. "Updated 12 min ago"); the exact time is in the account menu',
+      'Refinery: a paused salt shows how long its rank-up would take once it runs again',
+      'Page bar: the button with the world\'s name (e.g. "World 6") lists the worlds, each opening its first page; the Worlds menu still lists every page',
+      'Tournament: teams show their pets as icons, the name on hover or tap and a "+" on Pet Mart+ pets, so a match card is much shorter',
+      'Exotic Market: each card shows its share of the hard cap beside the effect, with no Details pill to press',
+      'Gem Shop: each item says what it does on its card, no Details pill needed'
     ],
     'fixes': [
-      'Death Note: each world\'s table title is in its world\'s colour again'
+      'Death Note: each world\'s table title is in its world\'s colour again',
+      'Royal Armory: upgrade costs show how much you have again for very large stored resources',
+      'Upgrade Optimizers: the Table view\'s rows are one line again, so more of the plan fits on screen'
     ]
   },
   {

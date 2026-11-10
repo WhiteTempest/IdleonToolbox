@@ -30,8 +30,12 @@ const Badge = ({ badge, small, color }) => (badge === 'up'
     lineHeight: '16px',
     color: 'background.default',
     bgcolor: 'text.secondary',
-    // The small tile's rank (the characters board's .rk)
-    ...(small ? { minWidth: 15, height: 15, px: '2px', fontWeight: 500, lineHeight: '15px', color: 'text.primary', bgcolor: 'action.selected' } : {}),
+    // The small tile's rank (the characters board's .rk), on a solid disc: the old see-through grey let the sprite under
+    // it swallow the white number, a skill's on a Lab sprite most (#78). The same grey, mixed opaque
+    ...(small ? {
+      minWidth: 15, height: 15, px: '2px', fontWeight: 500, lineHeight: '15px', color: 'text.primary',
+      bgcolor: 'color-mix(in srgb, var(--mui-palette-text-primary) 24%, var(--mui-palette-background-default))'
+    } : {}),
     ...(color ? { bgcolor: color, color: 'common.black', fontWeight: 700 } : {})
   }}>{badge}</Box>);
 
@@ -48,13 +52,10 @@ const glowSx = (glow) => (theme) => {
 // card (Bubbles' cauldrons, about 50 px) does the same.
 const LONG_VALUE = 7;
 const LONG_VALUE_SX = { '@container (max-width: 49.95px)': { fontSize: 11 } };
-// A full tile's sub lines (Bubbles' target), the tile's own width their container: 11 px below 58 px,
-// five to a narrow card, and 10 px below 52 px (Bubbles' four cauldrons across at 1920), where "/ 200,000" at 11 px
-// reached the tile's edge
+// A full tile's sub lines (Bubbles' target), 12 px at every width: a line that would not fit takes a shorter form
+// (Bubbles' "/ 200K"), never a smaller size, which reached 10 px on Bubbles' 50 px tiles
 const FULL_SUB_SX = {
-  fontSize: 12, lineHeight: '14px', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap', color: 'text.secondary',
-  '@container (max-width: 57.95px)': { fontSize: 11 },
-  '@container (max-width: 51.95px)': { fontSize: 10 }
+  fontSize: 12, lineHeight: '14px', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap', color: 'text.secondary'
 };
 const smallTileSx = (hasValue, empty) => ({
   position: 'relative',

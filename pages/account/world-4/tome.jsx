@@ -2,8 +2,10 @@ import React, { Fragment, useContext, useState } from 'react';
 import { AppContext } from '@components/common/context/AppProvider';
 import { NextSeo } from 'next-seo';
 import { Box, Stack, Typography } from '@mui/material';
-import { cleanUnderscore, formatNum, getTabs } from '@utility/helpers';
+import { cleanUnderscore, formatNum, gameLines, getTabs } from '@utility/helpers';
 import GameIcon from '@components/common/GameIcon';
+import InfoButton from '@components/common/InfoButton';
+import WithLastWord from '@components/common/WithLastWord';
 import { formatGame, tomeQuantity } from '@utility/gameNotation';
 import Tabber from '../../../components/common/Tabber';
 import { PAGES } from '@components/constants';
@@ -17,6 +19,7 @@ import { segmentColors } from '@parsers/world-4/tome';
 import { createBreakdown, flatLines } from '@parsers/breakdown';
 import PageSummary from '@components/common/cards/PageSummary';
 import StatTile from '@components/common/cards/StatTile';
+import BonusStrip from '@components/common/cards/BonusStrip';
 import CardGrid from '@components/common/cards/CardGrid';
 import ItemCard from '@components/common/cards/ItemCard';
 import Panel from '@components/common/cards/Panel';
@@ -33,12 +36,13 @@ const TIERS = ['bronze', 'silver', 'gold', 'blue'];
 
 // The rank's word art ("TOP 25%") beside its words at its own size: StatTile's 24 px icon shrank it past reading, and
 // pixel art never scales up (5e's Bell).
-// A titled row of bonus tiles that wraps
-const BonusStrip = ({ title, children }) => <Stack gap={1} component={'section'} aria-label={title}>
-  <Typography variant={'groupLabel'} component={'h2'} color={'text.secondary'}>{title}</Typography>
-  <Stack direction={'row'} flexWrap={'wrap'} gap={1}>{children}</Stack>
-</Stack>;
 const RankBadge = ({ top }) => <GameIcon src={`data/TomeTop${top}.png`} fit={'bounds'} size={[102, 17]} alt={''}/>;
+
+// The game's (Tap for more info) text. Only entries whose name carried the 膛 mark open it (extraction drops the mark
+// and leaves its underscore); the first row's info is the Tome score panel's header, not a help text.
+const helpText = ({ name, info }) => info && info !== 'filler' && /(_|\(Tap_for_more_info\))$/.test(name ?? '')
+  ? gameLines(info).join('\n')
+  : null;
 
 // The tier the parser picked, read back off its colour (a locked entry has none); its word and the theme's colour for it
 const tierOf = (color) => Object.keys(segmentColors).find((tier) => segmentColors[tier] === color) ?? null;
@@ -222,7 +226,14 @@ const Tome = () => {
                 tier && !maxed ? <Box component={'span'} sx={{ color: tierColor(tier) }}>{tierName(tier)}</Box> : null,
                 position === 19 ? 'Uses your active character' : null
               ].filter(Boolean);
-              return <ItemCard key={'tome-bonus' + index} title={cleanUnderscore(name?.replace('(Tap_for_more_info)', ''))}
+              const title = cleanUnderscore(name?.replace('(Tap_for_more_info)', '')).trim();
+              const help = helpText(bonus);
+              return <ItemCard key={'tome-bonus' + index}
+                               title={help ? <WithLastWord text={title}>
+                                 <InfoButton label={title} sx={{ ml: 0.5 }}>
+                                   <Typography variant={'body2'} component={'span'} sx={{ whiteSpace: 'pre-line' }}>{help}</Typography>
+                                 </InfoButton>
+                               </WithLastWord> : title}
                                dimmed={locked} status={locked ? 'locked' : maxed ? 'maxed' : undefined}
                                meta={meta.map((part, partIndex) => <Fragment key={partIndex}>{partIndex ? ' · ' : null}{part}</Fragment>)}
                                more={detailsSection({ ...bonus, points }, tier)}>

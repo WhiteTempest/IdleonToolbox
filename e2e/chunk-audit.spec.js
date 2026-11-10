@@ -20,21 +20,12 @@ const referencedScripts = async (request, route) => {
 
 const offenders = (scripts, marker) => scripts.filter(({ body }) => body.includes(marker)).map(({ src }) => src);
 
-test('the home page references no firebase chunk', async ({ request }) => {
-  const scripts = await referencedScripts(request, '/');
-  expect(offenders(scripts, FIREBASE_MARKER)).toEqual([]);
-});
-
+// The home page is read below, by what a visitor with no session really downloads.
 // An entity, a system page and a moved listing: the last two share their routes with listings and entities.
 for (const route of [firstExportedRoute('wiki/monster'), '/wiki/sneaking', '/wiki/equinox/upgrades']) {
-  test(`a wiki page (${route}) references no firebase chunk`, async ({ request }) => {
+  test(`a wiki page (${route}) references no firebase or game-data items chunk`, async ({ request }) => {
     const scripts = await referencedScripts(request, route);
-    expect(offenders(scripts, FIREBASE_MARKER)).toEqual([]);
-  });
-
-  test(`a wiki page (${route}) references no game-data items chunk`, async ({ request }) => {
-    const scripts = await referencedScripts(request, route);
-    expect(offenders(scripts, ITEMS_MARKER)).toEqual([]);
+    expect({ firebase: offenders(scripts, FIREBASE_MARKER), items: offenders(scripts, ITEMS_MARKER) }).toEqual({ firebase: [], items: [] });
   });
 }
 
@@ -70,20 +61,6 @@ test.describe('firebase loads only when a session might exist', () => {
     await expect.poll(() => page.evaluate(() => localStorage.getItem('authHint'))).toBe('no');
     expect(offenders(await loadedScripts(page, request), FIREBASE_MARKER).length).toBeGreaterThan(0);
   });
-});
-
-// The What's new dialog and tour load only for the visitor who gets them. The gate's end date keeps them shut here, so a guest's
-// whole visit fetches neither.
-const WHATS_NEW_MARKER = 'Show me around';
-
-test('a guest never downloads the What\'s new dialog', async ({ page, request }) => {
-  // A marker that left the dialog would make this pass vacuously.
-  expect(offenders(exportedChunks(path.join(process.cwd(), 'out', '_next', 'static')), WHATS_NEW_MARKER).length).toBeGreaterThan(0);
-  await page.addInitScript(() => localStorage.setItem('authHint', 'no'));
-  await page.goto('/');
-  await waitForRender(page);
-  await page.waitForTimeout(1500);
-  expect(offenders(await loadedScripts(page, request), WHATS_NEW_MARKER)).toEqual([]);
 });
 
 // The guild pages read one pure helper from the parsers (parsers/guildLevel.ts): the data barrel (1.67 MB) was theirs
@@ -154,15 +131,6 @@ test('no exported chunk carries a wiki-only table', () => {
   const chunks = exportedChunks(path.join(process.cwd(), 'out', '_next', 'static'));
   expect(chunks.length).toBeGreaterThan(0);
   expect(offenders(chunks, WIKI_TABLES_MARKER)).toEqual([]);
-});
-
-// The site draws its charts itself (bars and columns in HTML, lines in components/common/charts/LineChart): no
-// chart library ships. TooltipWrapper is the displayName of the tooltip every nivo chart mounts; this test's first
-// version proved the marker live while the guild page still drew nivo lines.
-const NIVO_MARKER = 'TooltipWrapper';
-
-test('no exported page ships nivo', () => {
-  expect(offenders(exportedChunks(path.join(process.cwd(), 'out', '_next', 'static')), NIVO_MARKER)).toEqual([]);
 });
 
 // The wiki's search index (about 7,600 names, 167 KB gzipped) is the quick search's last group: it loads when

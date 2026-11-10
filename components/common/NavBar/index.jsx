@@ -14,8 +14,8 @@ import QuickSearch from '@components/common/QuickSearch';
 import UserMenu from '@components/common/NavBar/UserMenu';
 import { ThemeLink } from '@components/common/NavBar/ThemeRows';
 
-import useFormatDate from '@hooks/useFormatDate';
 import AuthSkeleton from './AuthSkeleton';
+import DataAge, { getSavedAt } from './DataAge';
 import { BottomBannerAd, SideAds } from '@components/common/Ads/AdUnit';
 import ProfileBanner from './ProfileBanner';
 import { openCookiePolicy } from '@components/common/Etc/CookiePolicyDialog';
@@ -34,11 +34,10 @@ import PageHeader, { PageHeaderSlots } from './PageHeader';
 const NavBar = ({ children }) => {
   const { state } = useContext(AppContext);
   const router = useRouter();
-  const formatDate = useFormatDate();
   const prefetch = useNavPrefetch();
   // The bar's open menu and the phone menu (null, or { group } it opened at). A page change closes both; a query-only
   // change (a page writing its own state to the URL, Wardrobe's companion) does not.
-  const { openMenu, menuAnchor, setOpenMenu, toggleMenu, restOn, endRest } = useBarMenu();
+  const { openMenu, menuAnchor, byMouse, setOpenMenu, toggleMenu, restOn, leave, stayOpen } = useBarMenu();
   const [phoneMenuAt, setPhoneMenuAt] = useState(null);
   useEffect(() => {
     const close = (url) => {
@@ -50,12 +49,6 @@ const NavBar = ({ children }) => {
     router?.events?.on('routeChangeStart', close);
     return () => router?.events?.off('routeChangeStart', close);
   }, [router?.events]);
-  // A group row's name: the bar's panel from lg, where the bar has its menus; the phone menu at that group below it.
-  const openGroupMenu = (group, from) => {
-    if (window.matchMedia('(min-width: 1200px)').matches) toggleMenu(group.menu, from);
-    else setPhoneMenuAt({ group: group.key });
-  };
-
   // Render the authentication section based on loading state
   const renderAuthSection = () => {
     if (state.isLoading) {
@@ -70,11 +63,7 @@ const NavBar = ({ children }) => {
         {state?.signedIn ? (
           <Stack sx={{ px: 1, minWidth: 0 }}>
             <Typography variant={'body2'} noWrap sx={{ fontWeight: 'bold' }}>{cleanUnderscore(state?.characters?.[0]?.name)}</Typography>
-            {state?.lastUpdated ? (
-              <Typography variant={'caption'} noWrap>
-                {formatDate(state?.lastUpdated, { showSeconds: false, shortYear: true })}
-              </Typography>
-            ) : null}
+            {getSavedAt(state) ? <DataAge time={getSavedAt(state)}/> : null}
           </Stack>
         ) : null}
       </>
@@ -99,13 +88,14 @@ const NavBar = ({ children }) => {
           <Typography component="span" variant="sectionTitle" sx={{ display: { xs: 'none', sm: 'inline' } }}>Idleon Toolbox</Typography>
           <Typography component="span" variant="sectionTitle" sx={{ display: { xs: 'inline', sm: 'none' } }}>IT</Typography>
         </Link>
-        <NavItemsList openMenu={openMenu} onMenu={toggleMenu} onMenuRest={restOn} onMenuRestEnd={endRest}/>
+        <NavItemsList openMenu={openMenu} onMenu={toggleMenu} onMenuRest={restOn} onMenuLeave={leave}/>
         <QuickSearch/>
         {renderAuthSection()}
       </Toolbar>
     </MuiAppBar>
     <ProfileBanner/>
-    {openMenu ? <NavMenuPanel key={openMenu} menu={openMenu} anchor={menuAnchor} onClose={() => setOpenMenu(null)}/> : null}
+    {openMenu ? <NavMenuPanel key={openMenu} menu={openMenu} anchor={menuAnchor} onClose={() => setOpenMenu(null)}
+                              byMouse={byMouse} onStay={stayOpen} onLeave={leave}/> : null}
     <Box component={'main'} sx={{
       display: 'flex',
       flexDirection: 'column',
@@ -116,7 +106,7 @@ const NavBar = ({ children }) => {
       <Box sx={{ flex: 1 }}>
         <PageHeaderSlots>
           <Frame header={<>
-            <GroupRow openMenu={openMenu} phoneMenuOpen={Boolean(phoneMenuAt)} onOpenMenu={openGroupMenu}/>
+            <GroupRow/>
             <PageHeader onOpenGroup={(group) => setPhoneMenuAt({ group })}/>
           </>}>
             {children}

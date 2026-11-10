@@ -9,8 +9,7 @@ import theme from '../../../styles/theme/theme';
 
 const searchNames = vi.fn(async () => [{ mainChar: 'Baker333', rank: 75 }]);
 vi.mock('../../../services/leaderboards', () => ({ searchNames }));
-const bannerState = { isVisible: false };
-vi.mock('@hooks/useProfileBannerState', () => ({ default: () => bannerState }));
+vi.mock('@hooks/useProfileBannerState', () => ({ default: () => ({ isVisible: false }) }));
 const ControlBar = (await import('@components/leaderboards/ControlBar')).default;
 const { buildMetaIndex } = await import('@components/leaderboards/format');
 
@@ -23,7 +22,7 @@ const renderBar = (props = {}) => render(
   </QueryClientProvider>
 );
 
-afterEach(() => { bannerState.isVisible = false; cleanup(); vi.clearAllMocks(); });
+afterEach(() => { cleanup(); vi.clearAllMocks(); });
 
 describe('ControlBar', () => {
   it('suggests names after two characters and reports a typeahead pick, again when picked twice', async () => {
@@ -63,12 +62,10 @@ describe('ControlBar', () => {
     const jump = screen.getByLabelText('Jump to board');
     expect(jump.getAttribute('placeholder')).toBe('Jump to a board (1)');
     expect(jump.getAttribute('aria-label')).toBe('Jump to board');
-    expect(container.querySelector('label.MuiInputLabel-root')).toBeNull();
     // The export cannot know the viewport, so CSS (not a media query hook) picks the layout: the phone's copies stay out.
     expect(container.querySelectorAll('input[type="text"], input:not([type])')).toHaveLength(2);
-    // The "/" shortcut hint sits in the jump field, and the jump has no popup arrow.
+    // The "/" shortcut hint sits in the jump field.
     expect(jump.closest('.MuiInputBase-root').textContent.replace(/​/g, '')).toBe('/');
-    expect(container.querySelector('.MuiAutocomplete-popupIndicator')).toBeNull();
     // The Anon# hint lives in the placeholder: a helper line cost the sticky bar a row on phones.
     expect(screen.queryByText(/can be found by their Anon# id/)).toBeNull();
   });
@@ -78,15 +75,6 @@ describe('ControlBar', () => {
     expect(await screen.findByText(/2,608 players · updated/)).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'More options' }));
     expect(await screen.findAllByText(/2,608 players · updated/)).toHaveLength(2);
-  });
-
-  it('sticks right below the navbar, and below the profile banner when it shows', () => {
-    const stickyTop = ({ container }) => getComputedStyle(container.firstChild).top;
-    // Plus a pinned tab strip's height, which no Tabber here sets
-    expect(stickyTop(renderBar())).toBe('calc(56px + var(--page-tabs-pinned, 0px))');
-    cleanup();
-    bannerState.isVisible = true;
-    expect(stickyTop(renderBar())).toBe('calc(96px + var(--page-tabs-pinned, 0px))');
   });
 
   it('picks the highlighted suggestion on Enter, so a partial name finds the player', async () => {

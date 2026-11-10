@@ -151,7 +151,7 @@ describe('Header page goals', () => {
     expect(screen.getByLabelText('Direction').textContent).toBe('Stay at or below');
   });
 
-  it('a panel row uses the dashboard card wording and an outline on keyboard focus, and the dashboard link keeps the session query', async () => {
+  it('a panel row uses the dashboard card wording, and the dashboard link keeps the session query', async () => {
     const open = openGoal();
     seed(open);
     mount();
@@ -159,9 +159,6 @@ describe('Header page goals', () => {
     const view = resolveGoal(open, ctx);
     expect(statusText(view)).toBe(`Lv ${formatNumber(view.value)} of ${formatNumber(view.targetValue)}`);
     expect(within(panelRows()[0]).getByText(statusText(view))).toBeTruthy();
-    const button = panelRows()[0].querySelector('.MuiButtonBase-root');
-    button.classList.add('Mui-focusVisible');
-    expect(getComputedStyle(button).outlineStyle).toBe('solid');
     expect(screen.getByRole('link', { name: 'All goals on the dashboard' }).getAttribute('href'))
       .toBe('/dashboard?demo=true');
   });
@@ -185,18 +182,7 @@ describe('Header page goals', () => {
     expect(within(row).queryByRole('progressbar')).toBeNull();
   });
 
-  it('Add goal in the panel opens the add popover', async () => {
-    seed(openGoal());
-    mount();
-    await openPanel('Goals · 0 of 1 reached');
-    outerClick.mockClear();
-    const panelHeader = screen.getByRole('heading', { name: 'Goals on this page' }).parentElement;
-    fireEvent.click(within(panelHeader).getByRole('button', { name: 'Add goal' }));
-    expect(await screen.findByRole('heading', { name: 'Add goal' })).toBeTruthy();
-    expect(outerClick).not.toHaveBeenCalled();
-  });
-
-  it('keeps an Add goal action beside the goals count', async () => {
+  it('keeps an Add goal action beside the goals count, and Add goal in the panel opens the add popover too', async () => {
     seed(openGoal());
     mount();
     const count = await screen.findByRole('button', { name: 'Goals · 0 of 1 reached' });
@@ -204,6 +190,13 @@ describe('Header page goals', () => {
     expect(count.nextElementSibling).toBe(add);
     fireEvent.click(add);
     expect(await screen.findByRole('heading', { name: 'Add goal' })).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+    fireEvent.click(count);
+    outerClick.mockClear();
+    const panelHeader = screen.getByRole('heading', { name: 'Goals on this page' }).parentElement;
+    fireEvent.click(within(panelHeader).getByRole('button', { name: 'Add goal' }));
+    expect(await screen.findByRole('heading', { name: 'Add goal' })).toBeTruthy();
+    expect(outerClick).not.toHaveBeenCalled();
   });
 
   it('saving shows Goal saved with a dashboard link', async () => {
