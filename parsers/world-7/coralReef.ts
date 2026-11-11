@@ -1,7 +1,7 @@
 import { gameFill, notateNumber, lavaLog, lavaLog2 } from '@utility/helpers';
 import { generalSpelunky, coralReef, gameTables } from '@website-data';
 import {
-  isCompanionBonusActive,
+  companionLineName, isCompanionBonusActive,
   getEventShopBonus,
   getKillRoyShopBonus,
   getLoggedInSkillLevel
@@ -10,7 +10,7 @@ import { getMeritocracyBonus } from '@parsers/world-2/voteBallot';
 import { getLegendTalentBonus } from '@parsers/world-7/legendTalents';
 import { getArcadeBonus } from '@parsers/world-2/arcade';
 import { getVialsBonusByEffect } from '@parsers/world-2/alchemy';
-import { getStampsBonusByEffect } from '@parsers/world-1/stamps';
+import { getStampNode, getStampsBonusByEffect } from '@parsers/world-1/stamps';
 import { isJadeBonusUnlocked } from '@parsers/world-6/sneaking';
 import { getCardLevel } from '@parsers/cards';
 import { getMineheadBonusQTY } from '@parsers/world-7/minehead';
@@ -334,7 +334,7 @@ export const getReefDayGains = (account: any) => {
   const breakdown = createBreakdown('Reef day gains', notateNumber(value, 'MultiplierInfo'), [
     flat('Base', REEF_DAY_BASE_GAINS),
     productGroup(NUMBERED_GROUP, [
-      multiplier('Companion', 1 + companionBonusValue),
+      multiplier(companionLineName(40), 1 + companionBonusValue),
       multiplier('Event Shop', 1 + 0.3 * eventShopBonus),
       multiplier('Gem Shop', 1 + (20 * gemShopBonus) / 100),
       additiveGroup(NUMBERED_GROUP, [
@@ -342,7 +342,7 @@ export const getReefDayGains = (account: any) => {
         percent('Dancing Coral', dancingCoralBonus),
         percent('Clam Work', 20 * clamWorkBonus),
         percent('Killroy Shop', killroyBonus),
-        percent('Stamps', stampBonus),
+        getStampNode(account, { effect: 'Daily_Coral_gain_for_the_Coral_Reef' }, stampBonus),
         percent('Vials', vialBonus),
         percent('Legend Talent', legendTalentBonus),
         percent('Arcade', arcadeBonus),

@@ -6,7 +6,7 @@ import { CLASSES, getCharacterByHighestTalent, getTalentBonus, getHighestTalentA
 import { getStatsFromGear } from '@parsers/items';
 import { getArcadeBonus } from '@parsers/world-2/arcade';
 import { getJewelBonus } from '@parsers/world-4/lab';
-import { getBubbleBonus } from '@parsers/world-2/alchemy';
+import { bubbleLineName, getBubbleBonus } from '@parsers/world-2/alchemy';
 import { getLoreBossBonus } from '@parsers/world-7/spelunking';
 import { getMeritocracyBonus } from '@parsers/world-2/voteBallot';
 import { getEmperorBonus } from '@parsers/world-6/emperor';
@@ -16,7 +16,7 @@ import { getOptimizedGenericUpgrades } from '@parsers/genericUpgradeOptimizer';
 import { getLegendTalentBonus } from '@parsers/world-7/legendTalents';
 import { getPaletteBonus } from '@parsers/world-5/gaming';
 import { getExoticMarketBonus } from '@parsers/world-6/farming';
-import { isCompanionBonusActive } from '@parsers/misc';
+import { companionLineName, isCompanionBonusActive } from '@parsers/misc';
 import { getSushiBonus } from '@parsers/world-7/sushiStation';
 import { getJellyBonus } from '@parsers/world-7/jellyOperator';
 import { additiveGroup, createBreakdown, multiplier, NUMBERED_GROUP, percent } from '@parsers/breakdown';
@@ -431,7 +431,7 @@ export const getExtraTachyon = (character: any, account: any) => {
       ]),
       additiveGroup(NUMBERED_GROUP, [
         percent('Emperor', emperorBonus),
-        percent('Bubble', bubbleBonus)
+        percent(bubbleLineName('TACHYON_BUBBLE'), bubbleBonus)
       ]),
       masterclassDropsGroup,
       multiplier('Meritocracy', 1 + meritocracyBonus / 100),
@@ -621,7 +621,7 @@ export const getPrismaMulti = (account: any) => {
       percent('Ethereal Sigils', sigilsBonus),
       percent('Exotic Market', exoticMarketBonus),
       percent('Legend Talent', legendBonus),
-      percent('Companion', 50 * companionBonus),
+      percent(companionLineName(88), 50 * companionBonus),
       percent('Cap', 100 * (value - uncapped), { note: `At most ×${MAX_PRISMA_MULTI}` })
     ], { combine: 'additive' })
   };

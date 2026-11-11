@@ -6,12 +6,6 @@ export const alertAliases = {
   'account.World 3.traps': { overdue: 'trapsOverdue' },
   'account.World 3.hatRack': { missingHats: 'hatsMissing' },
   'account.World 4.capeVine': { missingCapes: 'capesMissing' },
-  'account.World 5.hole': {
-    motherlodeMaxed: 'motherlode',
-    hiveMaxed: 'theHive',
-    evertreeMaxed: 'evertree',
-    bottomlessTrenchMaxed: 'bottomlessTrench'
-  },
   'account.World 6.etc': { emperorAttempts: 'emperor' },
   'account.World 7.gallery': { missingTrophies: 'trophiesMissing', missingNametags: 'nametagsMissing' },
   'account.World 7.legendTalents': { legendPointsLeftToSpend: 'pointsLeftToSpend' }
@@ -766,7 +760,7 @@ export const alertMeta = {
       },
       overkillWorkers: {
         label: 'Spare Workers',
-        help: 'Alerts when an outpost has more Workers than it needs to empty its resource within this many hours. Workers only add collection rate, so the spare ones could be Traders or Surveyors and earn rank EXP instead.',
+        help: 'Alerts when an outpost has more Workers than it needs to empty its resource within this many hours. Workers only add collection rate, so the spare ones could be Traders or Surveyors and earn rank EXP instead. Also lists outposts whose resources are all empty with nothing better in range: all their Workers are spare.',
         unit: 'h',
         group: 'Units'
       },
@@ -779,11 +773,6 @@ export const alertMeta = {
       missingWorkers: {
         label: 'Resources that miss the reset',
         help: 'Alerts when an outpost needs more Workers to empty its resource before the daily reset, and has Traders or Surveyors that could become them. A resource only restocks and gains a level if it is already empty when the reset lands. Follows Spare Workers: when that one uses its hours instead of the reset, so does this.',
-        group: 'Units'
-      },
-      strandedWorkers: {
-        label: 'Workers on empty resources',
-        help: 'Alerts when every resource of an outpost is empty and nothing better is in range, while Workers are still assigned to it. Traders or Surveyors would earn rank EXP instead.',
         group: 'Units'
       },
       idleGuards: {
@@ -859,6 +848,12 @@ export const alertMeta = {
         label: 'Characters at full stamina',
         help: 'Alerts when at least this many characters have full stamina.',
         unit: 'characters'
+      },
+      staminaPercent: {
+        label: 'Count characters from a stamina %',
+        help: 'Counts a character once its stamina reaches this percent of its max, instead of waiting for full.',
+        unit: '%',
+        dependsOn: 'fullStaminaCharacters'
       },
       overstimLevel: { label: 'Overstim level reached', help: 'Alerts when your Overstim level reaches this value.' }
     }
@@ -1341,5 +1336,6 @@ export const alertMeta = {
   'timers.World 7.sushiFuelFull': { label: 'Sushi fuel full', icon: 'etc/Fuel', page: { pathname: '/account/world-7/sushi-station', label: 'Sushi station' }, options: {} },
   'timers.World 7.observationInsight': { label: 'Observation insight level ups', icon: 'data/ResMagni1', page: { pathname: '/account/world-7/research', query: { t: 'Observations' }, label: 'Observations' }, options: {} },
   'timers.World 7.royalNodeCap': { label: 'Next outpost resource empty', icon: 'data/UISkillIcon226', page: { pathname: '/account/class-specific/royal-armory', query: { t: 'Resources' }, label: 'Resources' }, options: {} },
-  'timers.World 7.overstim': { label: 'Overstim level up', icon: 'data/CaveShopUpg6', page: { pathname: '/account/world-7/spelunking', label: 'Spelunking' }, options: {} }
+  'timers.World 7.overstim': { label: 'Overstim level up', icon: 'data/CaveShopUpg6', page: { pathname: '/account/world-7/spelunking', label: 'Spelunking' }, options: {} },
+  'timers.World 7.yellowJelly': { label: 'Yellow jelly construction purchase', icon: 'data/MenaJelly5', page: { pathname: '/account/world-7/menagerie', query: { t: 'Jellies' }, label: 'Jellies' }, options: {} }
 };

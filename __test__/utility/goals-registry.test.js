@@ -54,10 +54,10 @@ const valueProblems = (d, ctx) => {
       return [
         ...(Number.isFinite(m.value(row, ctx)) ? [] : [`${name} ${d.key(row)} value`]),
         ...(max === null || (Number.isFinite(max) && max > 0) ? [] : [`${name} ${d.key(row)} max ${max}`]),
-        ...(!m.cost || (price > 0 && Number.isFinite(price)) ? [] : [`${name} ${d.key(row)} price ${price}`])
+        ...(!m.cost || (price > 0 && Number.isFinite(price)) ? [] : [`${name} ${d.key(row)} price ${price}`]),
+        ...(!m.cost || Number.isFinite(m.cost.have(ctx, row)) ? [] : [`${name} ${d.key(row)} cost have`])
       ];
-    }),
-    ...(!m.cost || Number.isFinite(m.cost.have(ctx)) ? [] : [`${name} cost have`])
+    })
   ]);
 };
 const everyDescriptor = (rule) => expectNoBreaks(DESCRIPTORS, ({ system }) => system, rule);
@@ -158,6 +158,9 @@ describe('deathNote', () => {
     expect(getDescriptor('deathNote').metrics.rank.tiers).toEqual(['None',
       '25K kills (mini boss 100)', '100K kills (mini boss 250)', '250K kills (mini boss 1K)', '500K kills (mini boss 5K)',
       '1M kills (mini boss 25K)', '5M kills (mini boss 100K)', '100M kills (mini boss 1M)']);
+    // a rung's kills come from the row's own table
+    const { need } = getDescriptor('deathNote').metrics.rank.tierAmount;
+    expect([need({ world: '0' }, 7), need({ world: 'miniBosses' }, 7)]).toEqual([1e8, 1e6]);
   });
 });
 

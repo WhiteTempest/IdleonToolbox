@@ -11,6 +11,7 @@ import {
 } from '@parsers/world-4/cooking';
 import { cleanUnderscore, getDuration, getNextCompanionClaim, hoursUntilDailyReset, notateNumber, notateProgress, totalHoursBetweenDates } from '../helpers';
 import { isRiftBonusUnlocked } from '@parsers/world-4/rift';
+import { LAYER_BREAKS_PER_DAY } from '@parsers/world-5/caverns/motherlode';
 import { FAMILIAR_EXP_MIN_CLAIM_SECONDS, getFamiliarLevelGains, getPendingFamiliarExp } from '@parsers/world-6/summoning';
 import { items, liquidsShop, ninjaExtraInfo } from '@website-data';
 import { getPowerPerCycle, getRefineryCycleTimes, getSaltMatsTimeLeft, getSaltsBalance, hasMissingMats } from '@parsers/world-3/refinery';
@@ -611,7 +612,7 @@ export const getWorld2Alerts = (account, fields, options, characters) => {
       }
     }
     if (options?.arcade?.unmaxedRotation?.checked) {
-      // Arcade upgrades cap at level 100 (gold balls); 101 = Super (Royal balls), 102 = Omega (Omega balls, 2.3.540).
+      // Arcade upgrades cap at level 100 (gold balls); 101 = Super (Cosmic balls), 102 = Omega (Omega balls, 2.3.540).
       const cap = options?.arcade?.includeOmega?.checked ? ARCADE_OMEGA_LEVEL
         : options?.arcade?.includeSuper?.checked ? ARCADE_SUPER_LEVEL : ARCADE_MAX_LEVEL;
       const unmaxed = account?.arcade?.shop?.filter((upgrade) => upgrade?.active && !isArcadePlaceholder(upgrade)
@@ -1303,21 +1304,17 @@ export const getWorld5Alerts = (account, fields, options, characters) => {
     if (buckets?.checked && !expandWhenFull && anySedimentFull.length > 0) {
       hole.buckets = true;
     }
-    const isMaxedOres = account?.hole?.caverns?.motherlode?.ores?.maxed;
-    if (motherlode?.checked && brokenLayersToday < 5 && isMaxedOres) {
-      hole.motherlodeMaxed = isMaxedOres;
-    }
-    const isMaxedBugs = account?.hole?.caverns?.theHive?.bugs?.maxed;
-    if (theHive?.checked && brokenLayersToday < 5 && isMaxedBugs) {
-      hole.hiveMaxed = isMaxedBugs;
-    }
-    const isMaxedLogs = account?.hole?.caverns?.evertree?.logs?.maxed;
-    if (evertree?.checked && brokenLayersToday < 5 && isMaxedLogs) {
-      hole.evertreeMaxed = isMaxedLogs;
-    }
-    const isMaxedFish = account?.hole?.caverns?.theBottomlessTrench?.fish?.maxed;
-    if (bottomlessTrench?.checked && brokenLayersToday < 5 && isMaxedFish) {
-      hole.bottomlessTrenchMaxed = isMaxedFish;
+    // The daily breaks are one pool shared by all four caverns, so it is one alert naming the ready ones
+    const layerBreaksLeft = Math.max(0, LAYER_BREAKS_PER_DAY - (brokenLayersToday ?? 0));
+    const caverns = account?.hole?.caverns;
+    const readyLayers = [
+      { option: 'motherlode', name: 'Motherlode', ready: motherlode?.checked && caverns?.motherlode?.ores?.maxed },
+      { option: 'theHive', name: 'The Hive', ready: theHive?.checked && caverns?.theHive?.bugs?.maxed },
+      { option: 'evertree', name: 'Evertree', ready: evertree?.checked && caverns?.evertree?.logs?.maxed },
+      { option: 'bottomlessTrench', name: 'Bottomless Trench', ready: bottomlessTrench?.checked && caverns?.theBottomlessTrench?.fish?.maxed }
+    ].filter(({ ready }) => ready);
+    if (layerBreaksLeft > 0 && readyLayers.length > 0) {
+      hole.layerBreaks = { left: layerBreaksLeft, caverns: readyLayers.map(({ option, name }) => ({ option, name })) };
     }
     if (bravery?.checked && account?.hole?.caverns?.bravery?.rewardMulti >= bravery?.props?.value) {
       hole.bravery = true;
@@ -1789,15 +1786,24 @@ export const getWorld7Alerts = (account, fields, options, characters) => {
     const horizon = resetHorizon ?? (rgOptions?.overkillWorkers?.props?.value ?? 24);
 
     if (rgOptions?.overkillWorkers?.checked) {
+      // Two ways a Worker earns nothing: its resource empties in time without it, or every resource
+      // it is wired to is already empty with nothing better in range (with a fresh node in reach,
+      // idleOutposts says the better thing: move the connection). getSpareWorkers skips the second
+      // case, so the two never list the same outpost.
+      const toEntry = (outpost, workers, empty) => ({
+        ...pickOutpostEntry(outpost),
+        workers,
+        empty,
+        expPerHour: (outpost.rankBars?.[0]?.expPerUnit ?? 0) * workers,
+        intelExpPerHour: surveyors ? (outpost.rankBars?.[1]?.expPerUnit ?? 0) * workers : 0
+      });
       const overkill = collectors
-        .map((outpost) => ({ outpost, workers: getSpareWorkers(outpost, horizon, workerRateBonus) }))
-        .filter(({ workers }) => workers > 0)
-        .map(({ outpost, workers }) => ({
-          ...pickOutpostEntry(outpost),
-          workers,
-          expPerHour: (outpost.rankBars?.[0]?.expPerUnit ?? 0) * workers,
-          intelExpPerHour: surveyors ? (outpost.rankBars?.[1]?.expPerUnit ?? 0) * workers : 0
-        }));
+        .map((outpost) => {
+          const empty = !outpost.freshNodeInReach
+            && (!(outpost.connectedNodes?.length > 0) || outpost.connectedNodes.every(({ exhausted }) => exhausted));
+          return toEntry(outpost, empty ? slotWorkersOf(outpost) : getSpareWorkers(outpost, horizon, workerRateBonus), empty);
+        })
+        .filter(({ workers }) => workers > 0);
       if (overkill.length > 0) {
         royalGuardian.overkillWorkers = {
           count: overkill.length,
@@ -1830,19 +1836,6 @@ export const getWorld7Alerts = (account, fields, options, characters) => {
           beforeReset: resetHorizon != null,
           outposts: missing
         };
-      }
-    }
-
-    if (rgOptions?.strandedWorkers?.checked) {
-      // Only where a rewire is not on the table: with a fresh node in reach, idleOutposts already
-      // says the better thing, and moving the connection beats retraining the Workers.
-      const stranded = collectors
-        .filter(({ connectedNodes, freshNodeInReach }) => !freshNodeInReach
-          && (!(connectedNodes?.length > 0) || connectedNodes.every(({ exhausted }) => exhausted)))
-        .map((outpost) => ({ ...pickOutpostEntry(outpost), workers: slotWorkersOf(outpost) }))
-        .filter(({ workers }) => workers > 0);
-      if (stranded.length > 0) {
-        royalGuardian.strandedWorkers = { count: stranded.length, surveyors, outposts: stranded };
       }
     }
 
@@ -1923,7 +1916,7 @@ export const getWorld7Alerts = (account, fields, options, characters) => {
         const keeper = soloCapable.reduce((best, link) =>
           (link.node.drainRate > best.node.drainRate ? link : best), soloCapable[0]);
         // Spare only if the slot can go somewhere better: with nothing live in reach, dropping the
-        // link buys the outpost nothing, so the same rule as idleOutposts/strandedWorkers applies.
+        // link buys the outpost nothing, so the same rule as idleOutposts and the empty-resource Spare Workers applies.
         links.filter((link) => link !== keeper && link.outpost.freshNodeInReach)
           .forEach(({ outpost }) => redundant.set(outpost.mapIndex, pickOutpostEntry(outpost)));
       });
@@ -1957,11 +1950,17 @@ export const getWorld7Alerts = (account, fields, options, characters) => {
     if (options?.spelunking?.fullStaminaCharacters?.checked) {
       const threshold = options?.spelunking?.fullStaminaCharacters?.props?.value ?? 1;
       const charactersStamina = account?.spelunking?.charactersStamina ?? [];
-      const fullStaminaCount = charactersStamina.filter(({ isFull }) => isFull).length;
+      const percent = options?.spelunking?.staminaPercent?.checked
+        ? Math.min(100, Math.max(1, options?.spelunking?.staminaPercent?.props?.value ?? 100))
+        : 100;
+      const fullStaminaCount = charactersStamina.filter(({ isFull, currentStamina, characterStamina }) => percent >= 100
+        ? isFull
+        : currentStamina >= characterStamina * percent / 100).length;
       if (fullStaminaCount >= threshold) {
         spelunking.fullStaminaCharacters = {
           count: fullStaminaCount,
-          threshold
+          threshold,
+          percent
         };
       }
     }

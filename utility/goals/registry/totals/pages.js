@@ -56,6 +56,7 @@ export const spelunkingTotals = totalsDescriptor({
   route: GOAL_ROUTES.spelunkingTotals,
   entries: [
     { key: 'power', name: 'Power', icon: 'data/CaveShopUpg17', value: ({ account }) => account?.spelunking?.power?.value },
+    { key: 'amberGain', name: 'Amber gain', value: ({ account }) => account?.spelunking?.amberGain?.value },
     {
       key: 'discoveries',
       name: 'Discoveries',
@@ -78,7 +79,12 @@ export const sushiTotals = totalsDescriptor({
     { key: 'uniqueSushi', name: 'Unique sushi', value: ({ account }) => account?.sushiStation?.uniqueSushi ?? 0 },
     { key: 'upgradeLevels', name: 'Total upgrade LV', value: ({ account }) => account?.sushiStation?.saveTotals?.upgradeLevels ?? 0 },
     { key: 'knowledgeLevels', name: 'Total knowledge LV', value: ({ account }) => account?.sushiStation?.saveTotals?.knowledgeLevels ?? 0 },
-    { key: 'perfectos', name: 'Perfectos', value: ({ account }) => account?.sushiStation?.saveTotals?.perfectos ?? 0 },
+    {
+      key: 'perfectos',
+      name: 'Perfectos',
+      value: ({ account }) => account?.sushiStation?.saveTotals?.perfectos ?? 0,
+      max: ({ account }) => account?.sushiStation?.knowledge?.length
+    },
     { key: 'bestCombo', name: 'Best combo', icon: 'etc/Bucks', value: ({ account }) => account?.sushiStation?.currency?.combo?.best ?? 0 }
   ]
 });

@@ -31,7 +31,7 @@ import {
   isArenaBonusActive,
   isBundlePurchased,
   getCompanionBonus,
-  isCompanionBonusActive,
+  companionLineName, isCompanionBonusActive,
   isCompanionLvl2Active,
   isMasteryBonusUnlocked,
   getSkillCardBonus,
@@ -49,9 +49,10 @@ import {
   getEquippedCardsData,
   getPlayerCards
 } from './cards';
-import { getStampBonus, getStampsBonusByEffect, getStampsBonusByStat } from './world-1/stamps';
+import { getStampBonus, getStampNode, getStampsBonusByEffect, getStampsBonusByStat } from './world-1/stamps';
 import { getPlayerPostOffice, getPostOfficeBonus, getPostOfficeBoxLevel } from './world-3/postoffice';
 import {
+  bubbleLineName,
   getActiveBubbleBonus,
   getBubbleBonus,
   getSigilBonus,
@@ -126,6 +127,7 @@ import {
   NUMBERED_GROUP,
   percent,
   productGroup,
+  sourceName,
   sumGroup
 } from '@parsers/breakdown';
 import type { BreakdownNode, BreakdownOptions } from '@parsers/breakdown';
@@ -719,9 +721,9 @@ const getSkillExpMultiParts = (skillName: string, character: any, characters: an
         additiveGroup(NUMBERED_GROUP, [
           allSkillExp?.breakdown,
           percent('Talent', (talentBonus + happyDudeTalentBonus)),
-          percent('Stamps', stampBonus),
+          getStampNode(account, { effect: 'Mining_Exp_Gain' }, stampBonus),
           percent('Cards', cardBonus),
-          percent('Bubble', base),
+          percent(bubbleLineName('REELY_SMART'), base),
           percent('Arcade', arcadeBonus),
           percent('Achievement', achievementBonus),
           percent('Skill Mastery', 25 * masteryBonus),
@@ -762,9 +764,9 @@ const getSkillExpMultiParts = (skillName: string, character: any, characters: an
         additiveGroup(NUMBERED_GROUP, [
           allSkillExp?.breakdown,
           percent('Talent', (talentBonus + happyDudeTalentBonus)),
-          percent('Stamps', stampBonus),
+          getStampNode(account, { effect: 'Choppin_Exp_Gain' }, stampBonus),
           percent('Cards', cardBonus),
-          percent('Bubble', bubbleBonus),
+          percent(bubbleLineName('NOODUBBLE'), bubbleBonus),
           percent('Achievement', achievementBonus),
           percent('Skill Mastery', 25 * masteryBonus),
           percent('Vote', voteBonus),
@@ -875,9 +877,9 @@ const getSkillExpMultiParts = (skillName: string, character: any, characters: an
           allSkillExp?.breakdown,
           percent('Fishing kit', fishingKit),
           percent('Talent', (talentBonus + talentBonus2 + happyDudeTalentBonus)),
-          percent('Stamps', stampBonus),
+          getStampNode(account, { effect: 'Fishing_Exp_Gain' }, stampBonus),
           percent('Cards', cardBonus),
-          percent('Bubble', base),
+          percent(bubbleLineName('REELY_SMART'), base),
           percent('Arcade', arcadeBonus),
           percent('Achievement', achievementBonus),
           percent('Skill Mastery', 25 * masteryBonus),
@@ -921,11 +923,11 @@ const getSkillExpMultiParts = (skillName: string, character: any, characters: an
         allSkillExp?.breakdown,
         percent('Talent', (talentBonus + talentBonus2 + happyDudeTalentBonus)),
         percent('P2W Extra Exp', (account?.alchemy?.p2w?.player?.extraExp ?? 0)),
-        percent('Stamp', stampBonus),
+        getStampNode(account, { effect: 'Alchemy_Exp_Gain' }, stampBonus),
         percent('Post Office', postOfficeBonus),
         percent('Statue', statueBonus),
-        percent('Bubble', bubbleBonus),
-        percent('Active Bubble', activeBubbleBonus),
+        percent(bubbleLineName('NOODUBBLE'), bubbleBonus),
+        percent(bubbleLineName('COOKIN_ROADKILL'), activeBubbleBonus),
         percent('Vault', upgradeVaultBonus),
         percent('Skill mastery', 25 * masteryBonus)
       ],
@@ -978,7 +980,7 @@ const getSkillExpMultiParts = (skillName: string, character: any, characters: an
         additiveGroup(NUMBERED_GROUP, [
           allSkillExp?.breakdown,
           percent('Talent', (talentBonus + talentBonus2 + happyDudeTalentBonus)),
-          percent('Stamps', stampBonus),
+          getStampNode(account, { effect: 'Catching_Exp_Gain' }, stampBonus),
           percent('Cards', cardBonus),
           percent('Arcade', arcadeBonus),
           percent('Achievement', achievementBonus),
@@ -1028,7 +1030,7 @@ const getSkillExpMultiParts = (skillName: string, character: any, characters: an
         additiveGroup(NUMBERED_GROUP, [
           allSkillExp?.breakdown,
           percent('Talent', (talentBonus + talentBonus2 + happyDudeTalentBonus)),
-          percent('Stamps', stampBonus),
+          getStampNode(account, { effect: 'Trapping_Exp_Gain' }, stampBonus),
           percent('Cards', cardBonus),
           percent('Post office', postOfficeBonus),
           percent('Trapping', (trappingBonus + trappingBonus2)),
@@ -1182,7 +1184,7 @@ const getSkillExpMultiParts = (skillName: string, character: any, characters: an
           percent('Meal', mealBonus),
           percent('Pet upgrade', 2 * account?.breeding?.petUpgrades?.[0]?.level),
           percent('Card (max 50%)', Math.min(cardBonus, 50)),
-          percent('Stamp', stampBonus),
+          getStampNode(account, { effect: 'Breeding_EXP_Gain' }, stampBonus),
           percent('Vial', vialBonus),
           percent('Statue', statueBonus),
           percent('Skill mastery', 25 * masteryBonus),
@@ -1255,7 +1257,7 @@ const getSkillExpMultiParts = (skillName: string, character: any, characters: an
         multiplier('Efficiency term', efficiencyTerm),
         productGroup(NUMBERED_GROUP, [
           getAllSkillExpMultiplierBreakdown(account),
-          multiplier('Companion', 1 + companionBonus),
+          multiplier(companionLineName(16), 1 + companionBonus),
           multiplier('Legend talent', 1 + legendBonus / 100),
           multiplier('Sushi', 1 + sushiBonus / 100)
         ]),
@@ -1267,9 +1269,9 @@ const getSkillExpMultiParts = (skillName: string, character: any, characters: an
           percent('Talent', (talentBonus + (belowOne ? 0 : talentBonus2))),
           percent('Jewel', jewelBonus),
           percent('Meal', mealBonus),
-          percent('Stamp', stampBonus),
+          getStampNode(account, { effect: 'Lab_Exp_Gain' }, stampBonus),
           percent('Vial', vialBonus),
-          percent('Bubble', bubbleBonus),
+          percent(bubbleLineName('MATRIX_EVOLVED'), bubbleBonus),
           percent('Souped Player', Math.min(100, 4 * soupedPlayerBonus)),
           percent('Sigil', sigilBonus),
           percent('Skill mastery', 25 * masteryBonus),
@@ -1389,15 +1391,15 @@ const getSkillExpMultiParts = (skillName: string, character: any, characters: an
           multiplier('Coral Kid (page 2)', 1 + coralKidBonus8 / 100),
           multiplier('Purrmep major link', Math.max(1, 1 + purrmepMajor)),
           multiplier('Shared Beliefs talent', 1 + talentBonus / 100),
-          multiplier('Companion', 1 + companionBonus)
+          multiplier(companionLineName(16), 1 + companionBonus)
         ]),
         additiveGroup(NUMBERED_GROUP, [
           percent('Unlocked gods', (10 * Math.max(0, unlockedGods - 10))),
           percent('Post office', postOfficeBonus),
           percent('Sigil', sigilBonus),
           percent('Card', cardBonus),
-          percent('Stamp', stampBonus),
-          percent('Active bubble', activeBubbleBonus),
+          getStampNode(account, { effect: 'Divinity_EXP_Gain' }, stampBonus),
+          percent(bubbleLineName('PIOUS_AT_HEART'), activeBubbleBonus),
           percent('Statue', statueBonus),
           percent('Meal', mealBonus),
           percent('Vial', vialBonus),
@@ -1439,7 +1441,7 @@ const getSkillExpMultiParts = (skillName: string, character: any, characters: an
       tree: [
         getAllSkillExpMultiplierBreakdown(account, 'Not included in the in-game Gaming tab'),
         additiveGroup(NUMBERED_GROUP, [
-          percent('Stamp', stampBonus),
+          getStampNode(account, { effect: 'Gaming_EXP_Gain' }, stampBonus),
           percent('Meal', mealBonus),
           percent('Vial', vialBonus),
           percent('Talent', talentBonus + talentBonus2),
@@ -1631,7 +1633,7 @@ const getSkillExpMultiParts = (skillName: string, character: any, characters: an
           multiplier('Ninja charms', 1 + charmExpBonus / 100),
           multiplier('Ninja charm penalty', Math.max(0, 1 - 100 * charmExpPenalty)),
           multiplier('Summoning', 1 + winBonus / 100),
-          multiplier('Companion', 1 + 1.5 * companion163),
+          multiplier(companionLineName(163), 1 + 1.5 * companion163),
           multiplier('Sneaky Skilling multi', Math.max(1, talentMulti))
         ]),
         additiveGroup(NUMBERED_GROUP, [
@@ -1641,7 +1643,7 @@ const getSkillExpMultiParts = (skillName: string, character: any, characters: an
           percent('Charm', charmBonus),
           percent('Card', cardBonus),
           percent('Lab', labBonus),
-          percent('Stamp', stampBonus),
+          getStampNode(account, { effect: 'Sneaking_EXP_Gain' }, stampBonus),
           percent('Star sign', starSignBonus),
           percent('Guild', guildBonus),
           percent('Talent', talentBonus),
@@ -1690,7 +1692,7 @@ const getSkillExpMultiParts = (skillName: string, character: any, characters: an
       tree: [
         multiplier('Passion of the Summon talent', Math.max(1, talentBonus)),
         getAllSkillExpMultiplierBreakdown(account),
-        multiplier('Companion', 1 + companionBonus),
+        multiplier(companionLineName(121), 1 + companionBonus),
         multiplier('Arcade', 1 + arcadeBonus / 100),
         additiveGroup(NUMBERED_GROUP, [
           percent('Vial', vialBonus),
@@ -1702,7 +1704,7 @@ const getSkillExpMultiParts = (skillName: string, character: any, characters: an
         additiveGroup(NUMBERED_GROUP, [
           percent('Shiny', shinyBonus),
           percent('Skill mastery', 25 * skillMasteryBonus),
-          percent('Stamp', stampBonus),
+          getStampNode(account, { effect: 'Summoning_EXP_Gain' }, stampBonus),
           percent('Star sign', starSignBonus),
           percent('Guild', guildBonus),
           percent('Vote', voteBonus)
@@ -1748,7 +1750,7 @@ const getSkillExpMultiParts = (skillName: string, character: any, characters: an
           percent('Grandiose EXP', grandioseExpBonus),
           percent('Golden food', goldenFoodBonus),
           percent('Meal', mealBonus),
-          percent('Stamp', stampBonus),
+          getStampNode(account, { stat: 'spelunkxp' }, stampBonus, character),
           percent('Statue', statueBonus)
         ]),
         multiplier('All skill EXP (1/10th)', 1 + (allSkillExp?.value ?? 0) / 10 / 100),
@@ -1774,7 +1776,7 @@ export const getAllSkillExpMultiplierBreakdown = (account: any, note?: string) =
   return productGroup(NUMBERED_GROUP, [
     multiplier('Meritocracy', 1 + getMeritocracyBonus(account, 10) / 100),
     multiplier('Legend talent', 1 + getLegendTalentBonus(account, 20) / 100),
-    multiplier('Companion', 1 + companionBonus)
+    multiplier(companionLineName(32), 1 + companionBonus)
   ], note ? { note } : {});
 }
 
@@ -1848,7 +1850,7 @@ export const getAllSkillsExp = (character: any, characters: any[], account: any)
     percent('Skill mastery', smithingSkillMasteryBonus + allSkillMasteryBonus),
     percent('Shiny', shinyBonus),
     percent('Superbit', superbitBonus),
-    percent('Companion', companionBonus),
+    percent(companionLineName(9), companionBonus),
     percent('Summoning', winnerBonus),
     percent('Guild', guildBonus),
     percent('Owl', owlBonus),
@@ -2254,7 +2256,7 @@ export const getClassExpMulti = (character: any, account: any, characters: any) 
   const armorSetBonus = getArmorSetBonus(account, 'IRON_SET');
   const exoticBonusQTY50 = getExoticMarketBonus(account, 50);
   const opt421 = account?.accountOptions?.[OPT.hoopsClassXpBonus] ?? 0;
-  const stampClassXP = getStampsBonusByEffect(account, 'classxp');
+  const stampClassXP = getStampsBonusByStat(account, 'classxp');
   const friendBonus1 = getFriendBonus(account, 1);
   const comp47 = isCompanionBonusActive(account, 47) ? account?.companions?.list?.at(47)?.bonus : 0;
   const comp111 = isCompanionBonusActive(account, 111) ? account?.companions?.list?.at(111)?.bonus : 0;
@@ -2352,25 +2354,25 @@ export const getClassExpMulti = (character: any, account: any, characters: any) 
         percent('Superbit (Noobie Gains)', superbitApplied ? superbitBonus : 0)
       ]),
       multiplier('Talent (Shiny Medallions)', hasMedallion?.acquired ? Math.max(1, shinyMedallionTalent) : 1),
-      multiplier('Companion (Panda)', 1 + 9 * comp37),
-      multiplier('Companion (Chippy)', 1 + comp33),
-      multiplier('Companion (Glunko)', 1 + 4 * comp160),
-      multiplier('Companion (Mr Pig)', 1 + comp32),
+      multiplier(companionLineName(37), 1 + 9 * comp37),
+      multiplier(companionLineName(33), 1 + comp33),
+      multiplier(companionLineName(160), 1 + 4 * comp160),
+      multiplier(companionLineName(32), 1 + comp32),
       multiplier('Crucible', 1 + crucibleClassExp),
       multiplier('Menagerie', 1 + menagerieClassExp / 100),
-      multiplier('Companion (Crystal Glunko)', 1 + 0.4 * comp168),
-      multiplier('Companion (Whale)', 1 + comp34),
-      multiplier('Companion (Eggroll)', 1 + comp145),
+      multiplier(companionLineName(168), 1 + 0.4 * comp168),
+      multiplier(companionLineName(34), 1 + comp34),
+      multiplier(companionLineName(145), 1 + comp145),
       productGroup('Jelly Operator', [
         multiplier('Jelly Operator (30)', 1 + jellyClassExp30 / 100),
         multiplier('Jelly Operator (62)', 1 + jellyClassExp62 / 100)
       ]),
-      multiplier('Companion (Baby Troll)', babyTrollMulti),
+      multiplier(companionLineName(128), babyTrollMulti),
       multiplier('Research Grid', 1 + researchGridTotal / 100),
       multiplier('Sticker', 1 + stickerBonus / 100),
       multiplier('Superbit (Experienced Gamer)', 1 + 0.1 * superbit63),
       multiplier('Zenith Market', 1 + zenithMarketBonus / 100),
-      multiplier('Companion (Santa Snake)', santaSnakeMulti, { note: 'Capped at ×1.01' }),
+      multiplier(companionLineName(50), santaSnakeMulti, { note: 'Capped at ×1.01' }),
       multiplier('Class EXP Multi Equip', 1 + equipBonus84 / 100),
       multiplier('Arcade (Class XP Multi)', 1 + arcadeBonus60 / 100),
       multiplier('Vial (Class EXP)', 1 + vial7classexp / 100),
@@ -2395,7 +2397,7 @@ export const getClassExpMulti = (character: any, account: any, characters: any) 
       percent('Food', foodBonus),
       percent('Star Sign', starSignBonus),
       percent('Vials', vialBonus),
-      percent('Bubble', bubbleBonus),
+      percent(bubbleLineName('GRIND_TIME'), bubbleBonus),
       percent('Cards', cardBonus),
       percent('Card Set', cardSetBonus),
       percent('Card Set (0)', cardSet0Bonus),
@@ -2420,10 +2422,10 @@ export const getClassExpMulti = (character: any, account: any, characters: any) 
       percent('Shiny', shinyBonus),
       percent('MSA', msaBonus),
       percent('EXP Cultivation', talentBonus4),
-      percent('Companion (Wispy)', comp3),
-      percent('Companion (Santa Snake)', comp50Additive),
-      percent('Companion (Jigglelord)', comp47),
-      percent('Companion (Obolbrine)', comp111),
+      percent(companionLineName(3), comp3),
+      percent(companionLineName(50), comp50Additive),
+      percent(companionLineName(47), comp47),
+      percent(companionLineName(111), comp111),
       percent('Island Shimmer', shimmerBonus),
       percent('Golden Food', goldenFoodBonus),
       percent('Owl', owlBonus),
@@ -2436,7 +2438,7 @@ export const getClassExpMulti = (character: any, account: any, characters: any) 
       percent('Iron Set', armorSetBonus),
       percent('Exotic Market', exoticBonusQTY50),
       percent('Account Option (421)', opt421),
-      percent('Stamp (Class XP)', stampClassXP),
+      getStampNode(account, { stat: 'classxp' }, stampClassXP),
       percent('Friend Bonus', friendBonus1),
       percent('The Button', buttonBonus)
     ])
@@ -2728,7 +2730,7 @@ export const getDropRate = (character: any, account: any, characters: any) => {
           percent('Post Office', postOfficeBonus),
           gearGroup(newDropRateBonusesBreakdown),
           percent('Obols', obols),
-          percent('Bubble', bubbleBonus),
+          percent(bubbleLineName('DROPPIN_LOADS'), bubbleBonus),
           percent('Cards', cardBonus + cardSetBonus + passiveCardBonus),
           percent('Shrine', shrineBonus),
           percent('Prayers', prayerBonus),
@@ -2745,7 +2747,7 @@ export const getDropRate = (character: any, account: any, characters: any) => {
           percent('Graded Rate (Royal Guardian)', gradedRateDropRate),
           percent('Mama Troll', mamaTrollDropRate),
           percent('Equinox', equinoxDropRateBonus),
-          percent('Stamps', stampBonus),
+          getStampNode(account, { effect: '+{%_Drop_Rate' }, stampBonus),
           percent('Tome', tomeBonus),
           percent('Owl', owlBonus),
           percent('Summoning', summoningBonus),
@@ -3040,7 +3042,7 @@ export const getCashMulti = (character: any, account: any, characters: any, play
         percent('Dollar of Agility', cashAgiBubble * Math.floor(agility / 250)),
         percent('Nickel of Wisdom', cashWisBubble * Math.floor(wisdom / 250))
       ]),
-      multiplier('Companion (24)', 1 + Math.min(4, companionBonus), { note: 'Max ×5' }),
+      multiplier(companionLineName(24), 1 + Math.min(4, companionBonus), { note: 'Max ×5' }),
       multiplier('Coin Drop Multi (38)', 1 + companionBonus38),
       multiplier('Equinox Broadbass', 1 + Math.min(4, companionBonus45), { note: 'Max ×5' }),
       multiplier('Potluck', 1 + Math.min(4, companionBonus159), { note: 'Max ×5' }),
@@ -3268,7 +3270,7 @@ export const getPlayerCrystalChance = (character: any, account: any, idleonData:
         additiveGroup(NUMBERED_GROUP, [
           percent('Crystal Shrine Crescent', crystalShrineBonus),
           percent('Post Office', nonPredatoryBoxBonus),
-          percent('Companion (Armadillo)', companion171Bonus),
+          percent(companionLineName(171), companion171Bonus),
           percent('Jelly Operator', jellyBonus8)
         ]),
         multiplier('Crystals 4 Days', 1 + crystals4DaysBonus / 100),
@@ -3329,7 +3331,10 @@ export const getPlayerFoodBonus = (character: any, account: any, isHealth?: any)
     (equipmentFoodEffectBonus + (stampBonus + ((starSignBonus) +
       (cardBonus + (cardSet + talentBonus))))))) / 100;
 }
-export const getPlayerSpeedBonus = (character: any, characters: any, account: any) => {
+export const getPlayerSpeedBonus = (character: any, characters: any, account: any) =>
+  getPlayerSpeedInfo(character, characters, account).value;
+
+export const getPlayerSpeedInfo = (character: any, characters: any, account: any) => {
   let finalSpeed;
   const featherWeight = getTalentBonus(character?.flatTalents, 'FEATHERWEIGHT');
   const featherFlight = getTalentBonus(character?.flatTalents, 'FEATHER_FLIGHT');
@@ -3352,19 +3357,54 @@ export const getPlayerSpeedBonus = (character: any, characters: any, account: an
   finalSpeed = (baseMath + (statuePower + ((speedStarSign) + (equipmentSpeedEffectBonus + (cardBonus + featherFlight))))) / 100; // 1.708730398284699
   finalSpeed = 1 + (finalSpeed + (agiMulti) / 2.2); // 2.829035843985983
   const tipToeQuickness = getTalentBonus(character?.flatStarTalents, 'TIPTOE_QUICKNESS');
+  const lines = [
+    percent('Base', 100),
+    percent('AGI', 100 * agiMulti / 2.2),
+    percent('Food', foodBonus),
+    percent(sourceName('Talent', 'FEATHERWEIGHT'), featherWeight),
+    percent(sourceName('Talent', 'FEATHER_FLIGHT'), featherFlight),
+    percent(sourceName('Talent', 'STRAFE'), strafe),
+    getStampNode(account, { effect: 'Movement_Speed' }, stampBonus, character),
+    percent(sourceName('Statue', account?.statues?.[1]?.name), statuePower),
+    percent('Star Sign', speedStarSign),
+    percent('Equipment', equipmentSpeedEffectBonus),
+    percent('Cards', cardBonus)
+  ];
+  // Before the game rounds down and caps it, in percent
+  let uncapped;
+  let cap;
   if (finalSpeed > 2) {
+    uncapped = 100 * finalSpeed;
     finalSpeed = Math.floor(100 * finalSpeed) / 100;
   }
   else if (finalSpeed > 1.75) {
+    uncapped = 100 * finalSpeed + tipToeQuickness;
+    cap = 200;
+    lines.push(percent(sourceName('Talent', 'TIPTOE_QUICKNESS'), tipToeQuickness));
     finalSpeed = Math.min(2, Math.floor(100 * ((finalSpeed) + tipToeQuickness / 100)) / 100)
   }
   else {
     const saltLickBonus = getSaltLickBonus(account?.saltLick, 7);
     const groundedMotherboard = account?.lab?.playersChips?.[character?.playerId]?.find((chip: any) => chip.index === 15)?.baseVal ?? 0;
     const sigilBonus = getSigilBonus(account?.alchemy?.p2w?.sigils, 'TUFT_OF_HAIR');
+    uncapped = 100 * finalSpeed + saltLickBonus + groundedMotherboard + tipToeQuickness + sigilBonus;
+    cap = 175;
+    lines.push(
+      percent('Salt Lick', saltLickBonus),
+      percent('Lab Chip', groundedMotherboard),
+      percent(sourceName('Talent', 'TIPTOE_QUICKNESS'), tipToeQuickness),
+      percent(sourceName('Sigil', 'TUFT_OF_HAIR'), sigilBonus)
+    );
     finalSpeed = Math.min(1.75, Math.floor(100 * (finalSpeed + (saltLickBonus + groundedMotherboard + (tipToeQuickness + sigilBonus)) / 100)) / 100)
   }
-  return Math.round(finalSpeed * 100);
+  const value = Math.round(finalSpeed * 100);
+  const capped = cap !== undefined && value >= cap && uncapped > cap;
+  const breakdown = createBreakdown('Movement speed', `${value}%`, [
+    ...lines,
+    percent(capped ? 'Cap' : 'Rounded down', value - uncapped,
+      { note: capped ? `Max ${cap}%` : 'The game rounds down to a whole percent' })
+  ], { combine: 'sum' });
+  return { value, breakdown };
 }
 // Every AFK type gains at least 1%
 const MIN_AFK_GAINS = 0.01;
@@ -3463,7 +3503,8 @@ export const getAfkGain = (character: any, characters: any, account: any) => {
     percent('Dungeons', flurboBonus),
     percent('Divinity Major', majorBonus * 30),
     percent('Divinity Minor', divinityMinorBonus),
-    percent('Companion', compBonus + compBonus25),
+    percent(companionLineName(6), compBonus),
+    percent(companionLineName(25), compBonus25),
     percent('Shrine', shrineBonus),
     percent('Rando Event Looty', randoEventLooty * randomItemsFound),
     percent('Summoning', summoningBonus),
@@ -3585,7 +3626,7 @@ export const getAfkGain = (character: any, characters: any, account: any) => {
       percent('Bribe', bribeAfkGains),
       percent('Card', cardBonus),
       percent('Post Office', dwarvenSupliesBonus),
-      percent('Bubble', bubbleBonus),
+      percent(bubbleLineName('DREAM_OF_IRONFISH'), bubbleBonus),
       skillAfkPool,
       allAfkPool
     ]);
@@ -3614,7 +3655,7 @@ export const getAfkGain = (character: any, characters: any, account: any) => {
       percent('Bribe', bribeAfkGains),
       percent('Card', cardBonus),
       percent('Post Office', tapedUpTimberBonus),
-      percent('Bubble', bubbleBonus),
+      percent(bubbleLineName('TREE_SLEEPER'), bubbleBonus),
       skillAfkPool,
       allAfkPool
     ]);
@@ -3647,7 +3688,7 @@ export const getAfkGain = (character: any, characters: any, account: any) => {
       percent('Bribe', bribeAfkGains),
       percent('Card', cardBonus),
       percent('Post Office', sealedFishheadsBonus),
-      percent('Bubble', bubbleBonus),
+      percent(bubbleLineName('DREAM_OF_IRONFISH'), bubbleBonus),
       percent('Gear (Fishing AFK gains)', gearBonus),
       percent('Obols', obolsBonus),
       skillAfkPool,
@@ -3679,7 +3720,7 @@ export const getAfkGain = (character: any, characters: any, account: any) => {
       percent('Bribe', bribeAfkGains),
       percent('Card', cardBonus),
       percent('Post Office', bugHuntingSuppliesBonus),
-      percent('Bubble', bubbleBonus),
+      percent(bubbleLineName('FLY_IN_MIND'), bubbleBonus),
       percent('Gear (Catching AFK gains)', catchingEquipmentBonus),
       skillAfkPool,
       allAfkPool
@@ -3733,7 +3774,7 @@ export const getAfkGain = (character: any, characters: any, account: any) => {
     // The share of the other AFK gains is always 0, so only the spelunking sources show
     categories = afkCategories(50, [
       percent('Big Fish', bigFishBonus),
-      percent('Companion', spelunkingCompBonus),
+      percent(companionLineName(28), spelunkingCompBonus),
       percent('Card', spelunkingCardBonus),
       percent('Vial', spelunkingVialBonus)
     ]);
@@ -3875,11 +3916,11 @@ export const getConstructionExpMulti = (character: any, account: any, isLoggedIn
       multiplier('Yellow Jelly', 1 + menagerieConExpBonus / 100)
     ]),
     additiveGroup(NUMBERED_GROUP, [
-      percent('Bubble', activeBubbleBonus),
+      percent(bubbleLineName('CALL_ME_BOB'), activeBubbleBonus),
       percent('Talents', talentBonus + secondTalentBonus),
       percent('Vial', vialBonus),
       percent('Statue', statueBonus),
-      percent('Stamps', stampBonus),
+      getStampNode(account, { effect: '+{%_Construction_Exp_Gain' }, stampBonus, character),
       percent('Vote', voteBonus),
       percent('Star sign', starSignBonus),
       percent('Post office', postOfficeBonus)

@@ -1,4 +1,5 @@
 import { getDescriptor, getDescriptors } from './registry';
+import { groupingOf, isInGroup } from './groups';
 import { effectiveScope, isAllChars, isCharScope, isGlobalKey, MAX_TARGET, NEXT_TARGET, scopeKey } from './store';
 
 const STATUS_ORDER = { ok: 0, reached: 1, invalid: 2, missing: 2, unread: 2 };
@@ -64,7 +65,7 @@ const invalidView = (goal, descriptor, metric, row, ctx) => {
 // A group name already says what it is ("Day market", "World 1"), so the group label is not repeated
 const allName = (goal, descriptor) => {
   if (goal.group == null) return `All ${String(descriptor?.label ?? goal.system).toLowerCase()}`;
-  return descriptor?.groups?.names?.[goal.group] ?? String(goal.group);
+  return groupingOf(descriptor, goal.group)?.names?.[goal.group] ?? String(goal.group);
 };
 
 // A priced yes/no metric: what the account has toward the row's price. Logged out it has nothing; a row without a
@@ -73,9 +74,11 @@ const costOf = (metric, row, ctx) => {
   if (!metric.cost) return null;
   const price = metric.cost.price(row, ctx);
   if (!Number.isFinite(price) || price <= 0) return null;
-  const have = metric.cost.have(ctx);
+  // a row paid from its own item (a coral, say) reads its balance and icon from the row
+  const have = metric.cost.have(ctx, row);
   // display 'coins' draws the coin tiers; icon(n) and format(n) draw any other currency
-  const { label, display, icon, format } = metric.cost;
+  const { label, display, format } = metric.cost;
+  const icon = metric.cost.icon ? (n) => metric.cost.icon(n, row) : null;
   return { label, ...(display ? { display } : {}), ...(icon ? { icon } : {}), ...(format ? { format } : {}), have: Number.isFinite(have) ? have : 0, price };
 };
 
@@ -87,6 +90,16 @@ const targetValueOf = (goal, metric, row, ctx, max) => {
   return goal.target;
 };
 
+// A tiered metric whose tiers are cut-offs on an amount: what the row has and what the target tier needs
+const tierAmountOf = (goal, metric, row, ctx, targetValue) => {
+  if (!metric.tierAmount || goal.op === '<=') return null;
+  const have = metric.tierAmount.have(row, ctx);
+  const need = metric.tierAmount.need(row, targetValue, ctx);
+  if (!Number.isFinite(have) || !Number.isFinite(need) || need <= 0) return null;
+  // a unit puts the amount on the goal's face ("62.3M of 100M kills"); without one only the bar follows it
+  return { have, need, ...(metric.tierAmount.unit ? { unit: metric.tierAmount.unit } : {}) };
+};
+
 // Compares one row with the goal. null = the comparison is impossible (no percent / no max / bad value).
 const evaluateRow = (goal, descriptor, metric, row, ctx) => {
   const max = metric.max?.(row, ctx) ?? null;
@@ -96,12 +109,15 @@ const evaluateRow = (goal, descriptor, metric, row, ctx) => {
   if (!Number.isFinite(targetValue)) return null;
   const reached = goal.op === '<=' ? value <= targetValue : value >= targetValue;
   const cost = costOf(metric, row, ctx);
+  const tierAmount = tierAmountOf(goal, metric, row, ctx, targetValue);
   // A percent goal keeps the plain amount too ("Lv 1,234"), so entries the same percent apart still read apart
   const amount = goal.unit === 'percentOfMax' ? metric.value(row, ctx) : null;
   let progress;
   if (reached) progress = 1;
   // Still reached only by buying it: the bar follows the purse toward the price
   else if (cost) progress = clamp01(cost.have / cost.price);
+  // A tier with a moving cut-off: the bar follows the amount toward the target tier's cut-off, not the tier count
+  else if (tierAmount) progress = clamp01(tierAmount.have / tierAmount.need);
   else if (goal.op === '<=') progress = clamp01(targetValue / value);
   else progress = clamp01(value / targetValue);
   return {
@@ -115,6 +131,7 @@ const evaluateRow = (goal, descriptor, metric, row, ctx) => {
     reached,
     ...(cost ? { cost } : {}),
     ...(Number.isFinite(amount) ? { amount } : {}),
+    ...(tierAmount ? { tierAmount } : {}),
     ...(metric.tiers ? { valueTierName: metric.tiers[value] } : {})
   };
 };
@@ -169,6 +186,41 @@ const resolveAllChars = (goal, descriptor, metric, { account, characters }, base
   };
 };
 
+// Every entry (or a group's) on every character: one entry per character, done once all of that character's entries
+// meet the target. A character with none of the entries is not counted
+const resolveAllCharsAll = (goal, descriptor, metric, { account, characters }, base) => {
+  const entries = (characters ?? []).flatMap((character) => {
+    const rowCtx = { account, characters, character };
+    const rows = descriptor.list(rowCtx) ?? [];
+    const inGroup = goal.group == null ? rows : rows.filter((row) => isInGroup(descriptor, goal.group, row));
+    const own = inGroup.map((row) => evaluateRow(goal, descriptor, metric, row, rowCtx)).filter(Boolean);
+    if (!own.length) return [];
+    const met = own.filter(({ reached }) => reached).length;
+    return [{
+      key: character.name,
+      name: character.name,
+      icon: `data/ClassIcons${character.classIndex ?? 0}`,
+      progress: own.reduce((sum, { progress }) => sum + progress, 0) / own.length,
+      reached: met === own.length,
+      counts: { met, total: own.length }
+    }];
+  });
+  const firstRows = (characters ?? []).map((character) => descriptor.list({ account, characters, character }) ?? [])
+    .find((rows) => rows.length) ?? [];
+  const summary = summarize(goal, entries, firstRows.length);
+  // characters 27 of 30 bags in are most of the way there, so the bar follows them, not only the finished ones
+  const progress = goal.watch || !entries.length ? summary.progress
+    : entries.reduce((sum, entry) => sum + entry.progress, 0) / entries.length;
+  return {
+    ...base,
+    name: allName(goal, descriptor),
+    icon: descriptor.systemIcon ?? (firstRows.length ? descriptor.icon(firstRows[0]) : null),
+    group: goal.group ?? null,
+    ...summary,
+    progress
+  };
+};
+
 // An entry every character shares (isGlobalKey) is one account value, whatever scope the goal was saved
 // with: it is read on the first character that has it and reads as the account's goal
 const globalContext = (goal, descriptor, { account, characters }) => {
@@ -217,8 +269,8 @@ const resolveInner = (goal, ctx) => {
     return entryView(goal, descriptor, metric, found.row, found.rowCtx, { ...base, ...tier, scope: 'account' });
   }
   if (isAllChars(goal.scope)) {
-    // only one entry across characters: an all goal over every character's entries is not offered
-    if (goal.kind !== 'entry' || descriptor.scope !== 'character') return missingView(goal, descriptor);
+    if (descriptor.scope !== 'character') return missingView(goal, descriptor);
+    if (goal.kind === 'all') return resolveAllCharsAll(goal, descriptor, metric, ctx, { ...base, ...tier });
     return resolveAllChars(goal, descriptor, metric, ctx, { ...base, ...tier });
   }
   const rowCtx = contextFor(goal, descriptor, ctx);
@@ -230,15 +282,15 @@ const resolveInner = (goal, ctx) => {
     const inGroup = goal.group == null
       ? rows
       // an imported file can carry a numeric group id
-      : rows.filter((row) => String(descriptor.groups?.of(row)) === String(goal.group));
+      : rows.filter((row) => isInGroup(descriptor, goal.group, row));
     const entries = inGroup.map((row) => evaluateRow(goal, descriptor, metric, row, rowCtx)).filter(Boolean);
     return {
       ...base,
       ...tier,
       name: allName(goal, descriptor),
-      // a metric can stand for the whole goal (a ribbon rank); otherwise the first entry's icon does
+      // a metric can stand for the whole goal (a ribbon rank), then the system's own icon, else the first entry's
       icon: metric.allIcon && Number.isFinite(goal.target) ? metric.allIcon(goal.target)
-        : inGroup.length ? descriptor.icon(inGroup[0]) : null,
+        : descriptor.systemIcon ?? (inGroup.length ? descriptor.icon(inGroup[0]) : null),
       group: goal.group ?? null,
       ...summarize(goal, entries, inGroup.length)
     };

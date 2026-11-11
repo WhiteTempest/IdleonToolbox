@@ -1,4 +1,4 @@
-import { createRange, formatDuration, lavaLog, notateNumber, number2letter, tryToParse } from '@utility/helpers';
+import { cleanUnderscore, createRange, formatDuration, lavaLog, notateNumber, number2letter, tryToParse } from '@utility/helpers';
 import { filteredGemShopItems, filteredLootyItems, keysMap, skillIndexMap, unrealisticGreenstackItems } from './parseMaps';
 import {
   bonuses,
@@ -22,8 +22,8 @@ import {
 } from '@website-data';
 import { checkCharClass, CLASSES, getTalentBonus, mainStatMap, talentPagesMap, getHighestTalentAcrossCharacters, getBestActiveCharacter, getLastBloodBerserkerLine } from './talents';
 import { getMealsBonusByEffectOrStat } from './world-4/cooking';
-import { getBubbleBonus, getSigilBonus, getVialsBonusByEffect, getVialsBonusByStat } from './world-2/alchemy';
-import { getStampsBonusByEffect } from './world-1/stamps';
+import { bubbleLineName, getBubbleBonus, getSigilBonus, getVialsBonusByEffect, getVialsBonusByStat } from './world-2/alchemy';
+import { getStampNode, getStampsBonusByEffect } from './world-1/stamps';
 import { getAchievementStatus } from './achievements';
 import { getAtomBonus } from './world-3/atomCollider';
 import { getPrayerBonusAndCurse } from './world-3/prayers';
@@ -996,9 +996,9 @@ export const getGoldenFoodMulti = (character: any, account: any, characters: any
       gearGroup(equipmentBonusBreakdown),
       percent('Obols', obolsBonus),
       percent('Talent', hungryForGoldTalentBonus),
-      percent('Stamp', goldenAppleStamp),
+      getStampNode(account, { effect: 'Effect_from_Golden_Food._Sparkle_sparkle!' }, goldenAppleStamp),
       percent('Achievement', goldenFoodAchievement),
-      percent('Bubble', goldenFoodBubbleBonus),
+      percent(bubbleLineName('SHIMMERON'), goldenFoodBubbleBonus),
       percent('Sigil', goldenFoodSigilBonus),
       percent('Meal', mealBonus),
       percent('Star Sign', starSignBonus),
@@ -1203,8 +1203,8 @@ export const getAllCap = (character: any, account: any, forceMaxCapacity: any) =
       { value: shrineBonus, name: 'Shrine' },
       { value: prayerBonus + (-prayerCurse), name: 'Prayer' },
       { value: bribeBonus, name: 'Bribe' },
-      { value: companionBonus, name: 'Companion' },
-      { value: ramLvl2Bonus, name: 'Companion Lv2' }
+      { value: companionBonus, name: companionLineName(18) },
+      { value: ramLvl2Bonus, name: `${companionLineName(2)} Lv2` }
     ]
   }
 }
@@ -1553,6 +1553,9 @@ export const isCompanionBonusActive = (account: any, index: any) => {
 export const getCompanionBonus = (account: any, index: number): number =>
   isCompanionBonusActive(account, index) ? Number(account?.companions?.list?.at(index)?.bonus) || 0 : 0;
 
+// A breakdown line for a companion's bonus, named as the game names the companion
+export const companionLineName = (index: number) => `Companion (${cleanUnderscore(companions?.[index]?.name) || index})`;
+
 // Pet Mart+ flag (game: _customBlock_CompLV2): true only when the companion is
 // both acquired and upgraded to level >= 1. Formulas multiply this flag by their own constant.
 export const isCompanionLvl2Active = (account: any, index: any) => {
@@ -1845,7 +1848,7 @@ export const getAllMasterclassDropz = (character: any, account: any) => {
     multiplier('Spelunking Shop (Turquoise Hardhat)', 1 + spelunkShop / 100),
     multiplier('Vial', 1 + vial / 100),
     multiplier('Button', 1 + button / 100),
-    multiplier('Companion', 1 + companion),
+    multiplier(companionLineName(38), 1 + companion),
     multiplier('Gear (Masterclass drops)', 1 + gear101 / 100),
     multiplier('Gear (Bonus MC drops)', 1 + gear106 / 100),
     multiplier('Card (Verminous)', 1 + ratCard / 100)
