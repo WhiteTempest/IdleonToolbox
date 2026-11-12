@@ -5,6 +5,36 @@ import { replayWhatsNew } from '@utility/whatsNew';
 /* eslint-disable react/jsx-key */
 export const patchNotes = [
   {
+    'ver': '4.0.5',
+    'gameVer': '2.3.561',
+    'date': '11/11/2026',
+    'features': [
+      'Death Note: kill counts show in short form again (K, B, T, Q, QQ)',
+      'Farming: pressing Bean Trade shows the full bean amount',
+      'Upgrade optimizers: how many times to buy shows on every card and table row, and the line under an upgrade name is shorter',
+      'Cooking: each meal card shows its ladles with the ladle icon again',
+      'Compass Medallions: each medallion shows its dust, weakness and drops',
+      'Grimoire, Compass and Tesseract: form stats as compact tiles',
+      'Goals: filter by several systems at once, shown as buttons when you track 5 systems or fewer',
+      'Goals: Menagerie totals track Jellyfish progress: ladles, chapters and pages tracked, Silver, Pink and Yellow Jellyfish levels',
+      'The Well: Full in breakdown lists the times without golden buckets and with each golden bucket',
+      'Dashboard: character cards stop at 6 to a row, like the character select in game',
+      'Goals: bubble % of max goals show the level that reaches the target beside your current level',
+      'Card search: presets can preview on a character, showing its drop rate, damage, AFK gains, kill rates and cash multi now and with the preset',
+      'Stamps: Save levels snapshot sits on the No Stamp Left Behind tile, so the stamp it levelled is easy to spot',
+      'Anvil: speed breakdown on each character, Smithing EXP per hour, next point costs, EXP waiting since your save and items made all time',
+      'Bribes: grouped into their sets, with locked bribes, what unlocks the Bail and Grail sets, and the coins to buy the ones for sale',
+      'Forge: forge stats with a speed breakdown, bars per hour, barrel effects and how long they last, each upgrade\'s current bonus and the cost to max all'
+    ],
+    'fixes': [
+      'Tournament: opponent and leaderboard team power and win chances show as a range, since Pet Mart+ upgrades of other players are not in the game data',
+      'Fishing Efficiency breakdown: the Strength bonus now lists each source, Skelefish Stamp included',
+      'Anvil: points include Acme Anvil, and EXP per craft includes your EXP bonus',
+      'Leaderboards: Sprout Speed shows times in seconds again',
+      'Forge: Empty in counts the ore your storage refill will load, and locked slots show as Locked'
+    ]
+  },
+  {
     'ver': '4.0.4',
     'gameVer': '2.3.561',
     'date': '10/11/2026',
@@ -47,7 +77,9 @@ export const patchNotes = [
       'Dashboard: the World 7 Spare Workers alert now also lists Workers on empty resources, replacing their separate alert',
       'Quests: pick characters with the Characters page\'s switcher, one or several at once. With more than one, each quest shows who is on it again, and In progress is blue so it stands apart from Done',
       'Goals: Outposts can track Expanded Barracks, Advanced Logistics and Greater Education levels, and the outpost list shows the monster of each map',
-      'Research Grid, Hole Study, Summoning and Spelunking Upgrades: the Details pill is gone, the rows it hid now always show on the cards'
+      'Research Grid, Hole Study, Summoning and Spelunking Upgrades: the Details pill is gone, the rows it hid now always show on the cards',
+      'Tesseract: the weapon and ring quality tiles show their best base stat roll',
+      'Minehead: Base damage now shows a breakdown of its sources'
     ],
     'fixes': [
       'Class EXP: now includes the Gud EXP Stamp bonus',
@@ -65,7 +97,8 @@ export const patchNotes = [
       'Slab: Funny 2hr Feather, Funny 2hr Slice and the Easter and Summer stones no longer count as missing greenstacks',
       'Breakdowns name each companion, and companions that showed the wrong name now read correctly',
       'Gaming: Sprout Speed now matches the game (adds the palette, crop depot and bits toggle bonuses)',
-      'Sailing: Ashen Urn bonus now follows the game level cap for each artifact tier'
+      'Sailing: Ashen Urn bonus now follows the game level cap for each artifact tier',
+      'Dashboard: sharper icon on the Royal Guardian unspent PTS alert'
     ]
   },
   {
