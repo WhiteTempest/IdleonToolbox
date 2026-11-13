@@ -56,6 +56,21 @@ const getShopItems = (seed: number): { shopItems: any[]; extraSeed: number } => 
   }
 }
 
+// game: the skin picker reads WeeklyBoss["UI_" + Number2Letter[i + 1]], the letter the skin's UImain_ sprite ends in
+export const isWeeklyUiOwned = (account: Account, rawName: string = ''): boolean => {
+  const letter = rawName.match(/^UImain_([a-z])$/)?.[1];
+  return Boolean(letter) && Number((account as any)?.weeklyBossesRaw?.[`UI_${letter}`]) === 1;
+};
+
+// The two fight buffs that last the week outside it, each capped at 150% where the game reads them: the tea break
+// (MISC "c", +Class EXP) and the chilly hotdogs (MISC "g", +damage to all characters)
+const WEEKLY_BUFF_CAP = 150;
+export const getWeeklyBossBuffs = (account: Account) => ({
+  classExp: Math.min(WEEKLY_BUFF_CAP, Number((account as any)?.weeklyBossesRaw?.c) || 0),
+  damage: Math.min(WEEKLY_BUFF_CAP, Number((account as any)?.weeklyBossesRaw?.g) || 0),
+  cap: WEEKLY_BUFF_CAP
+});
+
 const MAX_ACCUMULATOR_SIZE = 9;
 export const getWeeklyBoss = (account: Account, weeks: number = 10) => {
   // The weeks are seeded from the save's clock: with none, every week would draw the same boss with no date
@@ -101,9 +116,10 @@ export const getWeeklyBoss = (account: Account, weeks: number = 10) => {
     const dateInMs = Math.floor((seed + i) * 604800 * 1000);
     triplets = triplets.map((triplet: number[], index: number) => ({
       actions: triplet.map((index: number) => weeklyBossesActions?.[index]),
+      actionIndices: triplet,
       task: tasks?.[index]
     }));
-    weeklyBossesList.push({ bossName, shopItems, triplets, date: new Date(dateInMs) });
+    weeklyBossesList.push({ bossId, bossName, shopItems, triplets, date: new Date(dateInMs) });
   }
   return weeklyBossesList;
 }
@@ -135,8 +151,9 @@ export const getWeeklyBossCarryCap = (character: any, account: Account, loggedIn
 
 // game: WeeklyBoss("TaskQTY"), for the character whose turn it is. HP, MP, accuracy, defence, speed and
 // max damage are the logged-in character's in the game, so these read as if the turn character were
-// logged in. The game draws the number rounded.
-export const getTaskQuantity = (turn: number, bossId: number, account: Account, characters: any[]): number => {
+// logged in. The game draws the number rounded. Carry capacity reads the logged-in character's boosts, and the game
+// lets any character click it: `loggedInCharacter` is that character (the turn character when left out).
+export const getTaskQuantity = (turn: number, bossId: number, account: Account, characters: any[], loggedInCharacter?: any): number => {
   if (turn >= characters?.length) return 0;
   const character = characters?.[turn];
   if (bossId === 0) return character?.skillsInfo?.mining?.level;
@@ -150,7 +167,7 @@ export const getTaskQuantity = (turn: number, bossId: number, account: Account, 
   if (bossId === 8) return character?.skillsInfo?.laboratory?.level;
   if (bossId === 9) return character?.skillsInfo?.divinity?.level;
   if (bossId === 24) return character?.skillsInfo?.construction?.level;
-  if (bossId === 15) return getWeeklyBossCarryCap(character, account);
+  if (bossId === 15) return getWeeklyBossCarryCap(character, account, loggedInCharacter ?? character);
   // Unlike its neighbours this one isn't per character - the game reads the account-wide unique
   // quest count, so every character's turn contributes the same number.
   if (bossId === 16) return account?.totalQuestsCompleted;

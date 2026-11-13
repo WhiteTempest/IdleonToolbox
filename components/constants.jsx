@@ -124,7 +124,7 @@ export const PAGES = {
           icon: 'etc/Killroy_Skull',
           tabs: ['Schedule', 'Upgrades', 'Permanent Upgrades', 'Monsters']
         },
-        { label: 'weeklyBosses', icon: 'etc/SWR_Containment' },
+        { label: 'weeklyBosses', icon: 'etc/SWR_Containment', tabs: ['Weeks', 'Prizes', 'Battle solver'] },
         { label: 'voteBallot', icon: 'etc/VoteBallot', tabs: ['Bonus', 'Meritocracy'] }
       ]
     },
@@ -141,7 +141,7 @@ export const PAGES = {
         { label: 'prayers', icon: `data/PrayerSel` },
         { label: 'Traps', icon: 'data/TrapBoxSet1' },
         { label: 'saltLick', icon: 'data/ConTower3' },
-        { label: 'construction', icon: 'data/ClassIcons49', tabs: ['Main', 'Cog stat calculator'] },
+        { label: 'construction', icon: 'data/ClassIcons49', tabs: ['Main', 'Cog makers', 'Cog stat calculator'] },
         { label: 'armorSmithy', icon: 'etc/Armor_Set_Smithy' },
         { label: 'hatRack', icon: 'data/HatHelpA' }
       ]

@@ -1,7 +1,8 @@
 import { Stack, Typography } from '@mui/material';
 import { isValid } from 'date-fns';
 import { cleanUnderscore, formatNum } from '@utility/helpers';
-import { getTaskQuantity } from '@parsers/world-2/weeklyBosses';
+import { getTaskQuantity, isWeeklyUiOwned } from '@parsers/world-2/weeklyBosses';
+import StatusText from '@components/common/StatusText';
 import useFormatDate from '@hooks/useFormatDate';
 import { OPT } from '@parsers/accountOptions';
 import Panel from '@components/common/cards/Panel';
@@ -12,20 +13,30 @@ import GameIcon from '@components/common/GameIcon';
 export const TROPHY_ICON = 'data/Trophie.png';
 
 // A UI skin is a 960 x 66 strip of the game's top bar: its left end, beside the skin's name
-const skinIcon = (src) => <GameIcon src={src} fit={'strip'} side={'left'} size={32} alt={''}/>;
+const skinIcon = (src, size = 32) => <GameIcon src={src} fit={'strip'} side={'left'} size={size} alt={''}/>;
+
+// Gold Food and Statues draw the week's rolled one (FoodG + n, EquipmentStatues + n): the first stands in for it
+const ROLLED_PRIZE_SPRITES = { FoodG: 'FoodG1', EquipmentStatues: 'EquipmentStatues1' };
+export const prizeRawName = (rawName) => ROLLED_PRIZE_SPRITES[rawName] ?? rawName;
+// A prize's art: a skin's strip, or the item's sprite
+export const prizeIcon = ({ name, rawName }, size = 32) => (name?.includes('_UI')
+  ? skinIcon(`data/${prizeRawName(rawName)}.png`, size)
+  : `data/${prizeRawName(rawName)}.png`);
 
 // One week: its shop priced in trophies, and the turn each character takes (only this week has a current turn)
 const WeeklyBoss = ({ bossIndex, bossName, shopItems, triplets, date, account, characters, trophies }) => {
   const formatDate = useFormatDate();
   const currentTurn = bossIndex === 0 ? Number(account?.accountOptions?.[OPT.weeklyBossTurn]) : null;
   const turns = (triplets ?? []).slice(0, characters?.length ?? 0);
+  const toBuy = (shopItems ?? []).filter(({ rawName }) => !isWeeklyUiOwned(account, rawName));
+  const toBuyCost = toBuy.reduce((sum, { x1 }) => sum + (Number(x1) || 0), 0);
 
-  const shopCard = ({ name, rawName, x1 }, index) => {
-    const fixedRawName = rawName === 'FoodG' ? 'FoodG1' : rawName;
-    return <ItemCard key={`shop-${index}`} title={cleanUnderscore(name)}
-                     icon={name?.includes('_UI') ? skinIcon(`data/${fixedRawName}.png`) : `data/${fixedRawName}.png`}
-                     footer={<ItemCard.Cost icon={TROPHY_ICON} iconAlt={'Trophies'} need={x1 ?? 0} have={trophies}
-                                            format={(value) => formatNum(value, 'whole')}/>}/>;
+  const shopCard = (prize, index) => {
+    const { name, rawName, x1 } = prize;
+    return <ItemCard key={`shop-${index}`} title={cleanUnderscore(name)} icon={prizeIcon(prize)}
+                     footer={isWeeklyUiOwned(account, rawName) ? <StatusText status={'done'}>Owned</StatusText>
+                       : <ItemCard.Cost icon={TROPHY_ICON} iconAlt={'Trophies'} need={x1 ?? 0} have={trophies}
+                                        format={(value) => formatNum(value, 'whole')}/>}/>;
   };
 
   const turnCard = ({ actions, task }, index) => {
@@ -44,7 +55,13 @@ const WeeklyBoss = ({ bossIndex, bossName, shopItems, triplets, date, account, c
                 meta={isValid(date) ? formatDate(date, { showSeconds: false }) : undefined}>
     <Stack gap={3} sx={{ p: 2 }}>
       <Stack gap={1}>
-        <Typography variant={'groupLabel'} color={'text.secondary'}>Shop items</Typography>
+        <Stack direction={'row'} justifyContent={'space-between'} alignItems={'baseline'} gap={1} flexWrap={'wrap'}>
+          <Typography variant={'groupLabel'} color={'text.secondary'}>Shop items</Typography>
+          {/* What the rest of the week's shop costs: every item but the skins you own (the save keeps no other) */}
+          {toBuy.length ? <Typography variant={'body2'} color={'text.secondary'}>
+            {`${formatNum(toBuyCost, 'whole')} trophies to buy the rest`}
+          </Typography> : null}
+        </Stack>
         <CardGrid size={'s'}>{(shopItems ?? []).map(shopCard)}</CardGrid>
       </Stack>
       {turns.length ? <Stack gap={1}>

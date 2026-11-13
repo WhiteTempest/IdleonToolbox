@@ -6,6 +6,7 @@ import { getHoleLeaderboardTotals } from '@parsers/world-5/hole';
 import StatTile from '@components/common/cards/StatTile';
 import CardGrid from '@components/common/cards/CardGrid';
 import ItemCard from '@components/common/cards/ItemCard';
+import StatusText from '@components/common/StatusText';
 import { opalsFoundTile } from '@components/account/Worlds/World5/Hole/commons';
 
 const Gambit = ({ hole }) => {
@@ -15,23 +16,30 @@ const Gambit = ({ hole }) => {
   const doublers = gambit?.summoningDoublers;
   const totalTime = getHoleLeaderboardTotals(hole).gambitTime;
   // The game's $ in the first bonus is the doublers left to appoint (Gambit_SummoningDoublersLeft)
+  const pointsMultiText = `${formatGame(gambit?.pointsMulti ?? 1, 'Holes.GambitPTSmulti')}x`;
+  const pointsMultiBreakdown = gambit?.pointsMultiBreakdown;
   const doublersLeft = Math.max(0, (doublers?.total ?? 0) - (doublers?.appointed ?? 0));
 
   return <>
     <Stack direction={'row'} gap={2} flexWrap={'wrap'} mb={3}>
-      {(gambit?.times ?? []).map((time, index) => {
+      {(gambit?.runs ?? []).map(({ time, unlocked, schematicName }, index) => {
         // A record, so the clock stays (Follow-up 5a); 0 is a run never done
         return <StatTile key={`run-${index}`} label={`Gambit ${index + 1}`} icon={`etc/Gambit_${index}.png`}
-                         value={time > 0 ? msToClock(time * 1000) : '-'}/>;
+                         value={!unlocked ? <StatusText status={'locked'}/> : time > 0 ? msToClock(time * 1000) : '-'}
+                         sub={!unlocked && schematicName ? `Needs ${cleanUnderscore(schematicName)}` : undefined}/>;
       })}
       <StatTile label={'Total gambit time'} value={totalTime > 0 ? msToClock(totalTime * 1000) : '-'}/>
       <StatTile label={'Base points'} value={formatGame(Math.floor(gambit?.basePoints ?? 0), 'Holes.GambitPts', { whole: true })}/>
       <StatTile label={'Points'} value={formatGame(Math.floor(points), 'Holes.GambitPts', { whole: true })}/>
-      <StatTile label={'Points multi'} value={`${formatGame(gambit?.pointsMulti ?? 1, 'Holes.GambitPTSmulti')}x`}/>
+      <StatTile label={'Points multi'} value={pointsMultiText}
+                breakdown={pointsMultiBreakdown ? { ...pointsMultiBreakdown, totalValue: pointsMultiText } : undefined}/>
       {nextUnlock ? <StatTile label={'Next bonus at'} value={formatGame(nextUnlock.pointsReq ?? 0, 'Holes.GambitPtsREQ', { whole: true })}
                               sub={cleanUnderscore(nextUnlock.name)}/> : null}
       <StatTile label={'Summoning doublers'} value={`${formatNum(doublers?.appointed ?? 0)} / ${formatNum(doublers?.total ?? 0)}`}/>
       {opalsFoundTile(hole, 13)}
+      <StatTile label={'Next opal at'} icon={'data/Opal.png'}
+                value={`${formatGame(Math.floor(points), 'Holes.GambitPts', { whole: true })} / ${formatGame(gambit?.nextOpalPoints ?? 0, 'Holes.GambitPtsREQ', { whole: true })}`}
+                sub={points >= (gambit?.nextOpalPoints ?? Infinity) ? 'Given on entering the cavern' : undefined}/>
     </Stack>
     <CardGrid size={'s'}>
       {(gambit?.bonuses ?? []).map(({ name, description, pointsReq }, index) => {

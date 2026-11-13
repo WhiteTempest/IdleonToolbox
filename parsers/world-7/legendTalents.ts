@@ -1,5 +1,5 @@
 import type { IdleonData, Account } from '../types';
-import { gameFill, tryToParse } from '@utility/helpers';
+import { descriptionValueText, gameFill, tryToParse } from '@utility/helpers';
 import { generalSpelunky, legendTalents, researchGridSquares, gameTables } from '@website-data';
 import { getGildedBoostioBonus } from '@parsers/world-3/construction';
 import { getEventShopBonus, getGuaranteedCrystalMobs, companionLineName, isCompanionBonusActive } from '@parsers/misc';
@@ -91,6 +91,7 @@ const parseLegendTalents = (spelunkingRaw: any, accountData: Account = {} as Acc
       ...legendTalent,
       originalIndex: index,
       level: level,
+      nextLevelValue: level < maxLevel ? getNextLevelValue(legendTalent.description, index, Math.round(legendTalent.x2 * (level + 1))) : null,
       index: order?.indexOf(index + ''),
       bonus,
       maxLevel,
@@ -117,6 +118,13 @@ const parseLegendTalents = (spelunkingRaw: any, accountData: Account = {} as Acc
     maxSpendable
   };
 }
+
+// The next level's number as the description writes it. Double Aint Enough's "$" is 2 + bonus / 100; the other "$"
+// read account values, not the level.
+const getNextLevelValue = (description: string, index: number, nextBonus: number): string | null => {
+  if (index === 2) return `${2 + nextBonus / 100}x`;
+  return descriptionValueText(description, nextBonus);
+};
 
 const processLegendTalentDescription = (description: string, index: number, bonus: number, accountData: Account = {} as Account): string => {
   if (!description) return description;

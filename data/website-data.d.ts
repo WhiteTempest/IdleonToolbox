@@ -28,6 +28,7 @@ declare module '@website-data' {
       steamExclusive: boolean;
       secretAchievement: boolean;
       steamIndex?: number;
+      steamQuantity?: number;
       gems?: number;
       candy?: {
         rawName: string;
@@ -996,6 +997,11 @@ declare module '@website-data' {
       root: number;
     };
     eventShopRotation: number[];
+    taskUnlockColumnThresholds: number[];
+    gemShopRestocks: {
+      daily: number[];
+      weekly: number[];
+    };
     worshipMapType: number[];
     worshipExpRewards: {
       base: number;

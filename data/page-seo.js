@@ -2,7 +2,7 @@
 // Source of truth is each page's own <NextSeo>. Re-run the generator after changing one.
 export const PAGE_SEO = {
   "/404": { title: "Page Not Found | Idleon Toolbox", description: "This page could not be found.", noindex: true },
-  "/account/class-specific/apocalypses": { title: "Apocalypses | Idleon Toolbox", description: "Dedicated to the barbarian/blood berserker class to keep track of Zow and Chow talents" },
+  "/account/class-specific/apocalypses": { title: "Apocalypses | Idleon Toolbox", description: "Track each Barbarian and Blood Berserker's Zow, Chow, Super Chow and Wow kills, monster by monster" },
   "/account/class-specific/compass": { title: "Compass | Idleon Toolbox", description: "Keep track of your compass levels, upgrades and compass stats" },
   "/account/class-specific/grimoire": { title: "Grimoire | Idleon Toolbox", description: "Keep track of your grimoire levels, upgrades and wraith stats" },
   "/account/class-specific/royal-armory": { title: "Royal Armory | Idleon Toolbox", description: "Keep track of your Royal Guardian's armory, royal statues, statue flair and orblet market" },
@@ -14,7 +14,7 @@ export const PAGE_SEO = {
   "/account/clickers/owl": { title: "Owl | Idleon Toolbox", description: "Track your Owl minigame upgrades, feather progress, and bonus multipliers in Legends of Idleon" },
   "/account/misc/constellations": { title: "Constellations | Idleon Toolbox", description: "Explore all constellation completions and star sign bonuses for your Legends of Idleon characters" },
   "/account/misc/dungeons": { title: "Dungeons | Idleon Toolbox", description: "Dungeon information including happy hour times, currency, upgrades and more" },
-  "/account/misc/event-shop": { title: "Event Shop | Idleon Toolbox", description: "Track your event shop purchases, star currency, and bonus progression in Legends of Idleon" },
+  "/account/misc/event-shop": { title: "Event Shop | Idleon Toolbox", description: "Track your event shop purchases, Event Points, and bonus progression in Legends of Idleon" },
   "/account/misc/friends-stats": { title: "Friends Stats | Idleon Toolbox", description: "View all friendship bonuses and their effects on your Legends of Idleon account progression" },
   "/account/misc/general": { title: "General | Idleon Toolbox", description: "View your Legends of Idleon account overview including level, gems, keys, and general progression stats" },
   "/account/misc/guild": { title: "Guild | Idleon Toolbox", description: "Keep track of your guild members, gp, bonuses and more" },

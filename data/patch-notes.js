@@ -5,6 +5,59 @@ import { replayWhatsNew } from '@utility/whatsNew';
 /* eslint-disable react/jsx-key */
 export const patchNotes = [
   {
+    'ver': '4.0.7',
+    'gameVer': '2.3.561',
+    'date': '13/11/2026',
+    'features': [
+      'Classes: Compass lists Tempest Form stats in the game\'s order, says what unlocks each locked upgrade and how many abominations open the next town, fills in your Tempest element and weapon multiplier, and gets search on Portals and Medallions; Tesseract maps get search, show tachyons per drop with Extra tachyon and each bonus\'s kills, drop tiles count today\'s drops against the daily cap, and a Next upgrade tile shows while upgrades are locked; Royal Armory names statues by their marble with how many you have, shows flair tier names, a Next level row on shelves and when the next shelf opens; Speedrun shows each portal\'s kills and clear time on its card, gets portal search, shows bosses as small tiles with their portal total, and says which map its kill tiles are for',
+      'Misc: Friends Stats shows filled slots out of your total, each friend\'s level against the 30,000 cap, and dims bonuses no friend gives; Random Events lists every event with its rare drops and the worlds it spawns in (also signed out), and the schedule counts down to each event and marks the one running now; Event Shop calls its currency Event Points as the game does, names the current event, gets bonus search, and off-rotation bonuses show just their price; My guild shows the guild level and unspent GP, members\' rank and class, a Next level on each bonus, and the full Guild Gifts and small-guild sentences; Tournament shows your rank points toward the next division and counts down to the season\'s end',
+      'Task Board: Achievements gets a search across all worlds, a table view with each task and its rewards, and marks Steam exclusive achievements',
+      'Clickers: Owl shows shiny feathers per hour and Megafeather names; Poppy shows unspent reset points, what the next reset gives, Megafish names and the shiny rate per hour; Bubba shows each upgrade\'s level cap, a breakdown of the slice rate, the next Chromatic Megaflesh, Megaflesh names and how long the Smoker has been smoking; locked bonuses on all three say what unlocks them',
+      'Premium: Gem Shop follows the game\'s category order, shows how many permanent upgrades you bought and the gems left to max them, says when a restocking item is sold out today or this week, shows New Meal\'s meals left to unlock, and always shows the cost to max; Pets shows your pet storage, the daily free gems amount once claimed and on older saves, marks Pet Mart offers you can\'t afford yet, and shows the pet pack on sale in the Pet Mart; Bundles shows the gem shop\'s current offers in its order, renames Pet Mart packs to Pet Packs with their crystals, gems and pet bonus, says when the Starter Pack is no longer offered, and gets search'
+    ],
+    'fixes': [
+      'Compass and Tesseract: Mastery read 0.7% and 0.25% instead of 70% and 25%',
+      'Compass: the upgrade optimizer skipped Mastery Destruction and the Tempest Health upgrades, and the Extra dust breakdown called Spire of Dust "Per solardust"',
+      'Tesseract: Total tachyons collected counted held tachyons twice, Prisma chance showed before its upgrade was bought, and the optimizer skipped Bludon Hoarding and Fractal Tesseract',
+      'Royal Armory: Marble chance showed before the Royal Marble shelf was bought, when no marbles drop',
+      'Speedrun: Void talent points read as earned per run (they come from your highscore), and Void radius showed a bonus before Void Trial Rerun was learned',
+      'Skill EXP: the Skill EXP friend bonus was left out of all-skill EXP',
+      'Event Shop: the Forbidden Aisle could read locked after its Blackmarket bonuses were owned',
+      'My guild: locked bonuses looked buyable, and the King\'s wanted bonus read Guild Gifts instead of N/A',
+      'Tournament: the leaderboard showed Diamond and Master divisions the game doesn\'t have, and Matches called your last day\'s matches today\'s',
+      'Achievements: Steam achievements hid their progress, and Big Mobs Eek counted the wrong number',
+      'Owl: Feather Generation read as locked after a restart, the first upgrade goal read 100 instead of 1,000, and the Feather Restart alerts could miss',
+      'Poppy: upgrades read as locked until the fish waiting to be added were counted, and the average reset points left out unspent points',
+      'Bubba: upgrade levels left out their bonus levels, and capped upgrades still showed a cost',
+      'Gem Shop: unlimited and restocking items read as maxed or showed a cost to max'
+    ]
+  },
+  {
+    'ver': '4.0.6',
+    'gameVer': '2.3.561',
+    'date': '12/11/2026',
+    'features': [
+      'World 2: Bubbles show their bonus with the class bubbles; Cauldrons show liquid per hour and when it fills; Vials get search and a table view; Sigils show their next tier; Arcade Shop counts down to a full shop; Islands, Killroy and Weekly Bosses show their next steps, and Weekly Bosses gets a Battle solver tab',
+      'World 3: Construction gets a Cog makers tab; Printer flags a bigger sample; Atom Collider, Equinox, Buildings, Death Note, Worship, Prayers, Traps and Salt Lick show what is next and where their numbers come from; Armor Smithy and Hat Rack count what you own',
+      'World 4: Cooking shows each new meal chance and the next kitchen; Breeding, Laboratory, Rift and Tome show what is next; Cape Vine shows where its multi comes from',
+      'World 5: Sailing artifacts get search and filters; Divinity shows the next god offerings; Gaming superbits get search; Hole caverns and the Slab show more breakdowns',
+      'World 6: Farming stickers, crops and the Exotic Market show more; Sneaking knockout chance opens to how it is made; Summoning gets upgrade search; Beanstalk shows golden food ranks; Emperor totals open to their base and multi',
+      'World 7: Legend Talents, Zenith Market and Advice Fish show next level values; Research marks Active observations; Coral Reef shows shrine targets; Clam Work shows unlock levels; Minehead gets upgrade search, a next opponent and Not beaten view, and doublers show as an icon; Glimbo trades show how many items you own against the next trade cost; Sushi Station shows knowledge levels waiting to be collected, slots out of those unlocked and icons on its tiles; Jelly Operator gets upgrade and obstruction search, the next obstruction, and the game icons on its tiles; Menagerie missions can show only the claimable ones and say how far since the last claim, and boosts get search; The Button lists its tasks by the game cycle they fall in; upgrade optimizers group repeated steps',
+      'Misc: Quests get search by NPC, quest or reward, mark quests not started, and filter faster; Dungeon traits show sections with no pick and the rank a locked one needs, and RNG items can hide maxed ones; Constellations show points ready to claim, and Star Signs get a search across all three trees',
+      'Classes: Apocalypses gets a summary of Zow, Chow, Super Chow and Wow, shows Super Chow and Wow only on the character the game counts them on, and says when a talent level caps the count; Grimoire shows Knockout, Elimination and Annihilation stacks, monster maps and bones per drop after Extra bones, gets a monster search, and uncapped Grimoire, Compass and Tesseract upgrades no longer show a 999,999 max'
+    ],
+    'fixes': [
+      'Spelunking: Overstim showed an old level and its progress as a huge percent',
+      'Farming: unlocked land rank upgrades read as locked',
+      'Cooking: the possible meals for a recipe did not match the game',
+      'Hole caverns: The Well ignored buckets in its sediment times, and The Bell counted every bell as filling',
+      'Coral Reef: Dancing Coral bonuses had no unit, and Char Coral read 172 instead of its 2.72x Class EXP',
+      'Sushi Station: fuel could read above its cap, the part that goes to Overtuned now shows on its own',
+      'Star Signs: the infinite icon could sit on the wrong signs when only some of them are infinite',
+      'Apocalypses: boss, dungeon and arena maps were left out of the Zow, Chow and Wow counts, and the Zow damage and Chow cooking bonuses ignored the talent level cap'
+    ]
+  },
+  {
     'ver': '4.0.5',
     'gameVer': '2.3.561',
     'date': '11/11/2026',

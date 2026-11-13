@@ -332,7 +332,8 @@ export const cleanUnderscore = (str) => {
 const SENTENCE_END = /[.!?:]$/;
 const MID_SENTENCE = (before, line) => !SENTENCE_END.test(before) && (/^[a-z]/.test(line) || /\d$/.test(before));
 export const gameLines = (text, { keepBlank = false, sentences = false } = {}) => {
-  const lines = cleanUnderscore(text).split('@').map((line) => line.trim());
+  // The game writes "Total Bonus:+5%" with no space after the colon, at a line's start or mid-sentence
+  const lines = cleanUnderscore(text).split('@').map((line) => line.trim().replace(/(total bonus:)(?=\S)/gi, '$1 '));
   if (keepBlank) return lines;
   if (!sentences) return lines.filter(Boolean);
   // A blank line is a paragraph break: the line after it never joins
@@ -560,6 +561,15 @@ const gamePrint = (magnitude, mode) => {
 // value shows its decimals in every mode, so the mode only picks the short form from 1M up. whole prints a whole thing
 // (a cost, a requirement, a count) as the game does, in its mode's direction. Bits are a currency with tiers of their
 // own, and Whole is a whole thing by name. The sign is drawn outside the notation.
+// A description's first number at a given bonus, written as the text writes it: "{" is the bonus with the text's own
+// sign and percent ("+2,500%"), "}" its multiplier ("1.25x"). Null when the text's number is another token ("$").
+export const descriptionValueText = (description, bonus) => {
+  const match = String(description ?? '').match(/([+-]?)([{}$])(%?)/);
+  if (!match || match[2] === '$') return null;
+  const [, sign, token, percentSign] = match;
+  return token === '{' ? `${sign}${gameFill(bonus, 'Comma')}${percentSign}` : `${gameFill(1 + bonus / 100, 'MultiplierInfo')}x`;
+};
+
 export const gameFill = (value, mode, { whole = false } = {}) => {
   const magnitude = Math.abs(value);
   const printsAsGame = whole || magnitude >= SHORT_FROM || mode === 'Bits' || mode === 'Whole';

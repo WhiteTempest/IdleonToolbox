@@ -14,6 +14,7 @@ import {
   getBubbleCurve,
   getBubbleEffectPercent,
   getBubbleUpgradeCost,
+  getCauldronBoostBonus,
   getGrindTimeBubbleDaily,
   getKrukBubblesDaily,
   getMaxBonus,
@@ -160,7 +161,7 @@ const materialCost = (account, { index, level, cauldron }, { rawName, baseCost }
       cauldronBubble: Math.max(0.05, 1 - (growth('decay', lastBubbleLvl, 40, 12, false) / 100)
         * growth('decayMulti', classMultiplierLvl, 2, 50, false)
         * growth('decayMulti', multiBubble, 1.4, 30, false)),
-      cauldronLevel: Math.max(0.1, 1 - (Math.round(10 * growth('decay', cauldronCostLvl, 90, 100, false)) / 10) / 100),
+      cauldronLevel: Math.max(0.1, 1 - getCauldronBoostBonus(CAULDRON_INFO.findIndex(({ name }) => name === cauldron), 2, cauldronCostLvl) / 100),
       vialAndBubble: Math.max(0.05, 1 - vialAndBubbleBonus / 100),
       bargainTag: Math.max(0.1, Math.pow(0.75, bargainTags || 0)),
       smrt: Math.max(0.9, 1 - 0.1 * getAchievementStatus(account?.achievements, 108))
@@ -290,10 +291,26 @@ const targetLines = (row) => (row.level > 0 && Number.isFinite(row.target)
   ? [`/ ${row.target >= 1e4 ? formatGame(row.target, 'Big', { whole: true }) : formatNum(row.target)}`]
   : []);
 
+const CLASS_OF_CAULDRON = { power: 'Warriors', quicc: 'Archers', 'high-iq': 'Mages' };
+
+// What the bubble gives once the game multiplies it: the cauldron's multi bubble (Multorange) for everyone, and the
+// class bubble (Warriors Rule) for a character of the cauldron's class. A row for each that lands on it
+const fullBonusRows = (account, bubble, base) => {
+  if (!(bubble.level > 0)) return [];
+  const { bubbleName, cauldron } = bubble;
+  const everyone = getBubbleBonus(account, bubbleName, false, false, cauldron);
+  const withClass = getBubbleBonus(account, bubbleName, false, true, cauldron);
+  const multiName = bubbleTitle(account?.alchemy?.bubbles?.[cauldron]?.[16]?.bubbleName);
+  return [
+    everyone > base * (1 + 1e-9) ? [`With ${multiName}`, `+${formatNum(everyone)}`] : null,
+    withClass > everyone * (1 + 1e-9) ? [`For ${CLASS_OF_CAULDRON[cauldron]}`, `+${formatNum(withClass)}`] : null
+  ];
+};
+
 // A bubble's details on a tap: its sentence filled as the game fills it, how far it is to its cap, the level that
 // reaches the efficiency threshold, and the next level's cost. A bubble at Lv 0 is not found yet (a cauldron's
 // unlocked bubbles stop at its first Lv 0 one), so it has no level to buy
-const bubbleNote = (row, { account, discounts, prismaText, effThreshold, dollarFills }) => {
+const bubbleNote = (row, { account, discounts, prismaText, prismaMulti, effThreshold, dollarFills }) => {
   const { bubble, name, level, isPrisma, placeholder, bonusText, maxText, efficiency, target } = row;
   const threshold = formatNum(effThreshold, 'pct');
   // The sentence already holds the bonus where it fills one, so the line names only the cap
@@ -311,6 +328,7 @@ const bubbleNote = (row, { account, discounts, prismaText, effThreshold, dollarF
     </Stack>
     <ItemCard.Facts rows={[
       maxText ? (sentenceHasBonus ? ['Cap', maxText] : ['Bonus', `${bonusText} of ${maxText}`]) : null,
+      ...(placeholder ? [] : fullBonusRows(account, bubble, getBubbleCurve(bubble) * (isPrisma ? prismaMulti : 1))),
       efficiency !== null && level > 0 ? ['Efficiency', formatNum(efficiency, 'pct')] : null,
       target !== null
         ? Number.isFinite(target) ? [`Reaches ${threshold} at`, `Lv ${formatNum(target)}`] : [`Reaches ${threshold}`, 'Never']
@@ -410,8 +428,9 @@ const Bubbles = () => {
   const shownBubbles = cauldrons.reduce((sum, { shown }) => sum + shown.length, 0);
   const noteContext = {
     dollarFills: hasBubbles ? getBubbleDollarFills(account, state?.characters) : null,
-    account, discounts, prismaText: prismaFailed ? null : prismaText, effThreshold
+    account, discounts, prismaText: prismaFailed ? null : prismaText, prismaMulti: prismaMulti?.value ?? 1, effThreshold
   };
+  const fragments = Math.floor(account?.alchemy?.prismaFragments ?? 0);
 
   return (
     <>
@@ -441,7 +460,7 @@ const Bubbles = () => {
                              help={'Off: from your least progressed cauldron, the one you are waiting on.'}/>
       </PageSettings>}
       <PageSummary>
-        <StatTile label={'No Bubble Left Behind'} value={nblbFailed ? '-' : nblbText}
+        <StatTile label={'No Bubble Left Behind'} icon={'data/LabBonus3.png'} value={nblbFailed ? '-' : nblbText}
                   sub={!nblbFailed && upgradeable.upgradeableBubblesAmount
                     ? `+${formatNum(upgradeable.minLevel)} to ${formatNum(upgradeable.maxLevel)} levels each`
                     : undefined}
@@ -459,12 +478,12 @@ const Bubbles = () => {
                   sub={alchemyFailed ? undefined : `Bubble ${formatNum(future.first)}`}
                   breakdown={alchemyFailed ? undefined : future.breakdown} breakdownTitle={'Future bubbles'}
                   breakdownNoun={'bubbles'}/>
-        <StatTile label={'Prisma multi'} value={prismaFailed ? '-' : prismaText}
+        <StatTile label={'Prisma multi'} icon={'data/Quest99.png'} value={prismaFailed ? '-' : prismaText}
                   breakdown={!prismaFailed && prismaMulti?.breakdown ? { ...prismaMulti.breakdown, totalValue: prismaText } : undefined}
                   breakdownTitle={'Prisma multi'}/>
-        <StatTile label={'Prisma fragments'}
-                  value={alchemyFailed ? '-' : formatNum(Math.floor(account?.alchemy?.prismaFragments ?? 0))}/>
-        <StatTile label={'Particle upgrades'} value={formatNum(account?.accountOptions?.[OPT.alternateParticles] ?? 0)} failed={isParseFailed(account)}/>
+        <StatTile label={'Prisma fragments'} icon={'data/Quest99.png'}
+                  value={alchemyFailed ? '-' : formatNum(fragments)}/>
+        <StatTile label={'Particle upgrades'} icon={'etc/Particle.png'} value={formatNum(account?.accountOptions?.[OPT.alternateParticles] ?? 0)} failed={isParseFailed(account)}/>
         {pricedWith ? <StatTile label={'Priced with'} value={pricedWith}/> : null}
       </PageSummary>
       {daily.length ? <Panel title={'Upgraded daily'} meta={`${formatNum(daily.length)} bubbles`} sx={{ mb: 3 }}>

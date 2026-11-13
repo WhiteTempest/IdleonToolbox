@@ -3,6 +3,7 @@ import { cleanUnderscore, formatNum, shownDifference } from '@utility/helpers';
 import { formatCompassBonus, formatCompassMulti } from '@parsers/class-specific/compass';
 import { formatGrimoireBonus, formatGrimoireMulti } from '@parsers/class-specific/grimoire';
 import { formatTesseractBonus, formatTesseractMulti } from '@parsers/class-specific/tesseract';
+import { formatRoyalBonus, formatRoyalMulti } from '@parsers/class-specific/royalGuardian';
 import ItemCard from '@components/common/cards/ItemCard';
 import GameIcon from '@components/common/GameIcon';
 import WithLastWord from '@components/common/WithLastWord';
@@ -41,8 +42,8 @@ const MasterclassUpgradeCard = ({
   const title = cleanUpgradeName(name);
   return <ItemCard icon={<GameIcon src={`data/${icon}.png`} frame={frame ? `data/${frame}.png` : undefined} size={40} alt={''}/>}
                    title={helpIcon ? <WithLastWord text={title}>{helpIcon}</WithLastWord> : title}
-                   // An uncapped upgrade (an armory shelf past 999) reads its level with no max
-                   level={{ value: level, max: Number.isFinite(maxLevel) ? maxLevel : null }}
+                   // An uncapped upgrade reads its level with no max: the game prints "Lv N" for a max of 999 or more
+                   level={{ value: level, max: Number.isFinite(maxLevel) && maxLevel < 999 ? maxLevel : null }}
                    status={catalogOnly ? undefined : isMaxed ? 'maxed' : unlocked ? undefined : 'locked'}
                    footer={catalogOnly ? null : <>
                      <ItemCard.Cost icon={`data/${currencyIcon}.png`} iconAlt={currencyName} game={costGame} need={nextCost}
@@ -64,7 +65,8 @@ const MasterclassUpgradeCard = ({
 const SENTENCE_FILLS = {
   grimoire: (upgrade, multi) => (multi ? formatGrimoireMulti : formatGrimoireBonus),
   compass: ({ smallNotation }, multi) => (value) => (multi ? formatCompassMulti(value) : formatCompassBonus(value, smallNotation)),
-  tesseract: (upgrade, multi) => (multi ? formatTesseractMulti : formatTesseractBonus)
+  tesseract: (upgrade, multi) => (multi ? formatTesseractMulti : formatTesseractBonus),
+  armory: (upgrade, multi) => (multi ? formatRoyalMulti : formatRoyalBonus)
 };
 
 // The unit a sentence prints after its number, from its text in the game's data: "}x" a multiplier, "{%" a percent

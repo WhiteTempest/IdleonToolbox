@@ -648,6 +648,13 @@ export const getBundles = (idleonData: any) => {
 
   if (!bundlesData) return [];
 
+  // The game draws the Starter Pack offer only while ServerGemsReceived < 5000, none of bon_w/x/y is bought and the
+  // first character's level sits in a band under serverVar GemD1_LvMAX. The level band is left out, so `offered` is
+  // "not yet ruled out", never "on sale now".
+  // game: ServerGemsReceived / BundlesReceived.bon_w|x|y / GemD1_LvMAX (the NewPlayer2/3 offer image)
+  const starterOffered = (Number(idleonData?.ServerGemsReceived) || 0) < 5000
+    && !ownedBundles.bon_w && !ownedBundles.bon_x && !ownedBundles.bon_y;
+
   // Get all bundles from website-data and check ownership status.
   // bin_* are the Pet Mart "evolving" packs: they carry a display name, the companion they grant
   // and their two currency amounts, none of which the older bun_/bon_ bundles have.
@@ -660,7 +667,7 @@ export const getBundles = (idleonData: any) => {
         price: bundle.price,
         // The Starter Pack offer (bon_w/x/y) is drawn from OffersBG<card>.png, not <key>.png.
         ...(bundle.image ? { image: bundle.image } : {}),
-        ...(bundle.starterOffer ? { starterOffer: true } : {}),
+        ...(bundle.starterOffer ? { starterOffer: true, offered: starterOffered } : {}),
         ...(bundle.evolving ? {
           evolving: true,
           displayName: bundle.name,
@@ -678,6 +685,20 @@ export const getBundles = (idleonData: any) => {
       if (aType !== bType) return aType - bType;
       return a.name.localeCompare(b.name);
     });
+};
+
+// The Pet Mart's first slot sells one pet pack for real money: the first in serverVar GemEvoOrder whose pack and pet are
+// both not owned, or none. GemEvoOrder lists EvolvingBundles positions, which run bin_a, bin_b, ... as getBundles sorts them.
+// game: GemEvoOrder / EvolvingBundles[i][0] (pet) / BundlesReceived[EvolvingBundles[i][4]] (TournyStuff "n")
+export const getPetMartPackRotation = (bundles: any[], serverVars: any): any[] | null => {
+  if (typeof serverVars?.GemEvoOrder !== 'string') return null;
+  const packs = (bundles ?? []).filter(({ evolving }) => evolving);
+  return serverVars.GemEvoOrder.split(',').map((index: string) => packs[Number(index)]).filter(Boolean);
+};
+
+export const getPetMartPack = (bundles: any[], serverVars: any, companions: any[]): any | null => {
+  const petOwned = (pack: any) => (companions?.[pack.companionIndex]?.copies ?? 0) > 0;
+  return getPetMartPackRotation(bundles, serverVars)?.find((pack) => !pack.owned && !petOwned(pack)) ?? null;
 };
 
 export const isBundlePurchased = (account: any, name: string): boolean => {
@@ -1070,14 +1091,24 @@ const goldenFoodEffects: Record<string, string> = (() => {
 // The game's GoldFoodBonuses() keys off a food's Effect, not its name, so every golden food sharing
 // that Effect feeds the same stat. Two foods carry DropRatez - Golden_Cake and Golden_Sugar_Cookie -
 // and matching on the name alone dropped whichever one wasn't hardcoded at the call site.
+// One golden food's bonus: its Amount, grown by how many of it count (log scale), times the character's golden food multi
+const goldenFoodValue = (amount: any, quantity: any, multi: any) => !amount || !quantity
+  ? 0
+  : amount * (multi ?? 1) * 0.05 * lavaLog(1 + quantity) * (1 + lavaLog(1 + quantity) / 2.14);
+
+// What a beanstalk rank adds on its own: rank r counts as 1,000 * 10^r of the food (rank 0 adds nothing)
+export const getBeanstalkRankBonus = (rawName: string, rank: number, character: any, account: any, characters: any) => {
+  if (!character || !(rank > 0)) return 0;
+  const multi = getGoldenFoodMulti(character, account, characters)?.value;
+  return goldenFoodValue((items as any)?.[rawName]?.Amount, 1e3 * Math.pow(10, rank), multi);
+};
+
 export const getGoldenFoodBonus = (foodName: any, character: any, account: any, characters: any) => {
   if (!character) return 0;
   const effect = goldenFoodEffects?.[foodName];
   if (!effect) return 0;
   const goldenFoodMulti = getGoldenFoodMulti(character, account, characters);
-  const foodBonus = (amount: any, quantity: any) => !amount || !quantity
-    ? 0
-    : amount * goldenFoodMulti?.value * 0.05 * lavaLog(1 + quantity) * (1 + lavaLog(1 + quantity) / 2.14);
+  const foodBonus = (amount: any, quantity: any) => goldenFoodValue(amount, quantity, goldenFoodMulti?.value);
 
   // Equipped slots: the game walks every food slot and adds each GOLDEN_FOOD whose Effect matches.
   const baseBonus = (character?.food ?? []).reduce((sum: number, food: any) => food?.Type === 'GOLDEN_FOOD'
@@ -1125,10 +1156,31 @@ export const getRandomEvents = (account: any) => {
     const eventName = getEventName(eventType);
     const dateInMs = (seed + i) * 3600 * 1000;
     if (isPast(dateInMs + 3600 * 1000)) continue;
-    eventList.push({ mapName, eventName, date: dateInMs })
+    // An event holds its map for its whole clock hour (the boss spawns on entering the map within it): the first hour,
+    // still running, is live
+    eventList.push({ mapName, eventName, eventType, date: dateInMs, live: i === 0 })
   }
   return eventList;
 }
+
+// The five random events with their rare drops (game RANDOlist[82 + type], shown on the event banner, dark until found
+// in the Slab, Cards[1]) and the maps they can land on. No save needed but for the found state
+export const getRandomEventCatalog = (account?: any) => {
+  const found = new Set(account?.looty?.lootyRaw ?? []);
+  return [0, 1, 2, 3, 4].map((eventType) => ({
+    eventType,
+    eventName: getEventName(eventType),
+    drops: ((randomList?.[82 + eventType] ?? []) as string[]).map((rawName) => ({
+      rawName,
+      name: (items as any)?.[rawName]?.displayName ?? rawName,
+      found: found.has(rawName)
+    })),
+    maps: getEventMaps(eventType).map((raw: any) => mapNames?.[rawMapNames?.indexOf(raw)]).filter(Boolean),
+    // The worlds its map pool covers (50 maps a world)
+    worlds: [...new Set(getEventMaps(eventType).map((raw: any) => rawMapNames?.indexOf(raw))
+      .filter((index: number) => index >= 0).map((index: number) => Math.floor(index / 50) + 1))].sort((a, b) => a - b)
+  }));
+};
 
 const getEventMaps = (eventType: any) => {
   const [world1, world2, world3] = randomList.slice(68, 71)
@@ -1412,7 +1464,9 @@ export const getMinigameScore = (account: any, bonusName: any) => {
 }
 
 export const getCompanions = (companionObject: any = {}, accountOptions: any = [], simulatedIndices: any = []) => {
-  const maxStorage = companionObject?.p ?? 60;
+  // game: getCompanionInfoMe().length < Math.max(120, getStorage()) gates every box; getStorage() is `p`, 60 when unset
+  const maxStorage = Math.max(120, Number(companionObject?.p) || 60);
+  const storedPets = Array.isArray(companionObject?.l) ? companionObject.l.length : 0;
   const [companionIndex] = companionObject?.e?.split(',') || [];
   const companion = companions?.[companionIndex];
   const ownedCompanions = companionObject?.l?.reduce((result: any, comp: any) => {
@@ -1517,6 +1571,7 @@ export const getCompanions = (companionObject: any = {}, accountOptions: any = [
     freeClaimAnchor: companionObject?.t,
     petCrystals: companionObject?.s,
     maxStorage,
+    storedPets,
     tokens: {
       owned: tokensOwned,
       used: tokensUsed,
@@ -1788,6 +1843,8 @@ export const getKillRoy = (idleonData: any, charactersData: any, accountData: an
       breakpoints,
       nextBreakpoint,
       appliedBonuses: capInfo ? getAppliedBonuses(i, bonus, capInfo.cap) : null,
+      // game: SkullShopDesc[i][1], a fixed skull price for every purchase. The 3rd fight stops selling once unlocked
+      cost: i === 0 && unlockedThirdKillRoy ? null : Number(upgrade?.x1) || 0,
       description: description?.replace(replacementChar, formatDescriptionBonus(bonus, i))
     }
   });
@@ -2040,6 +2097,7 @@ export const getEventShopRotation = (account: any): {
   tiers: EventShopTier[];
   starsToFinish: number;
   offRotation: EventShopBonus[];
+  currentEvent: string | null;
 } => {
   const bonusOf = (index: number, text: string, price: string): EventShopBonus => {
     const [name, description] = text.split('@');
@@ -2053,7 +2111,8 @@ export const getEventShopRotation = (account: any): {
   const tiers = EVENT_SHOP_TIERS.map((name, tier) => {
     const bonuses = current.slice(4 * tier, 4 * tier + 4).map((index) => catalog[index]).filter(Boolean);
     const owned = bonuses.filter((bonus) => bonus.owned).length;
-    const lockedBy: EventShopTier['lockedBy'] = previous && (previous.lockedBy || previous.owned < previous.bonuses.length)
+    // game: a tier opens once the 4 bonuses of the tier right before it are owned, whatever the tiers before that
+    const lockedBy: EventShopTier['lockedBy'] = previous && previous.owned < previous.bonuses.length
       ? { name: previous.name, owned: previous.owned, total: previous.bonuses.length }
       : null;
     const starsLeft = bonuses.filter((bonus) => !bonus.owned).reduce((sum, bonus) => sum + bonus.price, 0);
@@ -2077,5 +2136,11 @@ export const getEventShopRotation = (account: any): {
     .map((bonus) => ({ ...bonus, lastSold: lastSold.get(bonus.index) ?? null }))
     .sort((a, b) => Number(a.owned) - Number(b.owned) || recency(b).localeCompare(recency(a)) || a.index - b.index);
 
-  return { tiers, starsToFinish: tiers.reduce((sum, tier) => sum + tier.starsLeft, 0), offRotation };
+  return {
+    tiers,
+    starsToFinish: tiers.reduce((sum, tier) => sum + tier.starsLeft, 0),
+    offRotation,
+    // The event the current rotation sells for, as the off-rotation cards name theirs
+    currentEvent: rotations.at(-1)?.event ?? null
+  };
 }
