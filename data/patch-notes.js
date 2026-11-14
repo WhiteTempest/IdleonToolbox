@@ -5,6 +5,23 @@ import { replayWhatsNew } from '@utility/whatsNew';
 /* eslint-disable react/jsx-key */
 export const patchNotes = [
   {
+    'ver': '4.0.8',
+    'gameVer': '2.3.561',
+    'date': '14/11/2026',
+    'features': [
+      'Stamps: a Page setting shows the material you own and need under each stamp at its max level',
+      'Gaming Imports: the Elegant Seashell card shows your shell rank and plants evolved, and the Bog Log card shows your best round and its bit multiplier once Pro Log Flipper is unlocked',
+      'Characters: the Skills panel shows an AFK rate breakdown for every AFK skill, not only the one the character is doing',
+      'Royal Armory: outpost cards line up their rates and ranks side by side for easy comparing, and long rates show short (331M/hr) with the exact number on hover',
+      'Leaderboards: 42 new boards across every tab, from Achievements to Crop Evolution. Upload your profile again to appear on all of them.',
+      'Characters: STR, AGI, WIS and LUK show where each stat comes from',
+      'Dashboard: the Spelunking stamina % alert is now separate from the full stamina alert, with its own characters threshold and a grey icon'
+    ],
+    'fixes': [
+      'Breakdowns: base lines on Damage, HP, MP, Accuracy and AFK Gains now show their share of the base, and no share goes past 100%'
+    ]
+  },
+  {
     'ver': '4.0.7',
     'gameVer': '2.3.561',
     'date': '13/11/2026',
@@ -13,7 +30,8 @@ export const patchNotes = [
       'Misc: Friends Stats shows filled slots out of your total, each friend\'s level against the 30,000 cap, and dims bonuses no friend gives; Random Events lists every event with its rare drops and the worlds it spawns in (also signed out), and the schedule counts down to each event and marks the one running now; Event Shop calls its currency Event Points as the game does, names the current event, gets bonus search, and off-rotation bonuses show just their price; My guild shows the guild level and unspent GP, members\' rank and class, a Next level on each bonus, and the full Guild Gifts and small-guild sentences; Tournament shows your rank points toward the next division and counts down to the season\'s end',
       'Task Board: Achievements gets a search across all worlds, a table view with each task and its rewards, and marks Steam exclusive achievements',
       'Clickers: Owl shows shiny feathers per hour and Megafeather names; Poppy shows unspent reset points, what the next reset gives, Megafish names and the shiny rate per hour; Bubba shows each upgrade\'s level cap, a breakdown of the slice rate, the next Chromatic Megaflesh, Megaflesh names and how long the Smoker has been smoking; locked bonuses on all three say what unlocks them',
-      'Premium: Gem Shop follows the game\'s category order, shows how many permanent upgrades you bought and the gems left to max them, says when a restocking item is sold out today or this week, shows New Meal\'s meals left to unlock, and always shows the cost to max; Pets shows your pet storage, the daily free gems amount once claimed and on older saves, marks Pet Mart offers you can\'t afford yet, and shows the pet pack on sale in the Pet Mart; Bundles shows the gem shop\'s current offers in its order, renames Pet Mart packs to Pet Packs with their crystals, gems and pet bonus, says when the Starter Pack is no longer offered, and gets search'
+      'Premium: Gem Shop follows the game\'s category order, shows how many permanent upgrades you bought and the gems left to max them, says when a restocking item is sold out today or this week, shows New Meal\'s meals left to unlock, and always shows the cost to max; Pets shows your pet storage, the daily free gems amount once claimed and on older saves, marks Pet Mart offers you can\'t afford yet, and shows the pet pack on sale in the Pet Mart; Bundles shows the gem shop\'s current offers in its order, renames Pet Mart packs to Pet Packs with their crystals, gems and pet bonus, says when the Starter Pack is no longer offered, and gets search',
+      'Dashboard: hover or tap the time on a timer to see when it ends, as a date or how many years away it is for the longest ones like Feather Restart'
     ],
     'fixes': [
       'Compass and Tesseract: Mastery read 0.7% and 0.25% instead of 70% and 25%',
@@ -29,7 +47,13 @@ export const patchNotes = [
       'Owl: Feather Generation read as locked after a restart, the first upgrade goal read 100 instead of 1,000, and the Feather Restart alerts could miss',
       'Poppy: upgrades read as locked until the fish waiting to be added were counted, and the average reset points left out unspent points',
       'Bubba: upgrade levels left out their bonus levels, and capped upgrades still showed a cost',
-      'Gem Shop: unlimited and restocking items read as maxed or showed a cost to max'
+      'Gem Shop: unlimited and restocking items read as maxed or showed a cost to max',
+      'Palette board: a colour level and odds stay centred on its hex after a live level up',
+      'Dashboard: the Double Clusters alert counts the Zenith Clusters still in your inventories',
+      'Buildings: towers outside a build slot show their real progress and time left instead of a huge number and Ready',
+      'Dashboard: the Sailing chest alert now fires when your banked sailing time fills every chest slot',
+      'Dashboard: the Ender captain alert in Sailing now works without the Better captain alert',
+      'Apocalypses: boss maps no longer show up as monsters left to kill'
     ]
   },
   {

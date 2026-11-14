@@ -9,9 +9,10 @@ import {
   getTotalMealSpeed,
   maxNumberOfSpiceClicks
 } from '@parsers/world-4/cooking';
-import { cleanUnderscore, getDuration, getNextCompanionClaim, hoursUntilDailyReset, notateNumber, notateProgress, totalHoursBetweenDates } from '../helpers';
+import { cleanUnderscore, getNextCompanionClaim, hoursUntilDailyReset, notateNumber, notateProgress, totalHoursBetweenDates } from '../helpers';
 import { isRiftBonusUnlocked } from '@parsers/world-4/rift';
 import { LAYER_BREAKS_PER_DAY } from '@parsers/world-5/caverns/motherlode';
+import { getChestsFromSailingTime } from '@parsers/world-5/sailing';
 import { FAMILIAR_EXP_MIN_CLAIM_SECONDS, getFamiliarLevelGains, getPendingFamiliarExp } from '@parsers/world-6/summoning';
 import { items, liquidsShop, ninjaExtraInfo } from '@website-data';
 import { getPowerPerCycle, getRefineryCycleTimes, getSaltMatsTimeLeft, getSaltsBalance, hasMissingMats } from '@parsers/world-3/refinery';
@@ -36,6 +37,7 @@ import { MINE_CURRENCY_UPGRADE_INDICES } from '@parsers/world-7/minehead';
 import { isHatRackEligible } from '@parsers/world-3/hatRack';
 import { isCapeVineEligible } from '@parsers/world-4/capeVine';
 import { getGoldCostToMaxLevel, getStampsPerDay } from '@parsers/world-1/stamps';
+import { getInventoryClusters } from '@parsers/world-1/statues';
 import { getTomeWishPity } from '@parsers/world-4/tome';
 import { BOSS_RESPAWN_ALERTS, isMinibossReady } from './bossRespawns';
 import { getTesseractBonus } from '@parsers/class-specific/tesseract';
@@ -1183,8 +1185,10 @@ export const getWorld5Alerts = (account, fields, options, characters) => {
   }
   if (fields?.sailing?.checked) {
     const sailing = {};
-    const { captains, chests, alwaysAlertEnderCaptains } = options?.sailing || {};
-    if (captains?.checked) {
+    const { captains: betterCaptains, chests, alwaysAlertEnderCaptains } = options?.sailing || {};
+    const alertBetter = betterCaptains?.checked;
+    const alertEveryEnder = alwaysAlertEnderCaptains?.checked;
+    if (alertBetter || alertEveryEnder) {
       const { captains, shopCaptains } = account?.sailing || {};
       const allSlotsEnder = captains?.length > 0 && captains?.every((c) => c?.captainType === 6);
       const relevantCaptains = shopCaptains?.reduce((res, shopCaption) => {
@@ -1225,12 +1229,17 @@ export const getWorld5Alerts = (account, fields, options, characters) => {
           }
           return false;
         });
-        if ((matches?.length > 0 && captainType !== -1) || (captainType === 6 && (alwaysAlertEnderCaptains?.checked || !allSlotsEnder || matches?.length > 0))) {
+        const isEnder = captainType === 6;
+        const betterAlert = alertBetter && (isEnder
+          ? !allSlotsEnder || matches?.length > 0
+          : matches?.length > 0 && captainType !== -1);
+        if (betterAlert || (isEnder && alertEveryEnder)) {
           const isSameValue = firstBonusIndex === secondBonusIndex;
           const temp = {
             captain: shopCaption,
             isSameValue,
-            enderCaptain: captainType === 6,
+            enderCaptain: isEnder,
+            option: betterAlert ? 'captains' : 'alwaysAlertEnderCaptains',
             badCaptains: matches.map(({
               captainIndex,
               firstBonusDescription: fbDesc,
@@ -1260,14 +1269,14 @@ export const getWorld5Alerts = (account, fields, options, characters) => {
       }
     }
     if (chests?.checked) {
-      const sailingTime = 259200 < account?.accountOptions?.[124]
-        ? Math.floor(account?.accountOptions?.[124] / 8640) / 10
-        : Math.floor(account?.accountOptions?.[124] / 3600);
-      const { maxChests, timeToFullChests } = account?.sailing;
-      const { hours } = getDuration(new Date().getTime(), timeToFullChests);
-      const availableChests = sailingTime > hours && maxChests > 0;
-      if (availableChests > 0) {
-        sailing.chests = availableChests;
+      const { maxChests, chests: shelf, boats } = account?.sailing || {};
+      const freeSlots = (maxChests || 0) - (shelf?.length || 0);
+      // the save's unspent sailing time, plus the time credited since (TimeAway.Sailing) at its 1x floor
+      const lastCredit = Number(account?.timeAway?.Sailing) || Number(account?.timeAway?.GlobalTime) || 0;
+      const unspentSeconds = (Number(account?.accountOptions?.[OPT.unspentSailingSeconds]) || 0)
+        + (lastCredit > 0 ? Math.max(0, Date.now() / 1000 - lastCredit) : 0);
+      if (maxChests > 0 && (freeSlots <= 0 || getChestsFromSailingTime(boats, freeSlots, unspentSeconds) >= freeSlots)) {
+        sailing.chests = true;
       }
     }
     if (Object.keys(sailing).length > 0) {
@@ -1947,18 +1956,25 @@ export const getWorld7Alerts = (account, fields, options, characters) => {
         };
       }
     }
+    const charactersStamina = account?.spelunking?.charactersStamina ?? [];
     if (options?.spelunking?.fullStaminaCharacters?.checked) {
       const threshold = options?.spelunking?.fullStaminaCharacters?.props?.value ?? 1;
-      const charactersStamina = account?.spelunking?.charactersStamina ?? [];
-      const percent = options?.spelunking?.staminaPercent?.checked
-        ? Math.min(100, Math.max(1, options?.spelunking?.staminaPercent?.props?.value ?? 100))
-        : 100;
-      const fullStaminaCount = charactersStamina.filter(({ isFull, currentStamina, characterStamina }) => percent >= 100
-        ? isFull
-        : currentStamina >= characterStamina * percent / 100).length;
+      const fullStaminaCount = charactersStamina.filter(({ isFull }) => isFull).length;
       if (fullStaminaCount >= threshold) {
         spelunking.fullStaminaCharacters = {
           count: fullStaminaCount,
+          threshold
+        };
+      }
+    }
+    if (options?.spelunking?.staminaPercent?.checked) {
+      const percent = Math.min(100, Math.max(1, options?.spelunking?.staminaPercent?.props?.value ?? 50));
+      const threshold = options?.spelunking?.staminaPercentCharacters?.props?.value ?? 1;
+      const percentCount = charactersStamina.filter(({ isFull, currentStamina, characterStamina }) => isFull
+        || currentStamina >= characterStamina * percent / 100).length;
+      if (percentCount >= threshold) {
+        spelunking.staminaPercent = {
+          count: percentCount,
           threshold,
           percent
         };
@@ -2011,8 +2027,11 @@ export const getWorld7Alerts = (account, fields, options, characters) => {
       const doubleClusterUpgrade = account?.zenith?.market?.find(upgrade => upgrade?.name === 'DOUBLE_CLUSTER');
       const clusters = account?.zenith?.clusters ?? 0;
       if (doubleClusterUpgrade && (!doubleClusterUpgrade?.x3 || (doubleClusterUpgrade?.level || 0) < doubleClusterUpgrade?.x3)) {
-        if (clusters >= doubleClusterUpgrade?.cost) {
+        const cost = doubleClusterUpgrade?.cost ?? 0;
+        if (clusters >= cost) {
           zenithMarket.doubleCluster = true;
+        } else if (clusters + getInventoryClusters(getCachedAllItems(characters, account)).total >= cost) {
+          zenithMarket.doubleCluster = 'inventory';
         }
       }
     }

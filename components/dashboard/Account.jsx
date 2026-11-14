@@ -552,12 +552,12 @@ const Account = ({ account, characters, trackers, lastUpdated }) => {
                   title={`Snail upgrade success chance is ${formatNum(alerts?.['World 5']?.gaming?.snail, 'pct')}`}
                   iconPath={'data/GamingItem7'}/> : null}
 
-              {alerts?.['World 5']?.sailing?.chests > 0 ? <Alert target={'World 5.sailing.chests'} key={'sailing-chest-alert'}
-                                                                 title={`You've reached the maximum capacity of chests`}
-                                                                 iconPath={'npcs/Chesty'}/> : null}
+              {alerts?.['World 5']?.sailing?.chests ? <Alert target={'World 5.sailing.chests'} key={'sailing-chest-alert'}
+                title={'Your boats have enough sailing time to fill every chest slot: open Sailing to collect'}
+                iconPath={'npcs/Chesty'}/> : null}
               {alerts?.['World 5']?.sailing?.captains?.length > 0 ?
-                alerts?.['World 5']?.sailing?.captains?.map(({ captain, bonus, badCaptains, enderCaptain }) => {
-                  return <Alert target={'World 5.sailing.captains'}
+                alerts?.['World 5']?.sailing?.captains?.map(({ captain, bonus, badCaptains, enderCaptain, option }) => {
+                  return <Alert target={`World 5.sailing.${option}`}
                     key={'captain' + captain?.captainIndex}
                     ariaLabel={`Captain ${captain?.captainIndex} in the shop`}
                     title={<Stack gap={1}>
@@ -849,16 +849,21 @@ const Account = ({ account, characters, trackers, lastUpdated }) => {
                     ? ''
                     : 's'} available (${formatNum(alerts?.['World 7']?.spelunking?.pageReads?.current)}/${formatNum(alerts?.['World 7']?.spelunking?.pageReads?.max)})`}
                   iconPath={'data/Spelunking0'}/> : null}
+              {alerts?.['World 7']?.spelunking?.staminaPercent?.count >= alerts?.['World 7']?.spelunking?.staminaPercent?.threshold
+                ?
+                <Alert target={'World 7.spelunking.staminaPercent'}
+                  title={`${formatNum(alerts?.['World 7']?.spelunking?.staminaPercent?.count)} character${alerts?.['World 7']?.spelunking?.staminaPercent?.count === 1
+                    ? ' has'
+                    : 's have'} ${alerts?.['World 7']?.spelunking?.staminaPercent?.percent}%+ stamina`}
+                  iconPath={'data/CaveShopUpg4'}
+                  imgStyle={{ filter: 'grayscale(1)' }}/>
+                : null}
               {alerts?.['World 7']?.spelunking?.fullStaminaCharacters?.count >= alerts?.['World 7']?.spelunking?.fullStaminaCharacters?.threshold
                 ?
                 <Alert target={'World 7.spelunking.fullStaminaCharacters'}
                   title={`${formatNum(alerts?.['World 7']?.spelunking?.fullStaminaCharacters?.count)} character${alerts?.['World 7']?.spelunking?.fullStaminaCharacters?.count === 1
-                    ? ''
-                    : 's'} ${alerts?.['World 7']?.spelunking?.fullStaminaCharacters?.count === 1
-                    ? 'has'
-                    : 'have'} ${alerts?.['World 7']?.spelunking?.fullStaminaCharacters?.percent < 100
-                    ? `${alerts?.['World 7']?.spelunking?.fullStaminaCharacters?.percent}%+`
-                    : 'full'} stamina`}
+                    ? ' has'
+                    : 's have'} full stamina`}
                   iconPath={'data/CaveShopUpg4'}/>
                 : null}
               {alerts?.['World 7']?.spelunking?.overstimLevel?.current >= alerts?.['World 7']?.spelunking?.overstimLevel?.threshold
@@ -881,7 +886,9 @@ const Account = ({ account, characters, trackers, lastUpdated }) => {
                   iconPath={'data/LegendTalentIcon12'}/> : null}
               {alerts?.['World 7']?.zenithMarket?.doubleCluster ?
                 <Alert target={'World 7.zenithMarket.doubleCluster'}
-                  title={'You can afford Double Clusters upgrade'}
+                  title={alerts?.['World 7']?.zenithMarket?.doubleCluster === 'inventory'
+                    ? 'You can afford Double Clusters upgrade: bring your clusters to the Zenelith'
+                    : 'You can afford Double Clusters upgrade'}
                   iconPath={'etc/Cluster'}/> : null}
               {alerts?.['World 7']?.zenithMarket?.clusterFarming ?
                 <Alert target={'World 7.zenithMarket.clusterFarming'}
