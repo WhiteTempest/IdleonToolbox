@@ -27,7 +27,7 @@ const parseTraps = (rawCharactersData: any, timeAway?: any) => {
   return rawCharactersData.map((char: any) => {
     const traps = char?.PldTraps || [];
     return traps.reduce((res: any, critterInfo: any) => {
-      const [critterId, , timeElapsed, critterName, crittersQuantity, trapType, trapTime, trapExp] = critterInfo;
+      const [critterId, , timeElapsed, critterName, crittersQuantity, trapType, trapTime, trapExp, rareChance] = critterInfo;
       if (critterId === -1 || critterId === '-1') return res;
       // trapType is the trap type index (0 Cardboard ... 6 Royal): it picks the row of trapsInfo
       const trapData = trapsInfo[trapType].find((trap) => trap.trapTime === trapTime)
@@ -38,6 +38,8 @@ const parseTraps = (rawCharactersData: any, timeAway?: any) => {
         crittersQuantity,
         trapType,
         trapExp,
+        // The placer's shiny chance, saved when the trap went down ("TotalRareChance")
+        rareChance: Number(rareChance) || 0,
         timeLeft: saveTime + (timeLeft * 1000),
         trapData
       }] : res;
@@ -51,8 +53,9 @@ export const calcTotalCritters = (account: any, { critter, exp }: any) => {
       res = {
         ...res,
         [rawName]: {
-          critters: (res?.[rawName]?.critters ?? 0) + (crittersQuantity * critter || 1),
-          exp: (res?.[rawName]?.exp ?? 0) + (trapExp * exp || 1)
+          // An EXP trap holds 0 critters: it must add 0, not 1
+          critters: (res?.[rawName]?.critters ?? 0) + (crittersQuantity ?? 0) * (critter ?? 1),
+          exp: (res?.[rawName]?.exp ?? 0) + (trapExp ?? 0) * (exp ?? 1)
         }
       }
     }, {});
@@ -167,6 +170,8 @@ export interface ShinyChanceCritter {
 
 export interface ShinyChance {
   multiplier: number;
+  // The collector's open-time factor: a placed trap's saved chance times this is its real chance
+  openMulti: number;
   bundleSize: number;
   critters: ShinyChanceCritter[];
 }
@@ -245,12 +250,32 @@ export const getShinyChance = (character: any, account: any): ShinyChance & { so
     // The game floors the placement snapshot at 0.001 before the open-time bonuses touch it.
     chance: Math.max(0.001, shinyChance * placementMulti) * onOpenMulti / prayerDivider
   })) ?? [];
-  return { multiplier, bundleSize, critters, sources };
+  return { multiplier, openMulti: onOpenMulti / prayerDivider, bundleSize, critters, sources };
 }
+
+// game: on open each trap rolls its saved chance x the collector's open-time factor once, whatever its
+// critter quantity (EXP traps roll too), and a hit drops "<critter>A" x the per-drop amount; the critter
+// collect rate never touches shinies. A trap gives all of a drop or nothing, so only traps at 100% are a count.
+export const getTrapShinyChance = (slot: any, { openMulti = 1 }: any = {}) =>
+  Math.min(100, (slot?.rareChance ?? 0) * openMulti);
+
+// By shiny critter ("Critter3A"): the shinies the traps at 100% are sure to give, and the chances of the rest
+export const sumTrapShinies = (trapSlots: any[] = [], shiny?: any) => trapSlots.reduce((res: any, slot: any) => {
+  if (!slot?.rawName) return res;
+  const chance = getTrapShinyChance(slot, shiny);
+  const key = `${slot.rawName}A`;
+  const entry = res?.[key] ?? { sureTraps: 0, sureShinies: 0, chances: [] };
+  return {
+    ...res,
+    [key]: chance >= 100
+      ? { ...entry, sureTraps: entry.sureTraps + 1, sureShinies: entry.sureShinies + (shiny?.bundleSize ?? 1) }
+      : { ...entry, chances: [...entry.chances, chance] }
+  };
+}, {});
 
 // The game rolls the chance against 100 * random(), so anything at or above 100 is a guaranteed
 // shiny and the surplus buys nothing on that critter.
-const formatChance = (value: number) => {
+export const formatShinyChance = (value: number) => {
   if (value >= 100) return '100%';
   if (value >= 1) return `${gameFill(value, 'Big')}%`;
   return `${parseFloat(value.toPrecision(3))}%`;
@@ -273,7 +298,7 @@ export const getShinyChanceInfo = (account: any, characters: any, selectedCharac
     ? perCharacter.find(({ name }: any) => name === selectedCharacter?.name) ?? getShinyChance(selectedCharacter, account)
     : best)
     ?? getShinyChance(null, account);
-  const { multiplier: shinyMulti, bundleSize, critters, sources } = selected;
+  const { multiplier: shinyMulti, openMulti, bundleSize, critters, sources } = selected;
 
   // The two list groups are reference values, not factors of the total
   const breakdown = createBreakdown('Shiny Critter Chance', formatMulti(shinyMulti), [
@@ -297,11 +322,17 @@ export const getShinyChanceInfo = (account: any, characters: any, selectedCharac
       ]),
       multiplier('Prayer - Shiny Snitch', 1 / sources?.prayerDivider, { formatted: `/${sources?.prayerDivider}` })
     ]),
-    listGroup('Chance by critter (x1 trap)', critters?.map(({ name, chance }: any) =>
-      info(cleanUnderscore(name) as string, chance, { formatted: formatChance(chance) })) ?? []),
+    // game: round((1 + prayersReal(3, 0)) * RareBonusOnOpenMULTI)
+    listGroup(`Shinies per drop: ${bundleSize}`, [
+      info('Prayer - Shiny Snitch', 1 + (sources?.shinySnitchBonus ?? 0), { formatted: formatMulti(1 + (sources?.shinySnitchBonus ?? 0)) }),
+      info('Meritocracy', sources?.meritocracyBonus ?? 0, { formatted: `+${gameFill(sources?.meritocracyBonus ?? 0, 'Big')}%` }),
+      info('Menagerie', sources?.menagerieBundleBonus ?? 0, { formatted: `+${gameFill(sources?.menagerieBundleBonus ?? 0, 'Big')}%` })
+    ]),
+    listGroup('Chance by critter (trap placed by this character)', critters?.map(({ name, chance }: any) =>
+      info(cleanUnderscore(name) as string, chance, { formatted: formatShinyChance(chance) })) ?? []),
     listGroup('By character', perCharacter?.map(({ name, multiplier: charMulti }: any) =>
       info(name, charMulti, { formatted: formatMulti(charMulti) })) ?? [])
   ]);
 
-  return { multiplier: shinyMulti, bundleSize, critters, perCharacter, breakdown };
+  return { multiplier: shinyMulti, openMulti, bundleSize, critters, perCharacter, breakdown };
 }

@@ -5,6 +5,26 @@ import { replayWhatsNew } from '@utility/whatsNew';
 /* eslint-disable react/jsx-key */
 export const patchNotes = [
   {
+    'ver': '4.0.9',
+    'gameVer': '2.3.561',
+    'date': '15/11/2026',
+    'features': [
+      'Stamps: the hover note on a max level stamp now shows the character with the best carry capacity',
+      'Traps: each critter in In your traps and in every character panel now shows how many shinies it will give on collect, and the Shiny chance breakdown shows what sets the shinies per drop',
+      'New breakdowns: crown chance and nugget rolls in Gaming, pearl value and black pearl value in Clam Work, and non consume chance on Characters',
+      'Star Signs: a Hide unlocked filter shows only the signs left to unlock',
+      'Breeding: shiny pets on the fence show the time to max level, with a sort for it',
+      'Spelunking: a Missing only filter on Lore bosses shows only the discoveries you still need',
+      'Compass, Grimoire, Tesseract and Royal Armory: the Daily Shopping Spree setting shows how many discounted purchases are left today'
+    ],
+    'fixes': [
+      'Traps: each trap now shows its real shiny chance, using the chance saved when it was placed',
+      'Dashboard: the daily W2 boss fight alert opens the Battle solver tab',
+      'Refinery: Count squire cycles no longer speeds up Polymerize salts, since Refinery Throttle only fills the Combustion and Synthesis tabs',
+      'Traps: shiny rows now show the chance and the amount per drop for traps under 100% instead of an average no collect can give, and EXP traps no longer add a critter to the In your traps totals'
+    ]
+  },
+  {
     'ver': '4.0.8',
     'gameVer': '2.3.561',
     'date': '14/11/2026',
@@ -15,7 +35,8 @@ export const patchNotes = [
       'Royal Armory: outpost cards line up their rates and ranks side by side for easy comparing, and long rates show short (331M/hr) with the exact number on hover',
       'Leaderboards: 42 new boards across every tab, from Achievements to Crop Evolution. Upload your profile again to appear on all of them.',
       'Characters: STR, AGI, WIS and LUK show where each stat comes from',
-      'Dashboard: the Spelunking stamina % alert is now separate from the full stamina alert, with its own characters threshold and a grey icon'
+      'Dashboard: the Spelunking stamina % alert is now separate from the full stamina alert, with its own characters threshold and a grey icon',
+      'Leaderboards: your card shows how your ranks moved since your last visit, and you can now upload your profile once an hour instead of every 4 hours'
     ],
     'fixes': [
       'Breakdowns: base lines on Damage, HP, MP, Accuracy and AFK Gains now show their share of the base, and no share goes past 100%'
