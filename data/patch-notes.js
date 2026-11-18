@@ -5,17 +5,31 @@ import { replayWhatsNew } from '@utility/whatsNew';
 /* eslint-disable react/jsx-key */
 export const patchNotes = [
   {
+    'ver': '4.0.11',
+    'gameVer': '2.3.561',
+    'date': '18/11/2026',
+    'features': [
+      'Gaming Palette: Creamy Orange and Light Cyan now show their 100% cap, Magenta says the game does not use it yet, Peachy Pink notes it also raises Flaggy and Construction EXP'
+    ],
+    'fixes': []
+  },
+  {
     'ver': '4.0.10',
     'gameVer': '2.3.561',
     'date': '17/11/2026',
     'features': [
       'Spelunking and Farming Land Rank upgrade optimizers: new Game order group lists each upgrade once in the upgrade menu order',
       'Prayers: each card shows how much its bonus and curse grow per level',
-      'Dashboard: The Hole alerts include Gambit attempt ready, when the daily Gambit challenge is available'
+      'Dashboard: The Hole alerts include Gambit attempt ready, when the daily Gambit challenge is available',
+      'Leaderboards: Since your last visit now shows how much your value on each board changed, under its rank move',
+      'Sailing: each boat upgrade shows the level where its value jumps, what the boat reaches there, how many levels are left and what they cost'
     ],
     'fixes': [
       'Acorn Shop: fixed a typo in the Palette Luck upgrade',
-      'Dashboard: the refinery materials alert counts 3D Printer output, so printed materials only alert when the printer cannot keep up'
+      'Dashboard: the refinery materials alert counts 3D Printer output, so printed materials only alert when the printer cannot keep up',
+      'Slab: Nomwich and the Valentine chocolates now count as Unrealistic greenstacks',
+      'Settings: uploading your profile right after signing in with Google or Apple no longer fails',
+      'Gaming Imports: the Elegant Seashell shell rank now matches the rank shown in game'
     ]
   },
   {
