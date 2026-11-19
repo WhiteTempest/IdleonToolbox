@@ -15,7 +15,14 @@ import { LAYER_BREAKS_PER_DAY } from '@parsers/world-5/caverns/motherlode';
 import { getChestsFromSailingTime } from '@parsers/world-5/sailing';
 import { FAMILIAR_EXP_MIN_CLAIM_SECONDS, getFamiliarLevelGains, getPendingFamiliarExp } from '@parsers/world-6/summoning';
 import { items, liquidsShop, ninjaExtraInfo } from '@website-data';
-import { getPowerPerCycle, getRefineryCycleTimes, getSaltMatsTimeLeft, getSaltsBalance, hasMissingMats } from '@parsers/world-3/refinery';
+import {
+  getPowerPerCycle,
+  getPrinterCoveredMats,
+  getRefineryCycleTimes,
+  getSaltMatsTimeLeft,
+  getSaltsBalance,
+  hasMissingMats
+} from '@parsers/world-3/refinery';
 import { calcTotals } from '@parsers/world-3/printer';
 import {
   addEquippedItems,
@@ -41,7 +48,7 @@ import { getInventoryClusters } from '@parsers/world-1/statues';
 import { getTomeWishPity } from '@parsers/world-4/tome';
 import { BOSS_RESPAWN_ALERTS, isMinibossReady } from './bossRespawns';
 import { getTesseractBonus } from '@parsers/class-specific/tesseract';
-import { getIdleGuards, getMissingWorkers, getSpareWorkers } from '@parsers/class-specific/royalGuardian';
+import { getIdleGuards, getMissingWorkers, getSpareWorkers, orbletUpgradeKey } from '@parsers/class-specific/royalGuardian';
 import { getCompassBonus } from '@parsers/class-specific/compass';
 import { calcTotalItemOwned } from '@parsers/storage';
 import { OPT } from '@parsers/accountOptions';
@@ -769,11 +776,14 @@ export const getWorld3Alerts = (account, fields, options, characters) => {
       const thresholdHours = matsThreshold?.checked ? matsThreshold?.props?.value ?? 0 : 0;
       const timeLeftBySalt = getSaltMatsTimeLeft(account, characters, refineryCycleTimes)
         .reduce((res, entry) => ({ ...res, [entry?.rawName]: entry }), {});
+      const printerCovered = getPrinterCoveredMats(account, characters, refineryCycleTimes);
       const mats = account?.refinery?.salts?.reduce((res, { rank, cost, rawName }, saltIndex) => {
         if (!enabled[rawName]) return res;
         const previousSaltIndex = saltIndex > 0 ? saltIndex - 1 : null;
         const previousSalt = account?.refinery?.salts?.[previousSaltIndex];
-        const missingMats = hasMissingMats(saltIndex, rank, cost, account);
+        // A material the printer out-prints only runs dry between printer collects, so it never alerts.
+        const missingMats = hasMissingMats(saltIndex, rank, cost, account)
+          .filter(({ rawName: matName }) => !printerCovered?.[rawName]?.includes(matName));
         const previousSaltMissingMats = hasMissingMats(previousSaltIndex, previousSalt?.rank, previousSalt?.cost, account);
         const timeLeft = timeLeftBySalt?.[rawName];
         // Materials that aren't gone yet but will be within the lead time. Both lists feed the same
@@ -1940,6 +1950,19 @@ export const getWorld7Alerts = (account, fields, options, characters) => {
 
     if (rgOptions?.restockLocked?.checked && account?.royalGuardian?.outpostStats?.restockUnlocked === false) {
       royalGuardian.restockLocked = true;
+    }
+
+    if (rgOptions?.orbletMarket?.checked) {
+      const selected = rgOptions?.orbletMarket?.props?.value;
+      const orblets = account?.royalGuardian?.orblets ?? 0;
+      const affordable = (account?.royalGuardian?.orbletMarket ?? [])
+        .filter(({ name, maxed, cost }) => selected?.[orbletUpgradeKey(name)] && !maxed && orblets >= cost);
+      if (affordable.length > 0) {
+        royalGuardian.orbletMarket = {
+          orblets,
+          upgrades: affordable.map(({ index, name, level, cost }) => ({ index, name, level, cost }))
+        };
+      }
     }
 
     if (Object.keys(royalGuardian).length > 0) {

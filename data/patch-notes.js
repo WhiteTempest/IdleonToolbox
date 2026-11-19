@@ -5,6 +5,19 @@ import { replayWhatsNew } from '@utility/whatsNew';
 /* eslint-disable react/jsx-key */
 export const patchNotes = [
   {
+    'ver': '4.0.12',
+    'gameVer': '2.3.561',
+    'date': '19/11/2026',
+    'features': [
+      'Dashboard: new Royal Guardian alert when you can afford a ticked Orblet Market upgrade'
+    ],
+    'fixes': [
+      'Vote Ballot and other weekly server bonuses now update after the reset without reloading the page',
+      'New or renamed characters now show their names without reloading the page',
+      'Dashboard: the refinery materials alert no longer fires for a material the 3D Printer prints faster than the salt uses it'
+    ]
+  },
+  {
     'ver': '4.0.11',
     'gameVer': '2.3.561',
     'date': '18/11/2026',
