@@ -2,22 +2,29 @@ import { tryToParse } from '@utility/helpers';
 
 const url = process.env.NEXT_PUBLIC_PROFILES_URL;
 // kind: what failed, for the upload analytics: cooldown (429), auth (401), server (other statuses), network (no answer),
-// client (anything before the request).
+// client (anything before the request). An automatic upload adds two the worker answers on purpose: off (403, automatic
+// uploads are switched off) and manual-first (409, nothing was uploaded by hand as Public or Anonymous yet).
+// hours: the worker's current gap between automatic uploads, when its answer carried one.
 export class UploadError extends Error {
-  constructor(kind, message, status = null) {
+  constructor(kind, message, status = null, hours = null) {
     super(message);
     this.kind = kind;
     this.status = status;
+    this.hours = hours;
   }
 }
 
 const GENERIC_UPLOAD_ERROR = 'An error has occurred while uploading your profile. Please try again later.';
 
 // tokenSource tells the worker's log whether the token came from Firebase just now ('fresh') or from sign-in ('stored').
-export const uploadProfile = async ({ profile, profileAccess, leaderboardParticipation }, token, tokenSource) => {
+// trigger 'auto': the site uploading by itself; the worker then keeps the access it has stored.
+// Answers { anonId?, autoUploadHours }.
+export const uploadProfile = async ({ profile, profileAccess, leaderboardParticipation, trigger }, token, tokenSource) => {
   let body;
   try {
-    body = JSON.stringify({ profile: parseProfile(profile), profileAccess, leaderboardParticipation });
+    body = JSON.stringify({
+      profile: parseProfile(profile), profileAccess, leaderboardParticipation, ...(trigger === 'auto' ? { trigger } : {})
+    });
   } catch (err) {
     console.error('Error has occurred: ', err);
     throw new UploadError('client', GENERIC_UPLOAD_ERROR);
@@ -27,17 +34,18 @@ export const uploadProfile = async ({ profile, profileAccess, leaderboardPartici
     response = await fetch(`${url}/profiles`, {
       method: 'POST',
       body,
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': token,
-        ...(tokenSource ? { 'X-Token-Source': tokenSource } : {})
-      }
+      headers: signedHeaders(token, tokenSource)
     });
   } catch (err) {
     console.error('Error has occurred: ', err);
     throw new UploadError('network', 'Could not reach the server. Check your connection and try again.');
   }
-  if (response.status === 200) return await response.json();
+  if (response.status === 200) return (await response.json()) ?? {};
+  if (trigger === 'auto' && [403, 409, 429].includes(response.status)) {
+    const hours = (await response.json().catch(() => null))?.autoUploadHours ?? null;
+    const kind = { 403: 'off', 409: 'manual-first', 429: 'cooldown' }[response.status];
+    throw new UploadError(kind, 'The automatic upload was not accepted.', response.status, hours);
+  }
   if (response.status === 429) {
     throw new UploadError('cooldown', 'You have uploaded your profile in the past hour. Please wait until the cooldown is over.', 429);
   }
@@ -45,6 +53,33 @@ export const uploadProfile = async ({ profile, profileAccess, leaderboardPartici
     throw new UploadError('auth', 'Your sign-in was not accepted. Sign out, sign in again and upload.', 401);
   }
   throw new UploadError('server', GENERIC_UPLOAD_ERROR, response.status);
+}
+
+const signedHeaders = (token, tokenSource) => ({
+  'Content-Type': 'application/json',
+  'Authorization': token,
+  ...(tokenSource ? { 'X-Token-Source': tokenSource } : {})
+});
+
+// Whether the signed-in account has a profile on the server: { exists, profileAccess, leaderboardParticipation, uploadedAt }.
+// Throws on anything but an answer, so "unknown" is never read as "no profile".
+export const getProfileStatus = async (token, tokenSource) => {
+  const response = await fetch(`${url}/profiles/me`, { method: 'GET', headers: signedHeaders(token, tokenSource) });
+  if (!response.ok) throw new Error(`The profile api answered ${response.status}`);
+  return await response.json();
+}
+
+export const deleteProfile = async (token, tokenSource) => {
+  let response;
+  try {
+    response = await fetch(`${url}/profiles`, { method: 'DELETE', headers: signedHeaders(token, tokenSource) });
+  } catch (err) {
+    console.error('Error has occurred: ', err);
+    throw new Error('Could not reach the server. Check your connection and try again.');
+  }
+  if (response.status === 200) return;
+  if (response.status === 401) throw new Error('Your sign-in was not accepted. Sign out, sign in again and delete.');
+  throw new Error('An error has occurred while deleting your profile. Please try again later.');
 }
 
 // null is the worker's answer that no such profile exists. Anything else that isn't a save throws: no answer, a 5xx, or
