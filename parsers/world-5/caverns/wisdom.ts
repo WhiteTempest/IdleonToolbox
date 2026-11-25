@@ -4,8 +4,10 @@ import {
   getMonumentAfkReq,
   getMonumentBonus,
   getMonumentHourBonus,
+  getMonumentMaxLinearMulti,
   getMonumentMultiReward,
   getMonumentMultiplier,
+  getMonumentTimeToReady,
   getAllMonumentsBonusLvs
 } from '@parsers/world-5/caverns/bravery';
 import { gameFill, lavaLog } from '@utility/helpers';
@@ -16,7 +18,8 @@ export const getWisdom = (holesObject: any,  accountData: any) => {
   const opalChance = Math.min(0.5, Math.pow(0.5, holesObject?.opalsPerCavern?.[12])
     * (1 + getMonumentBonus({ holesObject, t: 2, i: 5 }) / 100));
   const rewardMulti = getMonumentMultiReward(holesObject, 2, accountData) || 0;
-  const timeForNextFight = 72E3 * (1 - rewardMulti);
+  const maxLinearMulti = getMonumentMaxLinearMulti(holesObject, 2, accountData);
+  const timeForNextFight = getMonumentTimeToReady(holesObject, 2, accountData);
   const hours = holesObject?.braveryMonument?.[4] || 0;
   const hoursRewards = holesInfo?.[31]?.slice(16);
   const hoursBreakpoints = holesInfo?.[30]?.map((hours: any, index: any) => ({
@@ -53,6 +56,7 @@ export const getWisdom = (holesObject: any,  accountData: any) => {
   const bonusLvsMultiplier = getAllMonumentsBonusLvs(accountData);
   return {
     rewardMulti,
+    maxLinearMulti,
     hours,
     hoursRewards,
     hoursBreakpoints,

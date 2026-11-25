@@ -5,6 +5,26 @@ import { replayWhatsNew } from '@utility/whatsNew';
 /* eslint-disable react/jsx-key */
 export const patchNotes = [
   {
+    'ver': '4.0.16',
+    'gameVer': '2.3.561',
+    'date': '24/11/2026',
+    'features': [
+      'Refinery: each salt card shows its power per cycle, with a breakdown',
+      'Random Events: the running event now shows at the top of the page, and the dashboard timer shows where it is and how long it has left',
+      'Royal Armory: outposts tied on a rank are now sorted by the EXP of that rank',
+      'Dashboard: Bravery, Justice and Wisdom alerts use a % of their max linear reward multi instead of a fixed number. Custom numbers were reset',
+      'Gallery: the two developer-only items, I Made This Game and Lavas Awesome Nametag, are hidden unless you own them',
+      'Bubba: the page now shows your happiness, dice rolls, smoked meats, spare coins, charisma attributes and gifts, with their multipliers'
+    ],
+    'fixes': [
+      'Beanstalk: the next rank of Golden Nomwich and Butter Bar no longer shows a percent sign, and the Butter Bar note shows its real bonus',
+      'Refinery: rank up material costs now count the Panda companion, and the next rank cost counts the full power it needs',
+      'Refinery: salt cards show short once per material, beside what you own or print',
+      'Monuments: Justice and Wisdom no longer say Next fight, and all three countdowns count your reward multi bonuses',
+      'Minehead, Jelly Operator and Sushi Station: doubled upgrades now have a border, and the ones you can still double say Can be doubled'
+    ]
+  },
+  {
     'ver': '4.0.15',
     'gameVer': '2.3.561',
     'date': '22/11/2026',

@@ -113,6 +113,7 @@ const parseBubba = (rawBubba: any, account: any) => {
     totalUpgTypesAvailable,
     megafleshOwned,
     megaFlesh,
+    run: getRun(rawBubba),
     // Smoker (upgrade 15) smoking time: banked seconds [0][14] plus pending idle seconds [0][7],
     // which the game folds into [0][14] next time the Bubba window ticks
     smokerUnlocked: totalUpgTypesAvailable > SMOKER_UPGRADE,
@@ -123,6 +124,90 @@ const parseBubba = (rawBubba: any, account: any) => {
 // The smoked meat tier roll is floor(5 * rand ^ max(0.1, 9 - 10 * t / (7200 + t))).
 // The exponent bottoms out at 0.1 once t / (7200 + t) = 0.89, so waiting longer gains nothing.
 export const SMOKER_MAX_QUALITY_SECONDS = 0.89 * 7200 / 0.11;
+
+// The upgrade each of the run's features waits on (game: "T_FeatureUnlocked")
+const FEATURE_UPGRADE = { happiness: 1, charisma: 6, gifts: 9, dice: 12, smokedMeat: SMOKER_UPGRADE, coins: 21 };
+// The words on the game's BubbaHappyIcon art
+const MOODS = ['Amused', 'Beaming', 'Contented', 'Delighted', 'Ecstatic'];
+const CHARISMA_MAX_LEVEL = 120;
+const COIN_NAMES = ['Pennies', 'Nickels', 'Quarters', 'Dollars'];
+const BACON_MEGAFLESH = 2;
+
+// The game draws a meat slice after Hustle's "}x", which text needs in words
+const formatCharisma = (bonus: number, index: number) => {
+  const text = String(generalSpelunky?.[35]?.[index] ?? '').replace(/_+$/, '');
+  return cleanUnderscore((index === 0 ? `${text}_Meat_Slices` : text)
+    .replace('{', gameFill(bonus, 'Comma'))
+    .replace('}', gameFill(1 + bonus / 100, 'MultiplierInfo'))
+    .replace('$', gameFill(Math.floor(1e3 * (1 - 1 / (1 + bonus / 100))) / 10, 'Comma')));
+};
+
+const getSelectedGift = (rawBubba: any, gift: number) => {
+  const index = gift - 1;
+  const bonus = getGiftPassiveBonus(rawBubba, index);
+  // game: the passive, a line with a glyph, then what triggering the gift does
+  const [passive, trigger] = String(generalSpelunky?.[40]?.[index] ?? '').split('_@_貴貯_@_');
+  return {
+    index,
+    name: cleanUnderscore(generalSpelunky?.[39]?.[index] ?? ''),
+    passive: cleanUnderscore(passive
+      .replace('{', gameFill(bonus, 'Comma'))
+      .replace('}', gameFill(1 + bonus / 100, 'MultiplierInfo'))),
+    trigger: cleanUnderscore(trigger ?? '')
+  };
+};
+
+// What buying a Megaflesh resets: happiness, dice, smoked meats, spare coins, charisma and gifts
+const getRun = (rawBubba: any) => {
+  const feature = (index: number) => ({
+    unlocked: getTotUpgBonus(rawBubba, index) >= 0.1,
+    upgradeName: upgradeName(index)
+  });
+  const moodRank = getHappinessRank(rawBubba);
+  return {
+    happiness: {
+      ...feature(FEATURE_UPGRADE.happiness),
+      multi: getHappinessBonus(rawBubba),
+      rank: moodRank,
+      mood: MOODS[moodRank]
+    },
+    dice: {
+      ...feature(FEATURE_UPGRADE.dice),
+      multi: getDiceMulti(rawBubba),
+      maxSides: getDiceMaxSides(rawBubba),
+      rolls: (rawBubba?.[4] ?? []).filter((roll: any) => roll > 0)
+    },
+    smokedMeat: {
+      ...feature(FEATURE_UPGRADE.smokedMeat),
+      multi: getSmokeMeatMulti(rawBubba),
+      meats: (generalSpelunky?.[34] ?? []).map((_: any, index: number) => rawBubba?.[5]?.[index] || 0)
+    },
+    coins: {
+      ...feature(FEATURE_UPGRADE.coins),
+      multi: getSpareCoinsMulti(rawBubba),
+      coins: COIN_NAMES.map((name, index) => ({ name, amount: rawBubba?.[0]?.[9 + index] || 0 }))
+    },
+    charisma: {
+      ...feature(FEATURE_UPGRADE.charisma),
+      maxLevel: CHARISMA_MAX_LEVEL,
+      attributes: (generalSpelunky?.[36] ?? []).map((name: any, index: number) => ({
+        name: cleanUnderscore(name),
+        level: rawBubba?.[3]?.[index] || 0,
+        bonus: formatCharisma(getCharismaBonus(rawBubba, index), index),
+        selected: rawBubba?.[0]?.[6] === index + 1,
+        emulsified: rawBubba?.[0]?.[15] === index + 1
+      }))
+    },
+    gifts: {
+      ...feature(FEATURE_UPGRADE.gifts),
+      // game: the second gift comes with the Bacon Megaflesh
+      slots: 1 + getMegafleshOwned(rawBubba, BACON_MEGAFLESH),
+      selected: [rawBubba?.[0]?.[2] || 0, rawBubba?.[0]?.[3] || 0]
+        .filter((gift: number) => gift > 0)
+        .map((gift: number) => getSelectedGift(rawBubba, gift))
+    }
+  };
+};
 
 const getProgressReq = (totalUpgTypesAvailable: any) => {
   return 50 * Math.pow(2.8 + totalUpgTypesAvailable / 3.55, totalUpgTypesAvailable - Math.min(1, Math.floor(totalUpgTypesAvailable / 4)));
@@ -207,6 +292,12 @@ const getTotUpgBonus = (rawBubba: any, upgradeIndex: any) => {
 const getHappinessBonus = (rawBubba: any) => {
   const happiness = rawBubba?.[0]?.[1] || 0;
   return 1 + (10 * (lavaLog2(happiness) + 25 * lavaLog(happiness) + Math.pow(happiness, 0.75))) / 100;
+};
+
+// game: floor of "HappinessRank", which picks the mood's art
+const getHappinessRank = (rawBubba: any) => {
+  const happiness = rawBubba?.[0]?.[1] || 0;
+  return Math.floor(Math.min(4, lavaLog(Math.pow(Math.max(1, happiness / 30 + 1), 1.5))));
 };
 
 // game: "TotalQTYofLVs"

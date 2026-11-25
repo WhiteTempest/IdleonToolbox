@@ -31,9 +31,7 @@ import useBossRespawns from '@hooks/useBossRespawns';
 import { isMinibossReady } from '@utility/dashboard/bossRespawns';
 import { useRouter } from 'next/router';
 import { calcCost, calcTimeToRankUp, getRefineryCycles } from '@parsers/world-3/refinery';
-import { getLegendTalentBonus } from '@parsers/world-7/legendTalents';
-import { getMonumentMaxLinearTime } from '@parsers/world-5/caverns/bravery';
-import { getMeritocracyBonus } from '@parsers/world-2/voteBallot';
+import { getMonumentMaxLinearMulti, getMonumentMaxLinearTime } from '@parsers/world-5/caverns/bravery';
 import { CRYSTAL_ISLAND_MAX_DAYS, getCrystalIslandMobs, getIsland } from '@parsers/world-2/islands';
 import { SMOKER_MAX_QUALITY_SECONDS } from '@parsers/clickers/bubba';
 import { OPT } from '@parsers/accountOptions';
@@ -42,6 +40,7 @@ import { sessionQuery } from '@utility/nav-query';
 const maxTimeValue = 9.007199254740992e+15;
 const SECOND = 1000;
 const MINUTE = 60 * 1000;
+const HOUR = 60 * MINUTE;
 const DAY = 864e5;
 const WEEK = 7 * DAY;
 const YEAR = 365 * DAY;
@@ -70,11 +69,14 @@ export const useTimerRows = ({ characters, account, lastUpdated, trackers, bookA
     const allEmpty = Object.values(data || {}).every(({ checked }) => !checked);
     return { ...res, [alertName]: allEmpty };
   }, {});
-  const events = getRandomEvents(account);
-  // `events[0]` is still listed while its hour is running, so it's the event happening NOW, not the
-  // next one to spawn. The icon and the countdown have to resolve to the same event or the tile
-  // shows one event's name above another event's timer.
-  const nextEvent = events?.find(({ date }) => date > now) ?? events?.[0];
+  // The running event, unless one is already done today (the game spawns one a day), else the next one. The icon, the sub
+  // and the countdown all read this one event.
+  const randomEventDone = Boolean(account?.accountOptions?.[137]);
+  const randomEvent = getRandomEvents(account, wallClock).find(({ live }) => !live || !randomEventDone);
+  // Running, the row is named for the event, so its map has room on a phone
+  const randomEventName = cleanUnderscore(randomEvent?.eventName);
+  const randomEventMap = cleanUnderscore(randomEvent?.mapName);
+  const randomEventEnd = randomEvent?.date + HOUR;
   const nextHappyHours = calcHappyHours(account?.serverVars?.HappyHours) || [];
   const nextPrinterCycle = now + (3600 - (account?.timeAway?.GlobalTime - account?.timeAway?.Printer)) * 1000;
   const nextCompanionClaim = getNextCompanionClaim(account);
@@ -208,9 +210,7 @@ export const useTimerRows = ({ characters, account, lastUpdated, trackers, bookA
     if (!holesObject) return null;
     const maxLinearTime = getMonumentMaxLinearTime(holesObject, t, account);
     const currentTime = holesObject?.extraCalculations?.[Math.round(11 + t)] || 0;
-    const maxLinearMulti = (maxLinearTime / 72e3)
-      * (1 + getMeritocracyBonus(account, 7) / 100)
-      * (1 + getLegendTalentBonus(account, 27) / 100);
+    const maxLinearMulti = getMonumentMaxLinearMulti(holesObject, t, account);
     const timeUntilMax = Math.max(0, maxLinearTime - currentTime);
     const timeUntilMaxDate = timeUntilMax > 0 ? now + timeUntilMax * 1000 : null;
 
@@ -348,13 +348,18 @@ export const useTimerRows = ({ characters, account, lastUpdated, trackers, bookA
           icon={'etc/Happy_Hour.png'}
           placeholder={'Claim'}
         /> : null}
-        {trackers?.General?.randomEvents?.checked && events?.length > 0 ? <TimerRow target="General.randomEvents"
+        {trackers?.General?.randomEvents?.checked && randomEvent ? <TimerRow target="General.randomEvents"
           page={'/account/misc/random-events'}
-          sub={cleanUnderscore(nextEvent?.eventName)}
-          message={() => <RandomEvent {...nextEvent}/>}
-          time={nextEvent?.date}
-          placeholder={'Started'}
-          icon={`etc/${nextEvent?.eventName}.png`}
+          name={randomEvent.live ? randomEventName : undefined}
+          sub={randomEvent.live ? randomEventMap : `${randomEventName}, ${randomEventMap}`}
+          message={() => <RandomEvent {...randomEvent}/>}
+          time={randomEvent.live ? randomEventEnd : randomEvent.date}
+          placeholder={randomEvent.live ? 'Ended' : 'Started'}
+          state={randomEvent.live
+            ? <StatusText status={'ready'}><Timer type={'countdown'} date={randomEventEnd} placeholder={'0s'}/></StatusText>
+            : null}
+          actNow={randomEvent.live}
+          icon={`etc/${randomEvent.eventName}.png`}
         /> : null}
         {trackers?.General?.sailingTrades?.checked && account?.finishedWorlds?.World4 && account?.sailing?.trades?.length > 0
           ? <TimerRow target="General.sailingTrades"
@@ -1040,7 +1045,7 @@ const minibossProps = (miniboss, dailyReset, killsWanted) => {
   return { sub: count, value: next, time: dailyReset == null ? undefined : dailyReset + (daysTillNext - 1) * DAY, message: () => `${count}, ${next}` };
 };
 
-// A monument's reward multi against its max linear growth, as a row's props. Past that max it's time to fight. Below it the
+// A monument's reward multi against its max linear growth, as a row's props. Past that max it's ready. Below it the
 // date it gets there is a deadline like any other, so it sorts with them and counts down to it, with the ratio as its muted
 // line, and at zero it moves to Ready now. One with neither (no date, not past it) has nothing to count and nothing to act on.
 const monumentProps = (currentMulti, { maxLinearMulti, timeUntilMaxDate } = {}) => {
@@ -1048,10 +1053,10 @@ const monumentProps = (currentMulti, { maxLinearMulti, timeUntilMaxDate } = {}) 
   const pair = `${formatNum(currentMulti, 'mult')} / ${formatNum(maxMulti, 'mult')}`;
   const past = `Past its max linear growth: ${pair}`;
   if (Math.round(100 * currentMulti) > Math.round(100 * maxMulti)) {
-    return { sub: pair, placeholder: 'Fight', forcePlaceholder: true, message: () => past };
+    return { sub: pair, placeholder: 'Ready', forcePlaceholder: true, message: () => past };
   }
   if (timeUntilMaxDate) {
-    return { sub: pair, placeholder: 'Fight', time: timeUntilMaxDate, message: (when, over) => (over ? past : `Max linear growth: ${when}`) };
+    return { sub: pair, placeholder: 'Ready', time: timeUntilMaxDate, message: (when, over) => (over ? past : `Max linear growth: ${when}`) };
   }
   return { sub: 'At max linear growth', value: pair, message: () => 'At max linear growth' };
 };
