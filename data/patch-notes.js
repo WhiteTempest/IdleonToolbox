@@ -5,6 +5,39 @@ import { replayWhatsNew } from '@utility/whatsNew';
 /* eslint-disable react/jsx-key */
 export const patchNotes = [
   {
+    'ver': '4.0.18',
+    'gameVer': '2.3.561',
+    'date': '27/11/2026',
+    'features': [
+      'Research: the Grid tab shows how many grid points you have left to spend, and a new dashboard alert tells you when some are unspent',
+      'Statistics: filter every chart by total level and by class, with a page for each class, icons on every row, and new charts for linked gods, super talents, 3D printer samples, meditation styles, meals cooking and black stars',
+      'Dashboard: two new character alerts: your Maestro isn\'t the highest in a Right Hand of Action skill, and a character isn\'t linked to a god',
+      'Slab: a new "Owned, not in Slab" view lists the missing items you already have, and where each one is',
+      'Dashboard: new alerts for a built shrine no character is levelling, and unspent Land Rank points'
+    ],
+    'fixes': [
+      'Research: the Optimizer suggested moving lenses onto observations your Research level can\'t study yet'
+    ]
+  },
+  {
+    'ver': '4.0.17',
+    'gameVer': '2.3.561',
+    'date': '26/11/2026',
+    'features': [
+      'Breakdowns: new Fixed order sort that stays the same for every account, so two accounts are easier to compare',
+      'Royal Armory: upgrades show their own in-game icons on the cards, in the optimizer and in goals',
+      'Orblet Market: upgrades show their cost to max, and Glorification shows the outposts left and the average cost to glorify them',
+      'Breakdowns: bonus lines now link to the page and tab where that bonus comes from',
+      'Research: new Optimizer tab that finds where to put your grid shapes and observation lenses for Research EXP or Insight EXP, with each move to make in the game, step by step',
+      'Research: each of the 10 grid shapes now has its own colour on the Grid tab',
+      'Research: the Observations tab tells you when moving your lenses would give more Research EXP'
+    ],
+    'fixes': [
+      'Farming: the crop evo breakdown of a locked plot now shows its total and each bonus share',
+      'Research: the Optimizer suggested moving lenses onto observations you haven\'t discovered yet'
+    ]
+  },
+  {
     'ver': '4.0.16',
     'gameVer': '2.3.561',
     'date': '24/11/2026',

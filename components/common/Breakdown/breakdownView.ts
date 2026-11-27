@@ -8,7 +8,8 @@ import {
   isInactiveBreakdownNode,
   listGroup
 } from '@parsers/breakdown';
-import type { BreakdownCombine, BreakdownLine, BreakdownNode, BreakdownUnit, StatBreakdown } from '@parsers/breakdown';
+import type { BreakdownCombine, BreakdownLine, BreakdownLink, BreakdownNode, BreakdownUnit, StatBreakdown } from '@parsers/breakdown';
+import { breakdownLinkFor } from '@utility/breakdownSourceLinks';
 
 // The older breakdown shape: flat categories of sources, one level of sub-sections
 interface LegacySource {
@@ -50,6 +51,8 @@ export interface ViewNode {
   gain?: number;
   // The gain is how much faster a time gets (the group divides it), not how much the total grows
   faster?: boolean;
+  // The page a line's bonus comes from (utility/breakdownSourceLinks.js)
+  link?: BreakdownLink;
   children?: ViewNode[];
 }
 
@@ -61,6 +64,8 @@ interface ViewOptions {
   query: string;
   showInactive: boolean;
   pinned: Set<string>;
+  // Every line where its breakdown lists it, pinned or not, so the order is the same on every account
+  fixedOrder?: boolean;
   // How the top level combines (the breakdown root); legacy breakdowns are lists
   rootCombine?: BreakdownCombine;
   shares?: Map<BreakdownNode, number>;
@@ -151,10 +156,21 @@ const singleEntry = (node: BreakdownNode & { children: BreakdownNode[] }, showIn
 // gets divided, a min's last is usually the cap
 const ORDERED_COMBINES = new Set<BreakdownCombine>(['list', 'divide', 'min']);
 
+const sortsBySize = (nodes: BreakdownNode[], parent: BreakdownNode | undefined, rootCombine?: BreakdownCombine): boolean => {
+  if (parent) return isBreakdownGroup(parent) && !ORDERED_COMBINES.has(parent.combine);
+  return !!rootCombine && !ORDERED_COMBINES.has(rootCombine)
+    && new Set(nodes.filter(Boolean).map(getBreakdownNodeUnit)).size === 1;
+}
+
+// Whether any level of the breakdown is sorted by size, so the drawer has an order to offer
+export const hasSortedNodes = (nodes: BreakdownNode[], rootCombine?: BreakdownCombine, parent?: BreakdownNode): boolean =>
+  (nodes.filter(Boolean).length > 1 && sortsBySize(nodes, parent, rootCombine))
+  || nodes.filter(Boolean).some((node) => isBreakdownGroup(node) && hasSortedNodes(node.children, undefined, node));
+
 /**
  * The visible tree: search and inactive lines filtered out, each group's lines sorted by size (pinned
  * first). List, divide and min groups keep their order, and so does a top level that mixes units (a base
- * amount before its multipliers).
+ * amount before its multipliers). fixedOrder keeps every level in order.
  */
 const buildViewNodes = (nodes: BreakdownNode[], options: ViewOptions, parentKey = '', depth = 0,
                         parent?: BreakdownNode): ViewNode[] => {
@@ -166,6 +182,7 @@ const buildViewNodes = (nodes: BreakdownNode[], options: ViewOptions, parentKey 
       const key = `${parentKey}/${index}:${node.name}`;
       const pinKey = (node as PinnedLine).pinKey ?? key;
       const nameMatches = !!query && node.name.toLowerCase().includes(query);
+      const link: BreakdownLink | undefined = isBreakdownGroup(node) ? undefined : breakdownLinkFor(node);
       const view: ViewNode = {
         key,
         pinKey,
@@ -174,6 +191,7 @@ const buildViewNodes = (nodes: BreakdownNode[], options: ViewOptions, parentKey 
         inactive: isInactiveBreakdownNode(node),
         depth,
         ...(node.note ? { note: node.note } : {}),
+        ...(link ? { link } : {}),
         ...(options.shares?.has(node) ? { share: options.shares.get(node) } : {}),
         ...(options.gains?.has(node) ? { gain: options.gains.get(node) } : {}),
         ...(options.gains?.has(node) && options.faster?.has(node) ? { faster: true } : {})
@@ -202,10 +220,8 @@ const buildViewNodes = (nodes: BreakdownNode[], options: ViewOptions, parentKey 
       }
       return { view, size };
     });
-  const sortBySize = depth > 0
-    ? !!parent && isBreakdownGroup(parent) && !ORDERED_COMBINES.has(parent.combine)
-    : !!options.rootCombine && !ORDERED_COMBINES.has(options.rootCombine)
-      && new Set(nodes.filter(Boolean).map(getBreakdownNodeUnit)).size === 1;
+  if (options.fixedOrder) return views.map(({ view }) => view);
+  const sortBySize = sortsBySize(nodes, parent, options.rootCombine);
   return views
     .sort((a, b) => {
       const pinnedDiff = Number(options.pinned.has(b.view.pinKey)) - Number(options.pinned.has(a.view.pinKey));

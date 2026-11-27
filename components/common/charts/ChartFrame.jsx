@@ -9,7 +9,8 @@ import ChartLegend from './ChartLegend';
 // more series), the chart or its table, and the switch. table: DataTable's props. In a host that hands it spare height
 // (a Panel as tall as its neighbour on Statistics) a chart that grows takes it, up to its own limit, and the switch
 // closes the panel.
-const ChartFrame = ({ legend, table, children }) => {
+// tableLabel: the switch's words when the table holds more than the chart draws ("Show all 42 as a table").
+const ChartFrame = ({ legend, table, tableLabel = 'Show as table', children }) => {
   const [asTable, setAsTable] = useState(false);
   const frame = useRef(null);
   const bodyId = useId();
@@ -24,9 +25,10 @@ const ChartFrame = ({ legend, table, children }) => {
   return <Stack ref={frame} gap={1.5} sx={{ flexGrow: 1, scrollMarginTop: `${SCROLL_TARGET_MARGIN}px` }}>
     {!asTable && legend?.length > 1 ? <ChartLegend items={legend}/> : null}
     <Box id={bodyId} sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column' }}>{asTable ? <DataTable {...table}/> : children}</Box>
-    <Stack direction={'row'} justifyContent={'flex-end'} sx={{ pt: 1, borderTop: 1, borderColor: 'divider' }}>
+    {/* The table's last row already draws a line, so the switch takes none of its own there */}
+    <Stack direction={'row'} justifyContent={'flex-end'} sx={{ pt: 1, ...(asTable ? {} : { borderTop: 1, borderColor: 'divider' }) }}>
       <Button size={'small'} aria-controls={bodyId} onClick={toggle} sx={{ fontSize: 13 }}>
-        {asTable ? 'Show as chart' : 'Show as table'}
+        {asTable ? 'Show as chart' : tableLabel}
       </Button>
     </Stack>
   </Stack>;

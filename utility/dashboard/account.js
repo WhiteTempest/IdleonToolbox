@@ -1,6 +1,7 @@
 import { getArcadeBallsToClaim } from '@parsers/dungeons';
 import { ARCADE_MAX_LEVEL, ARCADE_OMEGA_LEVEL, ARCADE_SUPER_LEVEL, isArcadePlaceholder } from '@parsers/world-2/arcade';
 import { getBuildCost } from '@parsers/world-3/construction';
+import { getIdleShrines } from '@parsers/world-3/shrines';
 import { CAULDRON_INFO, CAULDRONS_MAX_LEVELS, LIQUID_INFO, MAX_VIAL_LEVEL, vialCostsArray } from '@parsers/world-2/alchemy';
 import {
   calcTimeToNextLevel,
@@ -743,8 +744,15 @@ export const getWorld3Alerts = (account, fields, options, characters) => {
       flags,
       buildings,
       saltBalance,
-      saltBalanceDirection
+      saltBalanceDirection,
+      idleShrines
     } = options?.construction || {};
+    if (idleShrines?.checked) {
+      const shrines = getIdleShrines(account, characters);
+      if (shrines.length > 0) {
+        construction.idleShrines = shrines;
+      }
+    }
     if (flags?.checked) {
       const flags = account?.construction?.board?.filter(({
         flagPlaced,
@@ -1440,7 +1448,10 @@ export const getWorld6Alerts = (account, fields, options, characters, lastUpdate
   }
   if (fields?.farming?.checked) {
     const farming = {};
-    const { plots, finishedPlots, totalCrops, missingPlots, beanTrade, exoticPurchases } = options?.farming || {};
+    const { plots, finishedPlots, totalCrops, missingPlots, beanTrade, exoticPurchases, rankPoints } = options?.farming || {};
+    if (rankPoints?.checked && (account?.farming?.availablePoints ?? 0) > 0) {
+      farming.rankPoints = account.farming.availablePoints;
+    }
     if (plots?.checked) {
       const availablePots = account?.farming?.plot?.filter(({ currentOG }) => plots?.props?.value > 0
         ? currentOG >= plots?.props?.value
@@ -2125,7 +2136,7 @@ export const getWorld7Alerts = (account, fields, options, characters) => {
   }
   if (fields?.research?.checked) {
     const research = {};
-    const { insightLevel, observationRollsLeft } = options?.research || {};
+    const { insightLevel, observationRollsLeft, unspentGridPoints } = options?.research || {};
     if (insightLevel?.checked) {
       const threshold = insightLevel?.props?.value ?? 3;
       const list = account?.research?.observations?.filter(obs =>
@@ -2141,6 +2152,14 @@ export const getWorld7Alerts = (account, fields, options, characters) => {
       const allFound = account?.research?.totalOccurrencesFound >= account?.research?.occurrencesToBeFound;
       if (rollsLeft > 0 && !allFound) {
         research.observationRollsLeft = { left: rollsLeft, max: rollsPerDay };
+      }
+    }
+    if (unspentGridPoints?.checked) {
+      const free = account?.research?.gridPTSavailable ?? 0;
+      // Free points with every reachable node maxed have nowhere to go
+      const canSpend = account?.research?.gridSquares?.some((square) => square?.canSelect && square?.name !== 'Name' && square?.level < square?.maxLv);
+      if (free > 0 && canSpend) {
+        research.unspentGridPoints = free;
       }
     }
     if (Object.keys(research).length > 0) {

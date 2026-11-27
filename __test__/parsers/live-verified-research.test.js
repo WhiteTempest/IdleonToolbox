@@ -3,7 +3,12 @@ import { describe, expect, it } from 'vitest';
 import latest from '../fixtures/latest.json';
 import { parseFixture } from '../helpers/parsed-fixtures';
 import { within, withLoggedInDivinity, withSkillLevel } from '../helpers/live-verified';
-import { getGridBonusAllmulti, getResearch } from '@parsers/world-7/research';
+import { getGridBonusAllmulti, getResearch, getResearchGridCanSelect } from '@parsers/world-7/research';
+import {
+  applyLensDrags, applyShapeMoves, createResearchScorer, getCoveredNodes, getGridLabel, getInsightExpReq, getLensDrags, getObservationBaseRate, getTurnPresses,
+  isInsideDragBounds, optimizeLenses, optimizeShapes, parseShapeCatalog
+} from '@parsers/world-7/researchOptimizer';
+import { research as researchData } from '@website-data';
 
 // Read from the running game on 2026-10-11 through the debug server, logged in as IAmTheHunterrr (Wind Walker).
 // latest.json is that account's save (OptionsListAccount[340] matches). "NoDoot" = DNSM.CompanionBon[0] set
@@ -114,5 +119,124 @@ describe('research verified against the live game', () => {
     const grid48 = (research) => research.gridSquares.find(({ index }) => index === 48)?.bonuses?.[0];
     within(grid48(getResearch(data, account, characters)), GAME.grid48);
     within(grid48(getResearch(data, account, withLoggedInDivinity(characters, 1))), GAME.grid48NoDoot);
+  });
+});
+
+// Read 2026-11-26 from the owner's live game (Research LV 127, 7 shapes) while moving two shapes by hand: the star
+// (shape 5) from (317,84) at 0 degrees to (312,112) at 135, then the diamond (shape 0) from (352,159) at 90 to (318,46)
+// at 0. Research[1] (node -> shape) was read before and after each drag. '.' is no shape.
+const SHAPE_MOVES = {
+  levels: '000000000000000000000000000000030000000000000002421430000000000000031242400000000000003234442340000000000141212210000000000003211433300000000000002441223000000000004443123421000000000004442444000000000000000000000000000000000000000000000000',
+  placements: [[352, 159, 90], [239, 98, 0], [418, 144, 0], [321, 213, 0], [188, 168, 0], [317, 84, 0], [148, 240, 5]],
+  moves: [{ shape: 5, x: 312, y: 112, rot: 135 }, { shape: 0, x: 318, y: 46, rot: 0 }],
+  owners: [
+    '...............................................111.5...............111555.............411455522..........44444.00............44444333.............4444333...........66666.333............6666...................................................',
+    '...............................................111.5...............111555.............411455522..........44444500............44444333.............4444333...........66666.333............6666...................................................',
+    '...............................0...............11105...............111555.............411455522..........44444555............44444333.............4444333...........66666.333............6666...................................................'
+  ]
+};
+
+describe('research optimizer shape model against the live game', () => {
+  const catalog = parseShapeCatalog(researchData[0], researchData[1], researchData[5]);
+  const decode = (text) => [...text].map((char) => (char === '.' ? -1 : Number(char)));
+  const selectableFor = (gridLevels) => gridLevels.map((_, node) => getResearchGridCanSelect({ gridLevels }, node));
+
+  it('every node the save gives a shape is one that shape covers', () => {
+    const saved = typeof data.Research === 'string' ? JSON.parse(data.Research) : data.Research;
+    const selectable = selectableFor(saved[0]);
+    const misplaced = saved[1].flatMap((shape, node) => {
+      if (shape < 0) return [];
+      const [x, y, rot] = saved[6].slice(4 * shape, 4 * shape + 3);
+      return getCoveredNodes(catalog[shape], { shape, x, y, rot }, selectable).includes(node) ? [] : [[node, shape]];
+    });
+    expect(misplaced).toEqual([]);
+  });
+
+  it('moving shapes one at a time gives the owners the game gave', () => {
+    const selectable = selectableFor([...SHAPE_MOVES.levels].map(Number));
+    const coverage = SHAPE_MOVES.placements.map(([x, y, rot], shape) => getCoveredNodes(catalog[shape], { shape, x, y, rot }, selectable));
+    const moves = SHAPE_MOVES.moves.map((move) => ({ ...move, covered: getCoveredNodes(catalog[move.shape], move, selectable) }));
+    const [before, afterStar, afterDiamond] = SHAPE_MOVES.owners.map(decode);
+    expect(applyShapeMoves(before, coverage, moves.slice(0, 1))).toEqual(afterStar);
+    expect(applyShapeMoves(before, coverage, moves)).toEqual(afterDiamond);
+  });
+
+  it.each([
+    ['0 to 135 is 27 right presses', 0, 135, { presses: 27, button: 'right' }],
+    ['90 to 0 is 18 left presses', 90, 0, { presses: 18, button: 'left' }],
+    ['350 to 10 goes on past 360', 350, 10, { presses: 4, button: 'right' }]
+  ])('turn buttons: %s', (_, from, to, expected) => {
+    expect(getTurnPresses(from, to)).toEqual(expected);
+  });
+
+  it('grid labels read like the game tiles', () => {
+    expect([91, 31, 50, 110].map((node) => getGridLabel(node))).toEqual(['L8', 'L11', 'K10', 'K7']);
+  });
+});
+
+describe('research optimizer scoring', () => {
+  const input = account.research.optimizer;
+
+  it('scores the save as the parser does: EXP multi, EXP rate and Insight rate', () => {
+    const scorer = createResearchScorer(input);
+    within(scorer.expMulti(input.owners, input.insightLevels), account.research.researchEXPmulti, 1e-9);
+    within(scorer.expRate(input.owners, input.lensSlots), account.research.researchEXPrateTOT, 1e-9);
+    const insight = account.research.observations.reduce((sum, { realInsightExpRate }) => sum + (realInsightExpRate ?? 0), 0);
+    within(scorer.insightRate(input.owners, input.lensSlots), insight, 1e-9);
+  });
+
+  it('a one-move plan stays inside the drag box and scores what it claims', () => {
+    const fixed = { ...input, canRotate: false };
+    const { now, plans: [plan] } = optimizeShapes(fixed, { maxMoves: 1, beamWidth: 1 });
+    const scorer = createResearchScorer(fixed);
+    expect(plan.ratio).toBeGreaterThanOrEqual(1);
+    within(plan.ratio, scorer.expRate(plan.owners, fixed.lensSlots) / now, 1e-12);
+    expect(plan.steps.every(({ shape, to }) => isInsideDragBounds(scorer.catalog[shape], to))).toBe(true);
+  });
+});
+
+// Read 2026-11-26 from the owner's live game: ResearchStuff("ObservationInsightExpREQ", i) at the save's Insight level,
+// and ResearchStuff("ResearchEXPrateObj", 42) with 4 glasses there, Insight LV 8, Grid_Bonus(93) 19.08 and
+// 5 kaleidoscopes next to it at Kalei_MultiBase 0.9742.
+const LENS_GAME = {
+  insightReq35At10: 245350.41222923566,
+  insightReq0At13: 2900.51752397418,
+  expRateObservation42: 595591.935244616
+};
+
+describe('research optimizer lenses', () => {
+  const input = account.research.optimizer;
+
+  it('Insight cost and an observation EXP rate match the game', () => {
+    within(getInsightExpReq(35, 10), LENS_GAME.insightReq35At10, 1e-12);
+    within(getInsightExpReq(0, 13), LENS_GAME.insightReq0At13, 1e-12);
+    within(4 * getObservationBaseRate(42) * (1 + (19.08 * 8) / 100) * (1 + 5 * 0.9742), LENS_GAME.expRateObservation42, 1e-12);
+  });
+
+  it('drags onto a full observation wait until a lens has left it', () => {
+    const from = [{ observation: 0, type: 0 }, { observation: 1, type: 1 }, { observation: 1, type: 1 }];
+    const to = [{ observation: 1, type: 0 }, { observation: 1, type: 1 }, { observation: 2, type: 1 }];
+    expect(getLensDrags(from, to, 2)).toEqual([
+      { type: 1, from: 1, to: 2, count: 1 },
+      { type: 0, from: 0, to: 1, count: 1 }
+    ]);
+  });
+
+  it('a plan for today never costs EXP, keeps the per-observation cap and its drags rebuild it', () => {
+    const plan = optimizeLenses(input, { restarts: 4 });
+    expect(plan.ratioToday).toBeGreaterThanOrEqual(1);
+    const counts = (slots) => slots.reduce((map, { observation, type }) => ({ ...map, [`${observation}:${type}`]: (map[`${observation}:${type}`] ?? 0) + 1 }), {});
+    const perObservation = Object.values(plan.slots.reduce((map, { observation }) => ({ ...map, [observation]: (map[observation] ?? 0) + 1 }), {}));
+    expect(Math.max(...perObservation)).toBeLessThanOrEqual(input.lensCap);
+    const rebuilt = applyLensDrags(input.lensSlots.filter(({ observation }) => observation >= 0), plan.drags);
+    expect(counts(rebuilt)).toEqual(counts(plan.slots));
+  });
+
+  it('never drags a lens onto an undiscovered observation', () => {
+    const wanted = new Set(optimizeLenses(input, { restarts: 4 }).drags.map(({ to }) => to));
+    expect(wanted.size).toBeGreaterThan(0);
+    const discovered = Array.from({ length: input.observationsFound }, (_, i) => !wanted.has(i));
+    const plan = optimizeLenses({ ...input, discovered }, { restarts: 4 });
+    expect(plan.drags.filter(({ to }) => wanted.has(to))).toEqual([]);
   });
 });

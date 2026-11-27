@@ -10,6 +10,8 @@ import { PAGE_BY_URL } from '../../utility/pageIndex';
 // heading per page - the class name, or the build's title.
 const ALREADY_HAS_H1 = new Set([
   '/', '/settings', '/tools/builds/[slug]',
+  // Draws its own h1: Statistics, or its class's icon and name
+  '/statistics/[[...classSlug]]',
   // Shares its header - and its h1 - with the class pages above. A NavBar title here as well put
   // two h1s on the page and shifted the whole layout when switching between "All" and a class.
   '/tools/builds',

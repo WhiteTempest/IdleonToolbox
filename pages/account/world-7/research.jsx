@@ -13,6 +13,8 @@ import { PAGES } from '@components/constants';
 import Grid from '@components/account/Worlds/World7/Research/Grid';
 import Observations from '@components/account/Worlds/World7/Research/Observations';
 import PostyNotes from '@components/account/Worlds/World7/Research/PostyNotes';
+import Optimizer from '@components/account/Worlds/World7/Research/Optimizer';
+import LensHint from '@components/account/Worlds/World7/Research/Optimizer/LensHint';
 
 // Time left in the Numbers board's style; no rate, no time
 const timeText = (hours) => (hours > 0 ? formatDuration(hours * 3600) : '-');
@@ -35,6 +37,7 @@ const Research = () => {
     researchEXPrateAFK,
     gridPTSearned,
     gridPTSpent,
+    gridPTSavailable,
     shapesOwned,
     magnifiersOwned,
     magnifyingGlassOwned,
@@ -93,7 +96,8 @@ const Research = () => {
       {/* Decision 6: the numbers that count one tab's list sit at that tab's top */}
       <Stack gap={3}>
         <Stack direction={'row'} gap={1} flexWrap={'wrap'}>
-          <StatTile label={'Grid points'} value={`${formatNum(gridPTSpent ?? 0)} / ${formatNum(gridPTSearned ?? 0)}`} failed={sectionFailed}/>
+          <StatTile label={'Grid points'} value={`${formatNum(gridPTSpent ?? 0)} / ${formatNum(gridPTSearned ?? 0)}`} failed={sectionFailed}
+                    sub={gridPTSavailable > 0 ? `${formatNum(gridPTSavailable)} to spend` : undefined}/>
           <StatTile label={'Shapes owned'} value={shapesOwned ?? 0} kind={'amount'} failed={sectionFailed}/>
           <StatTile label={'Lenses'} value={magnifiersOwned ?? 0} kind={'amount'} failed={sectionFailed}/>
           <StatTile label={'Magnifying Glasses'} icon={'data/ResMagni0.png'} value={magnifyingGlassOwned ?? 0}
@@ -111,9 +115,11 @@ const Research = () => {
           <StatTile label={'Max roll'} value={maxRoll ?? 0} kind={'amount'} failed={sectionFailed}/>
           <StatTile label={'Rolls per day'} value={rollsPerDay ?? 3} kind={'amount'} failed={sectionFailed}/>
         </Stack>
+        {parseFailed || sectionFailed ? null : <LensHint input={section?.optimizer}/>}
         {parseFailed ? null : <Observations observations={observations}/>}
       </Stack>
       <PostyNotes postyNotes={postyNotes}/>
+      {parseFailed || sectionFailed ? null : <Optimizer research={section} squares={gridSquares ?? []}/>}
     </Tabber>
   </SummaryFailed>;
 };
